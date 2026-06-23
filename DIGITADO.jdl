@@ -1,0 +1,129 @@
+enum TipoUsuario {
+    PROFESSOR,
+    ALUNO
+}
+
+enum Dificuldade {
+    FACIL,
+    MEDIO,
+    DIFICIL
+}
+
+enum ModoAtividade {
+    INDIVIDUAL,
+    COLETIVO
+}
+
+enum StatusAtividade {
+    PENDENTE,
+    EM_ANDAMENTO,
+    ENCERRADA
+}
+
+enum TipoErro {
+    ACENTUACAO,
+    TROCA_LETRA,
+    LETRA_FALTANDO,
+    LETRA_EXTRA,
+    ERRO_FONETICO,
+    OUTRO
+}
+
+entity Usuario {
+    nome String required
+    sobrenome String required
+    email String required unique
+    senha String required
+    tipoUsuario TipoUsuario required
+    ativo Boolean
+}
+
+entity Sala {
+    nome String required
+    codigo String required unique
+    descricao TextBlob
+    ativo Boolean
+}
+
+entity ListaPalavras {
+    nomeLista String required
+    descricao TextBlob
+    ativo Boolean
+}
+
+entity Palavra {
+    texto String required
+    dificuldade Dificuldade required
+    categoria String
+    idioma String
+    possuiAcento Boolean
+    ativa Boolean
+}
+
+entity Atividade {
+    titulo String required
+    modo ModoAtividade required
+    dataInicio Instant
+    dataFim Instant
+    tempoLimite Integer
+    status StatusAtividade
+}
+
+entity Resposta {
+    respostaDigitada String
+    correta Boolean
+    tempoResposta Integer
+    pontuacao Integer
+    dataResposta Instant
+}
+
+entity ErroOrtografico {
+    tipoErro TipoErro
+    descricao TextBlob
+}
+
+entity Ranking {
+    posicao Integer
+    pontuacaoTotal Integer
+    ultimaAtualizacao Instant
+}
+
+entity Conquista {
+    nome String required
+    descricao TextBlob
+    xpRecompensa Integer
+}
+
+entity UsuarioConquista {
+    dataConquista Instant
+    progresso Integer
+    concluida Boolean
+}
+
+relationship OneToMany {
+    Usuario{salas} to Sala{professor}
+    Usuario{listasPalavras} to ListaPalavras{professor}
+    Usuario{palavrasCriadas} to Palavra{criador}
+}
+
+relationship ManyToMany {
+    Usuario{salasAluno} to Sala{alunos}
+    ListaPalavras{palavras} to Palavra{listas}
+}
+
+relationship ManyToOne {
+    Atividade{sala} to Sala
+    Atividade{lista} to ListaPalavras
+
+    Resposta{atividade} to Atividade
+    Resposta{aluno} to Usuario
+    Resposta{palavra} to Palavra
+
+    ErroOrtografico{resposta} to Resposta
+
+    Ranking{sala} to Sala
+    Ranking{aluno} to Usuario
+
+    UsuarioConquista{aluno} to Usuario
+    UsuarioConquista{conquista} to Conquista
+}

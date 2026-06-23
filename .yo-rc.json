@@ -1,0 +1,33 @@
+{
+  "generator-jhipster": {
+    "applicationType": "monolith",
+    "authenticationType": "jwt",
+    "baseName": "DIGITADO",
+    "buildTool": "maven",
+    "cacheProvider": "no",
+    "clientFramework": "react",
+    "clientTestFrameworks": [],
+    "clientTheme": "none",
+    "creationTimestamp": 1782165671783,
+    "databaseType": "sql",
+    "devDatabaseType": "mysql",
+    "enableHibernateCache": null,
+    "enableTranslation": true,
+    "entities": [],
+    "feignClient": null,
+    "jhipsterVersion": "8.11.0",
+    "jwtSecretKey": "MTg0YTZkOTAwYzEzZGI4ZmE3YjQxMTZiZDk1NWMxOWExM2E4OGU3ZDVmZmRlZGNlZTlmNWQyYzIzMTlkNDYwMzYwM2RhN2RlOGIyN2M1OTVlNjk2NWJiMzI4YzdlNzU2NDgwZTk2ZjgyOWY3ZjA4MGZlZjEyZGNiMGE3OWI3N2U=",
+    "languages": ["pt-br"],
+    "microfrontend": null,
+    "microfrontends": [],
+    "nativeLanguage": "pt-br",
+    "packageName": "br.com.digitado",
+    "prodDatabaseType": "mysql",
+    "reactive": false,
+    "serverPort": null,
+    "serviceDiscoveryType": null,
+    "syncUserWithIdp": null,
+    "testFrameworks": [],
+    "withAdminUi": true
+  }
+}
