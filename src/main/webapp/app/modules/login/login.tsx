@@ -13,7 +13,7 @@ export const Login = () => {
 
   const handleLogin = (username, password, rememberMe = false) => dispatch(login(username, password, rememberMe));
 
-  const { from } = pageLocation.state || { from: { pathname: '/', search: pageLocation.search } };
+  const { from } = pageLocation.state || { from: { pathname: '/lobby', search: pageLocation.search } };
   if (isAuthenticated) {
     return <Navigate to={from} replace />;
   }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, Col, Row } from 'reactstrap';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
 import { toast } from 'react-toastify';
@@ -7,11 +7,15 @@ import { languages, locales } from 'app/config/translation';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { getSession } from 'app/shared/reducers/authentication';
 import { reset, saveAccountSettings } from './settings.reducer';
+import { TipoUsuario } from 'app/shared/model/enumerations/tipo-usuario.model';
+
+const TIPO_KEY = 'digitado-tipo-usuario';
 
 export const SettingsPage = () => {
   const dispatch = useAppDispatch();
   const account = useAppSelector(state => state.authentication.account);
   const successMessage = useAppSelector(state => state.settings.successMessage);
+  const [tipoUsuario, setTipoUsuario] = useState<string>(localStorage.getItem(TIPO_KEY) ?? TipoUsuario.ALUNO);
 
   useEffect(() => {
     dispatch(getSession());
@@ -27,6 +31,8 @@ export const SettingsPage = () => {
   }, [successMessage]);
 
   const handleValidSubmit = values => {
+    localStorage.setItem(TIPO_KEY, values.tipoUsuario ?? tipoUsuario);
+    setTipoUsuario(values.tipoUsuario ?? tipoUsuario);
     dispatch(
       saveAccountSettings({
         ...account,
@@ -44,7 +50,7 @@ export const SettingsPage = () => {
               User settings for {account.login}
             </Translate>
           </h2>
-          <ValidatedForm id="settings-form" onSubmit={handleValidSubmit} defaultValues={account}>
+          <ValidatedForm id="settings-form" onSubmit={handleValidSubmit} defaultValues={{ ...account, tipoUsuario }}>
             <ValidatedField
               name="firstName"
               label={translate('settings.form.firstname')}
@@ -88,6 +94,10 @@ export const SettingsPage = () => {
                   {languages[locale].name}
                 </option>
               ))}
+            </ValidatedField>
+            <ValidatedField type="select" name="tipoUsuario" label="Tipo de conta" data-cy="tipoUsuario">
+              <option value={TipoUsuario.ALUNO}>Aluno</option>
+              <option value={TipoUsuario.PROFESSOR}>Professor</option>
             </ValidatedField>
             <Button color="primary" type="submit" data-cy="submit">
               <Translate contentKey="settings.form.button">Save</Translate>
