@@ -18,6 +18,7 @@ class SecurityMetersServiceTests {
     private SecurityMetersService securityMetersService;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setup() {
         meterRegistry = new SimpleMeterRegistry();
 
