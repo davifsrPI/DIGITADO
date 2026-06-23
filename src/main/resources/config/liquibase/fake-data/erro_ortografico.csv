@@ -1,0 +1,11 @@
+id;tipo_erro;descricao
+1;LETRA_EXTRA;../fake-data/blob/hipster.txt
+2;ERRO_FONETICO;../fake-data/blob/hipster.txt
+3;LETRA_FALTANDO;../fake-data/blob/hipster.txt
+4;LETRA_EXTRA;../fake-data/blob/hipster.txt
+5;LETRA_EXTRA;../fake-data/blob/hipster.txt
+6;ACENTUACAO;../fake-data/blob/hipster.txt
+7;LETRA_EXTRA;../fake-data/blob/hipster.txt
+8;TROCA_LETRA;../fake-data/blob/hipster.txt
+9;LETRA_EXTRA;../fake-data/blob/hipster.txt
+10;ACENTUACAO;../fake-data/blob/hipster.txt

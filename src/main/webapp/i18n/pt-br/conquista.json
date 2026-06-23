@@ -1,0 +1,26 @@
+{
+  "digitadoApp": {
+    "conquista": {
+      "home": {
+        "title": "Conquistas",
+        "refreshListLabel": "Atualizar lista",
+        "createLabel": "Criar novo Conquista",
+        "createOrEditLabel": "Criar ou editar Conquista",
+        "notFound": "Nenhum Conquista encontrado"
+      },
+      "created": "Um novo Conquista foi criado com o identificador {{ param }}",
+      "updated": "Um Conquista foi atualizado com o identificador {{ param }}",
+      "deleted": "Um Conquista foi excluído com o identificador {{ param }}",
+      "delete": {
+        "question": "Tem certeza de que deseja excluir Conquista {{ id }}?"
+      },
+      "detail": {
+        "title": "Conquista"
+      },
+      "id": "ID",
+      "nome": "Nome",
+      "descricao": "Descricao",
+      "xpRecompensa": "Xp Recompensa"
+    }
+  }
+}

@@ -7,7 +7,17 @@
       "jhipster-needle-menu-add-element": "JHipster will add additional menu entries here (do not translate!)",
       "entities": {
         "main": "Entidades",
-        "jhipster-needle-menu-add-entry": "JHipster will add additional entities here (do not translate!)"
+        "jhipster-needle-menu-add-entry": "JHipster will add additional entities here (do not translate!)",
+        "usuario": "Usuario",
+        "sala": "Sala",
+        "listaPalavras": "Lista Palavras",
+        "palavra": "Palavra",
+        "atividade": "Atividade",
+        "resposta": "Resposta",
+        "erroOrtografico": "Erro Ortografico",
+        "ranking": "Ranking",
+        "conquista": "Conquista",
+        "usuarioConquista": "Usuario Conquista"
       },
       "account": {
         "main": "Conta",

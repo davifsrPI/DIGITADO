@@ -1,0 +1,9 @@
+{
+  "digitadoApp": {
+    "TipoUsuario": {
+      "null": "",
+      "PROFESSOR": "PROFESSOR",
+      "ALUNO": "ALUNO"
+    }
+  }
+}

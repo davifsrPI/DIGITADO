@@ -1,0 +1,28 @@
+{
+  "digitadoApp": {
+    "ranking": {
+      "home": {
+        "title": "Rankings",
+        "refreshListLabel": "Atualizar lista",
+        "createLabel": "Criar novo Ranking",
+        "createOrEditLabel": "Criar ou editar Ranking",
+        "notFound": "Nenhum Ranking encontrado"
+      },
+      "created": "Um novo Ranking foi criado com o identificador {{ param }}",
+      "updated": "Um Ranking foi atualizado com o identificador {{ param }}",
+      "deleted": "Um Ranking foi excluído com o identificador {{ param }}",
+      "delete": {
+        "question": "Tem certeza de que deseja excluir Ranking {{ id }}?"
+      },
+      "detail": {
+        "title": "Ranking"
+      },
+      "id": "ID",
+      "posicao": "Posicao",
+      "pontuacaoTotal": "Pontuacao Total",
+      "ultimaAtualizacao": "Ultima Atualizacao",
+      "sala": "Sala",
+      "aluno": "Aluno"
+    }
+  }
+}

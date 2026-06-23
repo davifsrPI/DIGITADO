@@ -1,0 +1,31 @@
+{
+  "digitadoApp": {
+    "resposta": {
+      "home": {
+        "title": "Respostas",
+        "refreshListLabel": "Atualizar lista",
+        "createLabel": "Criar novo Resposta",
+        "createOrEditLabel": "Criar ou editar Resposta",
+        "notFound": "Nenhum Resposta encontrado"
+      },
+      "created": "Um novo Resposta foi criado com o identificador {{ param }}",
+      "updated": "Um Resposta foi atualizado com o identificador {{ param }}",
+      "deleted": "Um Resposta foi excluído com o identificador {{ param }}",
+      "delete": {
+        "question": "Tem certeza de que deseja excluir Resposta {{ id }}?"
+      },
+      "detail": {
+        "title": "Resposta"
+      },
+      "id": "ID",
+      "respostaDigitada": "Resposta Digitada",
+      "correta": "Correta",
+      "tempoResposta": "Tempo Resposta",
+      "pontuacao": "Pontuacao",
+      "dataResposta": "Data Resposta",
+      "atividade": "Atividade",
+      "aluno": "Aluno",
+      "palavra": "Palavra"
+    }
+  }
+}

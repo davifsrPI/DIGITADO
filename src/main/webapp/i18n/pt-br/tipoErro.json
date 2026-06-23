@@ -1,0 +1,13 @@
+{
+  "digitadoApp": {
+    "TipoErro": {
+      "null": "",
+      "ACENTUACAO": "ACENTUACAO",
+      "TROCA_LETRA": "TROCA_LETRA",
+      "LETRA_FALTANDO": "LETRA_FALTANDO",
+      "LETRA_EXTRA": "LETRA_EXTRA",
+      "ERRO_FONETICO": "ERRO_FONETICO",
+      "OUTRO": "OUTRO"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "digitadoApp": {
+    "listaPalavras": {
+      "home": {
+        "title": "Lista Palavras",
+        "refreshListLabel": "Atualizar lista",
+        "createLabel": "Criar novo Lista Palavras",
+        "createOrEditLabel": "Criar ou editar Lista Palavras",
+        "notFound": "Nenhum Lista Palavras encontrado"
+      },
+      "created": "Um novo Lista Palavras foi criado com o identificador {{ param }}",
+      "updated": "Um Lista Palavras foi atualizado com o identificador {{ param }}",
+      "deleted": "Um Lista Palavras foi excluído com o identificador {{ param }}",
+      "delete": {
+        "question": "Tem certeza de que deseja excluir Lista Palavras {{ id }}?"
+      },
+      "detail": {
+        "title": "Lista Palavras"
+      },
+      "id": "ID",
+      "nomeLista": "Nome Lista",
+      "descricao": "Descricao",
+      "ativo": "Ativo",
+      "palavras": "Palavras",
+      "professor": "Professor"
+    }
+  }
+}

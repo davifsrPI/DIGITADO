@@ -1,0 +1,27 @@
+{
+  "annotations": {
+    "changelogDate": "20260623221035"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "tipoErro",
+      "fieldType": "TipoErro",
+      "fieldValues": "ACENTUACAO,TROCA_LETRA,LETRA_FALTANDO,LETRA_EXTRA,ERRO_FONETICO,OUTRO"
+    },
+    {
+      "fieldName": "descricao",
+      "fieldType": "TextBlob"
+    }
+  ],
+  "name": "ErroOrtografico",
+  "relationships": [
+    {
+      "otherEntityName": "resposta",
+      "relationshipName": "resposta",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "searchEngine": "no"
+}

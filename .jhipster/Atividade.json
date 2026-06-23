@@ -1,0 +1,52 @@
+{
+  "annotations": {
+    "changelogDate": "20260623221033"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "titulo",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "modo",
+      "fieldType": "ModoAtividade",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "INDIVIDUAL,COLETIVO"
+    },
+    {
+      "fieldName": "dataInicio",
+      "fieldType": "Instant"
+    },
+    {
+      "fieldName": "dataFim",
+      "fieldType": "Instant"
+    },
+    {
+      "fieldName": "tempoLimite",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "status",
+      "fieldType": "StatusAtividade",
+      "fieldValues": "PENDENTE,EM_ANDAMENTO,ENCERRADA"
+    }
+  ],
+  "name": "Atividade",
+  "relationships": [
+    {
+      "otherEntityName": "sala",
+      "relationshipName": "sala",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "listaPalavras",
+      "relationshipName": "lista",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "searchEngine": "no"
+}

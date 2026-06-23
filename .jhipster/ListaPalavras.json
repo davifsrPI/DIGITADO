@@ -1,0 +1,39 @@
+{
+  "annotations": {
+    "changelogDate": "20260623221031"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "nomeLista",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "descricao",
+      "fieldType": "TextBlob"
+    },
+    {
+      "fieldName": "ativo",
+      "fieldType": "Boolean"
+    }
+  ],
+  "name": "ListaPalavras",
+  "relationships": [
+    {
+      "otherEntityName": "palavra",
+      "otherEntityRelationshipName": "listas",
+      "relationshipName": "palavras",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-many"
+    },
+    {
+      "otherEntityName": "usuario",
+      "otherEntityRelationshipName": "listasPalavras",
+      "relationshipName": "professor",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "searchEngine": "no"
+}

@@ -1,0 +1,36 @@
+{
+  "annotations": {
+    "changelogDate": "20260623221038"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "dataConquista",
+      "fieldType": "Instant"
+    },
+    {
+      "fieldName": "progresso",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "concluida",
+      "fieldType": "Boolean"
+    }
+  ],
+  "name": "UsuarioConquista",
+  "relationships": [
+    {
+      "otherEntityName": "usuario",
+      "relationshipName": "aluno",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "conquista",
+      "relationshipName": "conquista",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "searchEngine": "no"
+}

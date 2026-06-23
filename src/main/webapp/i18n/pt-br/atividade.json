@@ -1,0 +1,31 @@
+{
+  "digitadoApp": {
+    "atividade": {
+      "home": {
+        "title": "Atividades",
+        "refreshListLabel": "Atualizar lista",
+        "createLabel": "Criar novo Atividade",
+        "createOrEditLabel": "Criar ou editar Atividade",
+        "notFound": "Nenhum Atividade encontrado"
+      },
+      "created": "Um novo Atividade foi criado com o identificador {{ param }}",
+      "updated": "Um Atividade foi atualizado com o identificador {{ param }}",
+      "deleted": "Um Atividade foi excluído com o identificador {{ param }}",
+      "delete": {
+        "question": "Tem certeza de que deseja excluir Atividade {{ id }}?"
+      },
+      "detail": {
+        "title": "Atividade"
+      },
+      "id": "ID",
+      "titulo": "Titulo",
+      "modo": "Modo",
+      "dataInicio": "Data Inicio",
+      "dataFim": "Data Fim",
+      "tempoLimite": "Tempo Limite",
+      "status": "Status",
+      "sala": "Sala",
+      "lista": "Lista"
+    }
+  }
+}

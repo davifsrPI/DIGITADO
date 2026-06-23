@@ -1,0 +1,29 @@
+{
+  "digitadoApp": {
+    "sala": {
+      "home": {
+        "title": "Salas",
+        "refreshListLabel": "Atualizar lista",
+        "createLabel": "Criar novo Sala",
+        "createOrEditLabel": "Criar ou editar Sala",
+        "notFound": "Nenhum Sala encontrado"
+      },
+      "created": "Um novo Sala foi criado com o identificador {{ param }}",
+      "updated": "Um Sala foi atualizado com o identificador {{ param }}",
+      "deleted": "Um Sala foi excluído com o identificador {{ param }}",
+      "delete": {
+        "question": "Tem certeza de que deseja excluir Sala {{ id }}?"
+      },
+      "detail": {
+        "title": "Sala"
+      },
+      "id": "ID",
+      "nome": "Nome",
+      "codigo": "Codigo",
+      "descricao": "Descricao",
+      "ativo": "Ativo",
+      "professor": "Professor",
+      "alunos": "Alunos"
+    }
+  }
+}

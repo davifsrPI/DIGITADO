@@ -1,0 +1,70 @@
+{
+  "annotations": {
+    "changelogDate": "20260623221029"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "nome",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "sobrenome",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "email",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "unique"]
+    },
+    {
+      "fieldName": "senha",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "tipoUsuario",
+      "fieldType": "TipoUsuario",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "PROFESSOR,ALUNO"
+    },
+    {
+      "fieldName": "ativo",
+      "fieldType": "Boolean"
+    }
+  ],
+  "name": "Usuario",
+  "relationships": [
+    {
+      "otherEntityName": "sala",
+      "otherEntityRelationshipName": "professor",
+      "relationshipName": "salas",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "listaPalavras",
+      "otherEntityRelationshipName": "professor",
+      "relationshipName": "listasPalavras",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "palavra",
+      "otherEntityRelationshipName": "criador",
+      "relationshipName": "palavrasCriadas",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "sala",
+      "otherEntityRelationshipName": "alunos",
+      "relationshipName": "salasAluno",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-many"
+    }
+  ],
+  "searchEngine": "no"
+}

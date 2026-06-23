@@ -1,0 +1,10 @@
+{
+  "digitadoApp": {
+    "Dificuldade": {
+      "null": "",
+      "FACIL": "FACIL",
+      "MEDIO": "MEDIO",
+      "DIFICIL": "DIFICIL"
+    }
+  }
+}

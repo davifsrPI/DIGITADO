@@ -1,0 +1,31 @@
+{
+  "digitadoApp": {
+    "palavra": {
+      "home": {
+        "title": "Palavras",
+        "refreshListLabel": "Atualizar lista",
+        "createLabel": "Criar novo Palavra",
+        "createOrEditLabel": "Criar ou editar Palavra",
+        "notFound": "Nenhum Palavra encontrado"
+      },
+      "created": "Um novo Palavra foi criado com o identificador {{ param }}",
+      "updated": "Um Palavra foi atualizado com o identificador {{ param }}",
+      "deleted": "Um Palavra foi excluído com o identificador {{ param }}",
+      "delete": {
+        "question": "Tem certeza de que deseja excluir Palavra {{ id }}?"
+      },
+      "detail": {
+        "title": "Palavra"
+      },
+      "id": "ID",
+      "texto": "Texto",
+      "dificuldade": "Dificuldade",
+      "categoria": "Categoria",
+      "idioma": "Idioma",
+      "possuiAcento": "Possui Acento",
+      "ativa": "Ativa",
+      "criador": "Criador",
+      "listas": "Listas"
+    }
+  }
+}

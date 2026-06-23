@@ -1,0 +1,28 @@
+{
+  "digitadoApp": {
+    "usuarioConquista": {
+      "home": {
+        "title": "Usuario Conquistas",
+        "refreshListLabel": "Atualizar lista",
+        "createLabel": "Criar novo Usuario Conquista",
+        "createOrEditLabel": "Criar ou editar Usuario Conquista",
+        "notFound": "Nenhum Usuario Conquista encontrado"
+      },
+      "created": "Um novo Usuario Conquista foi criado com o identificador {{ param }}",
+      "updated": "Um Usuario Conquista foi atualizado com o identificador {{ param }}",
+      "deleted": "Um Usuario Conquista foi excluído com o identificador {{ param }}",
+      "delete": {
+        "question": "Tem certeza de que deseja excluir Usuario Conquista {{ id }}?"
+      },
+      "detail": {
+        "title": "Usuario Conquista"
+      },
+      "id": "ID",
+      "dataConquista": "Data Conquista",
+      "progresso": "Progresso",
+      "concluida": "Concluida",
+      "aluno": "Aluno",
+      "conquista": "Conquista"
+    }
+  }
+}

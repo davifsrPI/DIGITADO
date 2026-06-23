@@ -1,0 +1,36 @@
+{
+  "annotations": {
+    "changelogDate": "20260623221036"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "posicao",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "pontuacaoTotal",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "ultimaAtualizacao",
+      "fieldType": "Instant"
+    }
+  ],
+  "name": "Ranking",
+  "relationships": [
+    {
+      "otherEntityName": "sala",
+      "relationshipName": "sala",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "usuario",
+      "relationshipName": "aluno",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "searchEngine": "no"
+}

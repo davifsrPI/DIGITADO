@@ -1,0 +1,50 @@
+{
+  "annotations": {
+    "changelogDate": "20260623221034"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "respostaDigitada",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "correta",
+      "fieldType": "Boolean"
+    },
+    {
+      "fieldName": "tempoResposta",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "pontuacao",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "dataResposta",
+      "fieldType": "Instant"
+    }
+  ],
+  "name": "Resposta",
+  "relationships": [
+    {
+      "otherEntityName": "atividade",
+      "relationshipName": "atividade",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "usuario",
+      "relationshipName": "aluno",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "palavra",
+      "relationshipName": "palavra",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "searchEngine": "no"
+}

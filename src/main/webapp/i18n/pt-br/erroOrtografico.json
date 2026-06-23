@@ -1,0 +1,26 @@
+{
+  "digitadoApp": {
+    "erroOrtografico": {
+      "home": {
+        "title": "Erro Ortograficos",
+        "refreshListLabel": "Atualizar lista",
+        "createLabel": "Criar novo Erro Ortografico",
+        "createOrEditLabel": "Criar ou editar Erro Ortografico",
+        "notFound": "Nenhum Erro Ortografico encontrado"
+      },
+      "created": "Um novo Erro Ortografico foi criado com o identificador {{ param }}",
+      "updated": "Um Erro Ortografico foi atualizado com o identificador {{ param }}",
+      "deleted": "Um Erro Ortografico foi excluído com o identificador {{ param }}",
+      "delete": {
+        "question": "Tem certeza de que deseja excluir Erro Ortografico {{ id }}?"
+      },
+      "detail": {
+        "title": "Erro Ortografico"
+      },
+      "id": "ID",
+      "tipoErro": "Tipo Erro",
+      "descricao": "Descricao",
+      "resposta": "Resposta"
+    }
+  }
+}

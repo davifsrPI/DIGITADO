@@ -1,0 +1,53 @@
+{
+  "annotations": {
+    "changelogDate": "20260623221032"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "texto",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "dificuldade",
+      "fieldType": "Dificuldade",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "FACIL,MEDIO,DIFICIL"
+    },
+    {
+      "fieldName": "categoria",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "idioma",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "possuiAcento",
+      "fieldType": "Boolean"
+    },
+    {
+      "fieldName": "ativa",
+      "fieldType": "Boolean"
+    }
+  ],
+  "name": "Palavra",
+  "relationships": [
+    {
+      "otherEntityName": "usuario",
+      "otherEntityRelationshipName": "palavrasCriadas",
+      "relationshipName": "criador",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "listaPalavras",
+      "otherEntityRelationshipName": "palavras",
+      "relationshipName": "listas",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-many"
+    }
+  ],
+  "searchEngine": "no"
+}

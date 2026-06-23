@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+                        http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+    <!--
+        Added the constraints for entity ListaPalavras.
+    -->
+    <changeSet id="20260623221031-2" author="jhipster">
+
+        <addForeignKeyConstraint baseColumnNames="lista_palavras_id"
+                                 baseTableName="rel_lista_palavras__palavras"
+                                 constraintName="fk_rel_lista_palavras__palavras__lista_palavras_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="lista_palavras"
+                                 />
+
+        <addForeignKeyConstraint baseColumnNames="palavras_id"
+                                 baseTableName="rel_lista_palavras__palavras"
+                                 constraintName="fk_rel_lista_palavras__palavras__palavras_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="palavra"
+                                 />
+
+        <addForeignKeyConstraint baseColumnNames="professor_id"
+                                 baseTableName="lista_palavras"
+                                 constraintName="fk_lista_palavras__professor_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="usuario"
+                                 />
+    </changeSet>
+</databaseChangeLog>
