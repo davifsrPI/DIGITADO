@@ -1,5 +1,6 @@
 package br.com.digitado.web.rest;
 
+import br.com.digitado.service.OnlineUsersService;
 import br.com.digitado.service.UserService;
 import br.com.digitado.service.dto.UserDTO;
 import java.util.*;
@@ -26,9 +27,11 @@ public class PublicUserResource {
     private static final Logger LOG = LoggerFactory.getLogger(PublicUserResource.class);
 
     private final UserService userService;
+    private final OnlineUsersService onlineUsersService;
 
-    public PublicUserResource(UserService userService) {
+    public PublicUserResource(UserService userService, OnlineUsersService onlineUsersService) {
         this.userService = userService;
+        this.onlineUsersService = onlineUsersService;
     }
 
     /**
@@ -51,5 +54,10 @@ public class PublicUserResource {
 
     private boolean onlyContainsAllowedProperties(Pageable pageable) {
         return pageable.getSort().stream().map(Sort.Order::getProperty).allMatch(ALLOWED_ORDERED_PROPERTIES::contains);
+    }
+
+    @GetMapping("/online-count")
+    public ResponseEntity<Map<String, Long>> getOnlineCount() {
+        return ResponseEntity.ok(Map.of("count", onlineUsersService.getOnlineCount()));
     }
 }
