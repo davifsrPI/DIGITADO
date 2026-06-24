@@ -101,7 +101,7 @@ export const CriarSala = () => {
     setError(null);
     try {
       const res = await axios.post('/api/salas', { nome, codigo, descricao: descricao || null, ativo: true });
-      navigate(`/sala/${res.data.codigo}`);
+      navigate(`/sala/${res.data.codigo}`, { state: { isProfessor: true } });
     } catch {
       setError('Não foi possível criar a sala. Tente novamente.');
     } finally {

@@ -1,22 +1,19 @@
 import './sala-jogo-styles.scss';
 
 import React, { useCallback, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
-import { TipoUsuario } from 'app/shared/model/enumerations/tipo-usuario.model';
 import { EstadoJogo, FeedbackAluno, useSalaWebSocket } from './hooks/useSalaWebSocket';
 import { SalaJogoAluno } from './sala-jogo-aluno';
 import { SalaJogoProfessor } from './sala-jogo-professor';
 
-const TIPO_KEY = 'digitado-tipo-usuario';
-
 export const SalaJogo: React.FC = () => {
   const { codigo } = useParams<{ codigo: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const account = useAppSelector(state => state.authentication.account);
-  const tipoUsuario = (localStorage.getItem(TIPO_KEY) as TipoUsuario) ?? TipoUsuario.ALUNO;
-  const isProfessor = tipoUsuario === TipoUsuario.PROFESSOR;
+  const isProfessor = (location.state as { isProfessor?: boolean } | null)?.isProfessor === true;
 
   const login = account?.login ?? 'anonimo';
   const nome = account?.firstName ? `${account.firstName} ${account.lastName ?? ''}`.trim() : login;

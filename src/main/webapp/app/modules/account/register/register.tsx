@@ -8,10 +8,6 @@ import './register.scss';
 import PasswordStrengthBar from 'app/shared/layout/password/password-strength-bar';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { handleRegister, reset } from './register.reducer';
-import { TipoUsuario } from 'app/shared/model/enumerations/tipo-usuario.model';
-
-const TIPO_KEY = 'digitado-tipo-usuario';
-
 export const RegisterPage = () => {
   const [password, setPassword] = useState('');
   const dispatch = useAppDispatch();
@@ -26,8 +22,7 @@ export const RegisterPage = () => {
 
   const currentLocale = useAppSelector(state => state.locale.currentLocale);
 
-  const handleValidSubmit = ({ username, email, firstPassword, tipoUsuario }) => {
-    localStorage.setItem(TIPO_KEY, tipoUsuario ?? TipoUsuario.ALUNO);
+  const handleValidSubmit = ({ username, email, firstPassword }) => {
     dispatch(handleRegister({ login: username, email, password: firstPassword, langKey: currentLocale }));
   };
 
@@ -115,10 +110,6 @@ export const RegisterPage = () => {
               }}
               data-cy="secondPassword"
             />
-            <ValidatedField type="select" name="tipoUsuario" label="Tipo de conta" data-cy="tipoUsuario">
-              <option value={TipoUsuario.ALUNO}>Aluno</option>
-              <option value={TipoUsuario.PROFESSOR}>Professor</option>
-            </ValidatedField>
             <Button id="register-submit" color="primary" type="submit" data-cy="submit">
               <Translate contentKey="register.form.button">Register</Translate>
             </Button>

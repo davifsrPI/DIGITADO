@@ -4,13 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
-import { TipoUsuario } from 'app/shared/model/enumerations/tipo-usuario.model';
-
-const TIPO_KEY = 'digitado-tipo-usuario';
 
 export const Lobby = () => {
   const account = useAppSelector(state => state.authentication.account);
-  const [tipoUsuario] = useState<TipoUsuario>((localStorage.getItem(TIPO_KEY) as TipoUsuario) ?? TipoUsuario.ALUNO);
   const [roomCode, setRoomCode] = useState('');
   const navigate = useNavigate();
 
@@ -20,8 +16,6 @@ export const Lobby = () => {
       document.body.classList.remove('lobby-page');
     };
   }, []);
-
-  const isProfessor = tipoUsuario === TipoUsuario.PROFESSOR;
 
   const handleEnterRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +35,7 @@ export const Lobby = () => {
         <div className="lobby-greeting">
           <span className="lobby-badge">
             <span className="badge-dot"></span>
-            {isProfessor ? 'Professor' : 'Aluno'}
+            Online
           </span>
           <h1>
             Olá, <span className="lobby-name">{account?.firstName || account?.login}</span> 👋
@@ -70,13 +64,11 @@ export const Lobby = () => {
           </form>
         </div>
 
-        {isProfessor && (
-          <Link to="/sala/new" className="create-room-link">
-            <span className="create-room-link-icon">✏️</span>
-            Criar uma sala nova
-            <span className="create-room-link-arrow">→</span>
-          </Link>
-        )}
+        <Link to="/sala/new" className="create-room-link">
+          <span className="create-room-link-icon">✏️</span>
+          Criar uma sala nova
+          <span className="create-room-link-arrow">→</span>
+        </Link>
 
         <div className="lobby-footer-links">
           <Link to="/ranking">🏆 Ver ranking</Link>
