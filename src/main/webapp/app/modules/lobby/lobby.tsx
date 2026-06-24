@@ -1,7 +1,7 @@
 import './lobby.scss';
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
 import { TipoUsuario } from 'app/shared/model/enumerations/tipo-usuario.model';
@@ -10,7 +10,9 @@ const TIPO_KEY = 'digitado-tipo-usuario';
 
 export const Lobby = () => {
   const account = useAppSelector(state => state.authentication.account);
-  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>((localStorage.getItem(TIPO_KEY) as TipoUsuario) ?? TipoUsuario.ALUNO);
+  const [tipoUsuario] = useState<TipoUsuario>((localStorage.getItem(TIPO_KEY) as TipoUsuario) ?? TipoUsuario.ALUNO);
+  const [roomCode, setRoomCode] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.body.classList.add('lobby-page');
@@ -20,6 +22,12 @@ export const Lobby = () => {
   }, []);
 
   const isProfessor = tipoUsuario === TipoUsuario.PROFESSOR;
+
+  const handleEnterRoom = (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = roomCode.trim().toUpperCase();
+    if (code) navigate(`/sala/${code}`);
+  };
 
   return (
     <div className="lobby-wrapper">
@@ -38,30 +46,37 @@ export const Lobby = () => {
           <h1>
             Olá, <span className="lobby-name">{account?.firstName || account?.login}</span> 👋
           </h1>
-          <p>O que você quer fazer hoje?</p>
+          <p>Digite o código da sala para começar</p>
         </div>
 
-        <div className={`lobby-cards ${isProfessor ? 'two-cards' : 'one-card'}`}>
-          <Link to="/sala" className="lobby-card enter-card">
-            <div className="card-icon">🎮</div>
-            <div className="card-info">
-              <h2>Entrar em uma sala</h2>
-              <p>Participe de uma sala existente e dispute com outros jogadores em tempo real.</p>
-            </div>
-            <div className="card-arrow">→</div>
+        <div className="enter-room-box">
+          <div className="enter-room-icon">🎮</div>
+          <h2>Entrar em uma sala</h2>
+          <p>Insira o código fornecido pelo seu professor</p>
+          <form onSubmit={handleEnterRoom} className="room-code-form">
+            <input
+              type="text"
+              className="room-code-input"
+              placeholder="Ex: A4BX2"
+              value={roomCode}
+              onChange={e => setRoomCode(e.target.value.toUpperCase())}
+              maxLength={8}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <button type="submit" className="room-enter-btn" disabled={!roomCode.trim()}>
+              Entrar →
+            </button>
+          </form>
+        </div>
+
+        {isProfessor && (
+          <Link to="/sala/new" className="create-room-link">
+            <span className="create-room-link-icon">✏️</span>
+            Criar uma sala nova
+            <span className="create-room-link-arrow">→</span>
           </Link>
-
-          {isProfessor && (
-            <Link to="/sala/new" className="lobby-card create-card">
-              <div className="card-icon">✏️</div>
-              <div className="card-info">
-                <h2>Criar uma sala</h2>
-                <p>Monte uma sala personalizada, escolha as palavras e convide seus alunos.</p>
-              </div>
-              <div className="card-arrow">→</div>
-            </Link>
-          )}
-        </div>
+        )}
 
         <div className="lobby-footer-links">
           <Link to="/ranking">🏆 Ver ranking</Link>

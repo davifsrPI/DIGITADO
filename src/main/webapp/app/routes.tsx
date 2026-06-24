@@ -11,6 +11,7 @@ import PasswordResetFinish from 'app/modules/account/password-reset/finish/passw
 import Logout from 'app/modules/login/logout';
 import Home from 'app/modules/home/home';
 import Lobby from 'app/modules/lobby/lobby';
+import CriarSala from 'app/modules/sala/criar-sala';
 import EntitiesRoutes from 'app/entities/routes';
 import PrivateRoute from 'app/shared/auth/private-route';
 import ErrorBoundaryRoutes from 'app/shared/error/error-boundary-routes';
@@ -38,6 +39,14 @@ const AppRoutes = () => {
           element={
             <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <Lobby />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="sala/new"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+              <CriarSala />
             </PrivateRoute>
           }
         />

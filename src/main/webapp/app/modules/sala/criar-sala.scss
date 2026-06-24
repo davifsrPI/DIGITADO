@@ -1,0 +1,259 @@
+body.criar-sala-page .jh-card {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+body.criar-sala-page .view-container {
+  padding: 0 !important;
+}
+
+.cs-wrapper {
+  position: relative;
+  min-height: calc(100vh - 60px);
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Poppins', sans-serif;
+  color: white;
+  padding: 40px 20px;
+  overflow: hidden;
+}
+
+.cs-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cs-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: 0.35;
+}
+
+.cs-shape.one {
+  width: 420px;
+  height: 420px;
+  background: #22c55e;
+  top: -100px;
+  left: -100px;
+}
+
+.cs-shape.two {
+  width: 380px;
+  height: 380px;
+  background: #2563eb;
+  bottom: -120px;
+  right: -80px;
+}
+
+.cs-shape.three {
+  width: 280px;
+  height: 280px;
+  background: #facc15;
+  top: 50%;
+  left: 60%;
+  transform: translate(-50%, -50%);
+}
+
+.cs-center {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cs-back {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  transition: color 0.2s;
+
+  &:hover {
+    color: white;
+  }
+}
+
+.cs-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px);
+  border-radius: 28px;
+  padding: 44px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.cs-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 36px;
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+
+  p {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+.cs-header-icon {
+  font-size: 38px;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.cs-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #fca5a5;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.cs-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.cs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  input,
+  textarea {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 14px 18px;
+    font-size: 14px;
+    color: white;
+    font-family: 'Poppins', sans-serif;
+    outline: none;
+    resize: none;
+    transition:
+      border-color 0.2s,
+      background 0.2s;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    &:focus {
+      border-color: rgba(34, 197, 94, 0.6);
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+.cs-optional {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+}
+
+.cs-code-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cs-code-display {
+  flex: 1;
+  height: 58px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 2px dashed rgba(34, 197, 94, 0.4);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: #4ade80;
+  font-family: monospace;
+}
+
+.cs-regen-btn {
+  height: 58px;
+  padding: 0 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+}
+
+.cs-code-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.5;
+}
+
+.cs-submit-btn {
+  width: 100%;
+  height: 56px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+  margin-top: 8px;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(34, 197, 94, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
