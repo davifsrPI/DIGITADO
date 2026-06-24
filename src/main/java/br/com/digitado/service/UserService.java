@@ -3,8 +3,11 @@ package br.com.digitado.service;
 import br.com.digitado.config.Constants;
 import br.com.digitado.domain.Authority;
 import br.com.digitado.domain.User;
+import br.com.digitado.domain.Usuario;
+import br.com.digitado.domain.enumeration.TipoUsuario;
 import br.com.digitado.repository.AuthorityRepository;
 import br.com.digitado.repository.UserRepository;
+import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.service.dto.AdminUserDTO;
@@ -38,10 +41,18 @@ public class UserService {
 
     private final AuthorityRepository authorityRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthorityRepository authorityRepository) {
+    private final UsuarioRepository usuarioRepository;
+
+    public UserService(
+        UserRepository userRepository,
+        PasswordEncoder passwordEncoder,
+        AuthorityRepository authorityRepository,
+        UsuarioRepository usuarioRepository
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authorityRepository = authorityRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     public Optional<User> activateRegistration(String key) {
@@ -118,8 +129,21 @@ public class UserService {
         authorityRepository.findById(AuthoritiesConstants.USER).ifPresent(authorities::add);
         newUser.setAuthorities(authorities);
         userRepository.save(newUser);
+        createUsuarioForUser(newUser, encryptedPassword, TipoUsuario.ALUNO);
         LOG.debug("Created Information for User: {}", newUser);
         return newUser;
+    }
+
+    private void createUsuarioForUser(User user, String encryptedPassword, TipoUsuario tipo) {
+        Usuario usuario = new Usuario();
+        usuario.setNome(user.getFirstName() != null ? user.getFirstName() : user.getLogin());
+        usuario.setSobrenome(user.getLastName() != null ? user.getLastName() : "");
+        usuario.setEmail(user.getEmail() != null ? user.getEmail() : user.getLogin() + "@digitado.local");
+        usuario.setSenha(encryptedPassword);
+        usuario.setTipoUsuario(tipo);
+        usuario.setAtivo(true);
+        usuarioRepository.save(usuario);
+        LOG.debug("Created Usuario for User: {}", user.getLogin());
     }
 
     private boolean removeNonActivatedUser(User existingUser) {
@@ -161,6 +185,7 @@ public class UserService {
             user.setAuthorities(authorities);
         }
         userRepository.save(user);
+        createUsuarioForUser(user, encryptedPassword, TipoUsuario.ALUNO);
         LOG.debug("Created Information for User: {}", user);
         return user;
     }

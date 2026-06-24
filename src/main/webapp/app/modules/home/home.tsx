@@ -1,31 +1,18 @@
 import './home.scss';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
 
 export const Home = () => {
   const account = useAppSelector(state => state.authentication.account);
-  const [onlineCount, setOnlineCount] = useState<number | null>(null);
 
   useEffect(() => {
     document.body.classList.add('home-page');
     return () => {
       document.body.classList.remove('home-page');
     };
-  }, []);
-
-  useEffect(() => {
-    const fetchCount = () => {
-      fetch('/api/online-count')
-        .then(r => r.json())
-        .then((data: { count: number }) => setOnlineCount(data.count))
-        .catch(() => setOnlineCount(null));
-    };
-    fetchCount();
-    const interval = setInterval(fetchCount, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -42,7 +29,7 @@ export const Home = () => {
       <section className="hero">
         <div className="hero-badge">
           <span className="badge-dot"></span>
-          {onlineCount !== null ? `${onlineCount} jogador${onlineCount !== 1 ? 'es' : ''} online agora` : 'Verificando jogadores online...'}
+          Jogue agora com outros alunos
         </div>
 
         <h1 className="hero-title">
