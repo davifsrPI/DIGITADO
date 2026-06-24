@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
-import { Alert, Button, Col, Row } from 'reactstrap';
+import { Button } from 'reactstrap';
 import { toast } from 'react-toastify';
-import { Link } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
+import './register.scss';
 
 import PasswordStrengthBar from 'app/shared/layout/password/password-strength-bar';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -15,12 +16,13 @@ export const RegisterPage = () => {
   const [password, setPassword] = useState('');
   const dispatch = useAppDispatch();
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    document.body.classList.add('register-page');
+    return () => {
+      document.body.classList.remove('register-page');
       dispatch(reset());
-    },
-    [],
-  );
+    };
+  }, []);
 
   const currentLocale = useAppSelector(state => state.locale.currentLocale);
 
@@ -40,16 +42,23 @@ export const RegisterPage = () => {
   }, [successMessage]);
 
   return (
-    <div>
-      <Row className="justify-content-center">
-        <Col md="8">
-          <h1 id="register-title" data-cy="registerTitle">
-            <Translate contentKey="register.title">Registration</Translate>
-          </h1>
-        </Col>
-      </Row>
-      <Row className="justify-content-center">
-        <Col md="8">
+    <div className="register-wrapper">
+      <div className="register-bg">
+        <div className="rg-shape one" />
+        <div className="rg-shape two" />
+        <div className="rg-shape three" />
+      </div>
+
+      <div className="register-center">
+        <div className="register-brand">
+          <span className="register-brand-icon">✦</span>
+          DIGITADO
+        </div>
+
+        <div className="register-card">
+          <h2>Criar conta</h2>
+          <p className="register-sub">Preencha seus dados para se cadastrar</p>
+
           <ValidatedForm id="register-form" onSubmit={handleValidSubmit}>
             <ValidatedField
               name="username"
@@ -114,24 +123,13 @@ export const RegisterPage = () => {
               <Translate contentKey="register.form.button">Register</Translate>
             </Button>
           </ValidatedForm>
-          <p>&nbsp;</p>
-          <Alert color="warning">
-            <span>
-              <Translate contentKey="global.messages.info.authenticated.prefix">If you want to</Translate>{' '}
-            </span>
-            <Link to="/login" className="alert-link">
-              <Translate contentKey="global.messages.info.authenticated.link">sign in</Translate>
-            </Link>
-            <span>
-              <Translate contentKey="global.messages.info.authenticated.suffix">
-                , you can try the default accounts:
-                <br />- Administrator (login=&quot;admin&quot; and password=&quot;admin&quot;)
-                <br />- User (login=&quot;user&quot; and password=&quot;user&quot;).
-              </Translate>
-            </span>
-          </Alert>
-        </Col>
-      </Row>
+
+          <div className="register-footer-link">
+            <span>Já tem uma conta?</span>
+            <RouterLink to="/login">Entrar</RouterLink>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

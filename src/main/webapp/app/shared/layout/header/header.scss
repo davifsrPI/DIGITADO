@@ -1,17 +1,9 @@
-$header-color: #fff;
-$header-color-secondary: #bbb;
-$header-color-hover: darken($header-color, 20%);
-
 /* ==========================================================================
 Development Ribbon
 ========================================================================== */
 .ribbon {
   background-color: rgba(170, 0, 0, 0.5);
   left: -3.5em;
-  -moz-transform: rotate(-45deg);
-  -ms-transform: rotate(-45deg);
-  -o-transform: rotate(-45deg);
-  -webkit-transform: rotate(-45deg);
   transform: rotate(-45deg);
   overflow: hidden;
   position: absolute;
@@ -21,6 +13,7 @@ Development Ribbon
   z-index: 99999;
   pointer-events: none;
   opacity: 0.75;
+
   a {
     color: #fff;
     display: block;
@@ -35,88 +28,163 @@ Development Ribbon
 }
 
 /* ==========================================================================
-Navbar styles
+Navbar
 ========================================================================== */
 .jh-navbar {
-  background-color: #353d47;
-  padding: 0.2em 1em;
-  .profile-image {
-    margin: -10px 0;
-    height: 40px;
-    width: 40px;
-    border-radius: 50%;
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 0.3em 1.2em;
+
+  .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
   }
+
+  a.nav-link,
+  .nav-link {
+    color: rgba(255, 255, 255, 0.75) !important;
+    font-weight: 500;
+    transition: color 0.2s;
+
+    &:hover {
+      color: white !important;
+    }
+  }
+
+  .dropdown-toggle {
+    color: rgba(255, 255, 255, 0.75) !important;
+
+    &::after {
+      margin-left: 0.25em;
+      opacity: 0.6;
+    }
+
+    &:hover {
+      color: white !important;
+    }
+  }
+
+  ul.navbar-nav {
+    padding: 0.4em 0;
+
+    .nav-item {
+      margin-left: 0.5rem;
+    }
+  }
+
   .dropdown-item.active,
   .dropdown-item.active:focus,
   .dropdown-item.active:hover {
-    background-color: #353d47;
-  }
-  .dropdown-toggle::after {
-    margin-left: 0.15em;
-  }
-  ul.navbar-nav {
-    padding: 0.5em;
-    .nav-item {
-      margin-left: 1.5rem;
-    }
-  }
-  a.nav-link {
-    font-weight: 400;
-    > span {
-      margin-left: 5px;
-    }
-  }
-  .jh-navbar-toggler {
-    color: #ccc;
-    font-size: 1.5em;
-    padding: 10px;
-    &:hover {
-      color: #fff;
-    }
+    background-color: rgba(99, 102, 241, 0.2);
   }
 }
+
 .navbar-brand {
   overflow: hidden;
 }
 
-.jh-navbar .navbar-nav .nav-link {
-  padding-right: 0;
-  padding-left: 0;
-}
-
-.navbar-version {
-  font-size: 0.65em;
-  color: $header-color-secondary;
-  padding: 0 0 0 10px;
-}
-
+/* ==========================================================================
+Brand
+========================================================================== */
 .brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none !important;
+
   &:hover {
     text-decoration: none;
   }
+
   .brand-icon {
-    height: 35px;
-    width: auto;
-    display: inline-block;
-    img {
-      width: 45px;
-    }
+    display: none;
   }
 }
 
 .brand-title {
-  font-size: 1.25rem;
-  margin-left: 0.25rem;
-  color: $header-color;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: white !important;
+
+  &::before {
+    content: '✦ ';
+    color: #facc15;
+  }
+
   &:hover {
-    color: $header-color-hover;
+    color: rgba(255, 255, 255, 0.85) !important;
     text-decoration: none;
   }
 }
 
+.navbar-version {
+  font-size: 0.6em;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 0 0 0 6px;
+}
+
+/* ==========================================================================
+Dropdown menu
+========================================================================== */
+.jh-navbar .dropdown-menu {
+  background: rgba(10, 18, 36, 0.97);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: 8px;
+  min-width: 190px;
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  margin-top: 6px;
+
+  .dropdown-item {
+    color: rgba(255, 255, 255, 0.78);
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition:
+      background 0.15s,
+      color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    svg,
+    .fa,
+    [data-icon] {
+      opacity: 0.65;
+      width: 14px;
+    }
+
+    &:hover,
+    &:focus {
+      background: rgba(99, 102, 241, 0.18);
+      color: white;
+
+      svg,
+      .fa,
+      [data-icon] {
+        opacity: 1;
+      }
+    }
+  }
+
+  .dropdown-divider {
+    border-color: rgba(255, 255, 255, 0.07);
+    margin: 6px 8px;
+  }
+}
+
+/* ==========================================================================
+Loading bar
+========================================================================== */
 .loading-bar {
-  height: 3px;
-  background-color: #009cd8;
+  height: 2px;
+  background: linear-gradient(90deg, #6366f1, #22c55e);
   position: absolute;
   top: 0;
   z-index: 1031;
