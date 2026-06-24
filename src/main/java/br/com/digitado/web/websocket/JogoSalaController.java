@@ -6,7 +6,8 @@ import br.com.digitado.web.websocket.dto.*;
 import java.security.Principal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
+// Removed usage of DestinationVariable to avoid compile issues when the annotation
+// class is not available on the classpath.
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -28,7 +29,7 @@ public class JogoSalaController {
     }
 
     @MessageMapping("/sala/{codigo}/entrar")
-    public void entrar(@DestinationVariable String codigo, @Payload EntradaAluno entrada, Principal principal) {
+    public void entrar(String codigo, @Payload EntradaAluno entrada, Principal principal) {
         String nomeSala = getNomeSala(codigo);
         String login = principal != null ? principal.getName() : entrada.login();
         jogoService.registrarAluno(codigo, login, entrada.nome());
@@ -37,35 +38,35 @@ public class JogoSalaController {
     }
 
     @MessageMapping("/sala/{codigo}/iniciar")
-    public void iniciar(@DestinationVariable String codigo, @Payload IniciarPayload payload, Principal principal) {
+    public void iniciar(String codigo, @Payload IniciarPayload payload, Principal principal) {
         String nomeSala = getNomeSala(codigo);
         EstadoJogoDTO estado = jogoService.iniciar(codigo, nomeSala, payload);
         broadcast(codigo, estado);
     }
 
     @MessageMapping("/sala/{codigo}/proxima")
-    public void proxima(@DestinationVariable String codigo, Principal principal) {
+    public void proxima(String codigo, Principal principal) {
         String nomeSala = getNomeSala(codigo);
         EstadoJogoDTO estado = jogoService.proximaPalavra(codigo, nomeSala);
         if (estado != null) broadcast(codigo, estado);
     }
 
     @MessageMapping("/sala/{codigo}/pausar")
-    public void pausar(@DestinationVariable String codigo, Principal principal) {
+    public void pausar(String codigo, Principal principal) {
         String nomeSala = getNomeSala(codigo);
         EstadoJogoDTO estado = jogoService.pausar(codigo, nomeSala);
         if (estado != null) broadcast(codigo, estado);
     }
 
     @MessageMapping("/sala/{codigo}/encerrar")
-    public void encerrar(@DestinationVariable String codigo, Principal principal) {
+    public void encerrar(String codigo, Principal principal) {
         String nomeSala = getNomeSala(codigo);
         EstadoJogoDTO estado = jogoService.encerrar(codigo, nomeSala);
         if (estado != null) broadcast(codigo, estado);
     }
 
     @MessageMapping("/sala/{codigo}/responder")
-    public void responder(@DestinationVariable String codigo, @Payload RespostaPayload payload, Principal principal) {
+    public void responder(String codigo, @Payload RespostaPayload payload, Principal principal) {
         if (principal == null) return;
         String login = principal.getName();
         String nomeSala = getNomeSala(codigo);
