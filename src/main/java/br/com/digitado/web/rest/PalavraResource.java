@@ -7,7 +7,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -38,6 +40,24 @@ public class PalavraResource {
 
     public PalavraResource(PalavraRepository palavraRepository) {
         this.palavraRepository = palavraRepository;
+    }
+
+    @GetMapping("/buscar")
+    public ResponseEntity<Map<String, Object>> buscarPalavra(@RequestParam String texto) {
+        String busca = texto.trim();
+        Map<String, Object> response = new HashMap<>();
+        Optional<Palavra> exata = palavraRepository.findByTextoIgnoreCase(busca);
+        if (exata.isPresent()) {
+            response.put("encontrada", true);
+            response.put("exata", true);
+            response.put("palavra", exata.get());
+            return ResponseEntity.ok(response);
+        }
+        List<Palavra> similares = palavraRepository.findTop5ByTextoContainingIgnoreCaseAndAtivaTrue(busca);
+        response.put("encontrada", false);
+        response.put("exata", false);
+        response.put("similares", similares);
+        return ResponseEntity.ok(response);
     }
 
     /**
