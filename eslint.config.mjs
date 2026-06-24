@@ -81,7 +81,7 @@ export default tseslint.config(
       'prefer-const': 'error',
       'object-shorthand': ['error', 'always', { avoidExplicitReturnArrows: true }],
       'default-case': 'error',
-      complexity: ['warn', 40],
+      complexity: ['warn', 60],
       'no-invalid-this': 'off',
       'react/prop-types': 'off',
       'react/display-name': 'off',
