@@ -15,7 +15,7 @@ export const SettingsPage = () => {
   const dispatch = useAppDispatch();
   const account = useAppSelector(state => state.authentication.account);
   const successMessage = useAppSelector(state => state.settings.successMessage);
-  const [tipoUsuario, setTipoUsuario] = useState<string>(localStorage.getItem(TIPO_KEY) ?? TipoUsuario.ALUNO);
+  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>((localStorage.getItem(TIPO_KEY) as TipoUsuario) ?? TipoUsuario.ALUNO);
 
   useEffect(() => {
     dispatch(getSession());

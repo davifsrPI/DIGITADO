@@ -10,7 +10,7 @@ const TIPO_KEY = 'digitado-tipo-usuario';
 
 export const Lobby = () => {
   const account = useAppSelector(state => state.authentication.account);
-  const [tipoUsuario, setTipoUsuario] = useState<string>(localStorage.getItem(TIPO_KEY) ?? TipoUsuario.ALUNO);
+  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>((localStorage.getItem(TIPO_KEY) as TipoUsuario) ?? TipoUsuario.ALUNO);
 
   useEffect(() => {
     document.body.classList.add('lobby-page');
