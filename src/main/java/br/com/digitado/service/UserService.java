@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -43,16 +44,20 @@ public class UserService {
 
     private final UsuarioRepository usuarioRepository;
 
+    private final Environment environment;
+
     public UserService(
         UserRepository userRepository,
         PasswordEncoder passwordEncoder,
         AuthorityRepository authorityRepository,
-        UsuarioRepository usuarioRepository
+        UsuarioRepository usuarioRepository,
+        Environment environment
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authorityRepository = authorityRepository;
         this.usuarioRepository = usuarioRepository;
+        this.environment = environment;
     }
 
     public Optional<User> activateRegistration(String key) {
@@ -121,10 +126,11 @@ public class UserService {
         }
         newUser.setImageUrl(userDTO.getImageUrl());
         newUser.setLangKey(userDTO.getLangKey());
-        // new user is not active
-        newUser.setActivated(false);
-        // new user gets registration key
-        newUser.setActivationKey(RandomUtil.generateActivationKey());
+        boolean isDev = Arrays.asList(environment.getActiveProfiles()).contains("dev");
+        newUser.setActivated(isDev);
+        if (!isDev) {
+            newUser.setActivationKey(RandomUtil.generateActivationKey());
+        }
         Set<Authority> authorities = new HashSet<>();
         authorityRepository.findById(AuthoritiesConstants.USER).ifPresent(authorities::add);
         newUser.setAuthorities(authorities);
@@ -138,7 +144,8 @@ public class UserService {
         Usuario usuario = new Usuario();
         usuario.setNome(user.getFirstName() != null ? user.getFirstName() : user.getLogin());
         usuario.setSobrenome(user.getLastName() != null ? user.getLastName() : "");
-        usuario.setEmail(user.getEmail() != null ? user.getEmail() : user.getLogin() + "@digitado.local");
+        String email = user.getEmail() != null ? user.getEmail() : user.getLogin() + "@digitado.local";
+        usuario.setEmail(email);
         usuario.setSenha(encryptedPassword);
         usuario.setTipoUsuario(tipo);
         usuario.setAtivo(true);
@@ -150,6 +157,9 @@ public class UserService {
         if (existingUser.isActivated()) {
             return false;
         }
+        // Remove the matching Usuario record to avoid unique-email constraint violations on re-registration
+        String email = existingUser.getEmail() != null ? existingUser.getEmail() : existingUser.getLogin() + "@digitado.local";
+        usuarioRepository.findByEmail(email).ifPresent(usuarioRepository::delete);
         userRepository.delete(existingUser);
         userRepository.flush();
         return true;

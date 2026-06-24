@@ -16,6 +16,8 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface UsuarioRepository extends UsuarioRepositoryWithBagRelationships, JpaRepository<Usuario, Long> {
+    Optional<Usuario> findByEmail(String email);
+
     default Optional<Usuario> findOneWithEagerRelationships(Long id) {
         return this.fetchBagRelationships(this.findById(id));
     }
