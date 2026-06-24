@@ -11,10 +11,10 @@ export const Logout = () => {
     dispatch(logout());
     if (authentication.logoutUrl) {
       window.location.href = authentication.logoutUrl;
-    } else if (!authentication.isAuthenticated) {
+    } else {
       window.location.href = '/';
     }
-  });
+  }, []);
 
   return (
     <div className="p-5">
