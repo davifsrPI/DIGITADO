@@ -1,0 +1,59 @@
+package br.com.digitado.web.websocket;
+
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.stereotype.Component;
+
+@Component
+public class JogoSalaJwtInterceptor implements ChannelInterceptor {
+
+    private static final Logger LOG = LoggerFactory.getLogger(JogoSalaJwtInterceptor.class);
+
+    private final JwtDecoder jwtDecoder;
+
+    public JogoSalaJwtInterceptor(JwtDecoder jwtDecoder) {
+        this.jwtDecoder = jwtDecoder;
+    }
+
+    @Override
+    public Message<?> preSend(Message<?> message, MessageChannel channel) {
+        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
+            String authHeader = accessor.getFirstNativeHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                try {
+                    Jwt jwt = jwtDecoder.decode(token);
+                    String authClaim = jwt.getClaimAsString("auth");
+                    List<GrantedAuthority> authorities = List.of();
+                    if (authClaim != null && !authClaim.isBlank()) {
+                        authorities = List.of(authClaim.split(","))
+                            .stream()
+                            .map(String::trim)
+                            .filter(a -> !a.isEmpty())
+                            .map(SimpleGrantedAuthority::new)
+                            .<GrantedAuthority>map(a -> a)
+                            .toList();
+                    }
+                    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(jwt.getSubject(), null, authorities);
+                    accessor.setUser(auth);
+                } catch (Exception e) {
+                    LOG.warn("WebSocket JWT inválido: {}", e.getMessage());
+                }
+            }
+        }
+        return message;
+    }
+}
