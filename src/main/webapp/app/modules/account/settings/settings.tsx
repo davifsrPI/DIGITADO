@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Button, Col, Row } from 'reactstrap';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
 import { toast } from 'react-toastify';
@@ -7,16 +7,12 @@ import { languages, locales } from 'app/config/translation';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { getSession } from 'app/shared/reducers/authentication';
 import { reset, saveAccountSettings } from './settings.reducer';
-import { TipoUsuario } from 'app/shared/model/enumerations/tipo-usuario.model';
-
-const TIPO_KEY = 'digitado-tipo-usuario';
 
 export const SettingsPage = () => {
   const dispatch = useAppDispatch();
   const account = useAppSelector(state => state.authentication.account);
   const successMessage = useAppSelector(state => state.settings.successMessage);
-  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>((localStorage.getItem(TIPO_KEY) as TipoUsuario) ?? TipoUsuario.ALUNO);
-  const formDefaultValues = useMemo(() => ({ ...account, tipoUsuario }), [account, tipoUsuario]);
+  const formDefaultValues = useMemo(() => ({ ...account }), [account]);
 
   useEffect(() => {
     dispatch(getSession());
@@ -32,8 +28,6 @@ export const SettingsPage = () => {
   }, [successMessage]);
 
   const handleValidSubmit = values => {
-    localStorage.setItem(TIPO_KEY, values.tipoUsuario ?? tipoUsuario);
-    setTipoUsuario(values.tipoUsuario ?? tipoUsuario);
     dispatch(
       saveAccountSettings({
         ...account,
@@ -95,10 +89,6 @@ export const SettingsPage = () => {
                   {languages[locale].name}
                 </option>
               ))}
-            </ValidatedField>
-            <ValidatedField type="select" name="tipoUsuario" label="Tipo de conta" data-cy="tipoUsuario">
-              <option value={TipoUsuario.ALUNO}>Aluno</option>
-              <option value={TipoUsuario.PROFESSOR}>Professor</option>
             </ValidatedField>
             <Button color="primary" type="submit" data-cy="submit">
               <Translate contentKey="settings.form.button">Save</Translate>

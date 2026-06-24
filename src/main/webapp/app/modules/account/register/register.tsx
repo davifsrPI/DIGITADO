@@ -1,15 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
 import { Button } from 'reactstrap';
 import { toast } from 'react-toastify';
 import { Link as RouterLink } from 'react-router-dom';
+import axios from 'axios';
 import './register.scss';
 
 import PasswordStrengthBar from 'app/shared/layout/password/password-strength-bar';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { handleRegister, reset } from './register.reducer';
+
+type EmailCheck = { status: 'idle' | 'loading' | 'found' | 'notfound'; nome?: string };
+
 export const RegisterPage = () => {
   const [password, setPassword] = useState('');
+  const [emailCheck, setEmailCheck] = useState<EmailCheck>({ status: 'idle' });
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
@@ -27,6 +33,25 @@ export const RegisterPage = () => {
   };
 
   const updatePassword = event => setPassword(event.target.value);
+
+  const handleEmailChange = (value: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value || !isEmail(value)) {
+      setEmailCheck({ status: 'idle' });
+      return;
+    }
+    setEmailCheck({ status: 'loading' });
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const { data } = await axios.get<{ encontrado: boolean; nome?: string }>('/api/public/verificar-email', {
+          params: { email: value.trim().toLowerCase() },
+        });
+        setEmailCheck(data.encontrado ? { status: 'found', nome: data.nome } : { status: 'notfound' });
+      } catch {
+        setEmailCheck({ status: 'idle' });
+      }
+    }, 600);
+  };
 
   const successMessage = useAppSelector(state => state.register.successMessage);
 
@@ -75,6 +100,7 @@ export const RegisterPage = () => {
               label={translate('global.form.email.label')}
               placeholder={translate('global.form.email.placeholder')}
               type="email"
+              onChange={e => handleEmailChange(e.target.value)}
               validate={{
                 required: { value: true, message: translate('global.messages.validate.email.required') },
                 minLength: { value: 5, message: translate('global.messages.validate.email.minlength') },
@@ -83,6 +109,15 @@ export const RegisterPage = () => {
               }}
               data-cy="email"
             />
+            {emailCheck.status === 'loading' && <p className="rg-email-check rg-email-check--loading">Verificando cadastro...</p>}
+            {emailCheck.status === 'found' && (
+              <p className="rg-email-check rg-email-check--found">
+                ✓ Cadastro encontrado: <strong>{emailCheck.nome}</strong>
+              </p>
+            )}
+            {emailCheck.status === 'notfound' && (
+              <p className="rg-email-check rg-email-check--notfound">Nenhum cadastro encontrado com este e-mail.</p>
+            )}
             <ValidatedField
               name="firstPassword"
               label={translate('global.form.newpassword.label')}

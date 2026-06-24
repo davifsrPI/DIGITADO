@@ -199,3 +199,26 @@ body.register-page .view-container {
     }
   }
 }
+
+.rg-email-check {
+  font-size: 0.82rem;
+  margin: -8px 0 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.rg-email-check--loading {
+  color: #94a3b8;
+}
+
+.rg-email-check--found {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.rg-email-check--notfound {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}

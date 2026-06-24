@@ -1,5 +1,6 @@
 package br.com.digitado.web.rest;
 
+import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.service.UserService;
 import br.com.digitado.service.dto.UserDTO;
 import java.util.*;
@@ -26,9 +27,28 @@ public class PublicUserResource {
     private static final Logger LOG = LoggerFactory.getLogger(PublicUserResource.class);
 
     private final UserService userService;
+    private final UsuarioRepository usuarioRepository;
 
-    public PublicUserResource(UserService userService) {
+    public PublicUserResource(UserService userService, UsuarioRepository usuarioRepository) {
         this.userService = userService;
+        this.usuarioRepository = usuarioRepository;
+    }
+
+    @GetMapping("/public/verificar-email")
+    public ResponseEntity<Map<String, Object>> verificarEmail(@RequestParam String email) {
+        return usuarioRepository
+            .findByEmail(email.trim().toLowerCase())
+            .map(u -> {
+                Map<String, Object> resp = new HashMap<>();
+                resp.put("encontrado", true);
+                resp.put("nome", u.getNome() + " " + u.getSobrenome());
+                return ResponseEntity.ok(resp);
+            })
+            .orElseGet(() -> {
+                Map<String, Object> resp = new HashMap<>();
+                resp.put("encontrado", false);
+                return ResponseEntity.ok(resp);
+            });
     }
 
     /**
