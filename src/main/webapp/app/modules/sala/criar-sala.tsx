@@ -245,7 +245,7 @@ export const CriarSala = () => {
                       </span>
                     </div>
                   </div>
-                  <button type="button" className="cs-add-word-btn" onClick={() => addWord(busca.palavra!)}>
+                  <button type="button" className="cs-add-word-btn" onClick={() => addWord(busca.palavra)}>
                     + Adicionar
                   </button>
                 </div>
