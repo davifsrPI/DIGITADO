@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Col, Row } from 'reactstrap';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
 import { toast } from 'react-toastify';
@@ -16,6 +16,7 @@ export const SettingsPage = () => {
   const account = useAppSelector(state => state.authentication.account);
   const successMessage = useAppSelector(state => state.settings.successMessage);
   const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>((localStorage.getItem(TIPO_KEY) as TipoUsuario) ?? TipoUsuario.ALUNO);
+  const formDefaultValues = useMemo(() => ({ ...account, tipoUsuario }), [account, tipoUsuario]);
 
   useEffect(() => {
     dispatch(getSession());
@@ -50,7 +51,7 @@ export const SettingsPage = () => {
               User settings for {account.login}
             </Translate>
           </h2>
-          <ValidatedForm id="settings-form" onSubmit={handleValidSubmit} defaultValues={{ ...account, tipoUsuario }}>
+          <ValidatedForm id="settings-form" onSubmit={handleValidSubmit} defaultValues={formDefaultValues}>
             <ValidatedField
               name="firstName"
               label={translate('settings.form.firstname')}
