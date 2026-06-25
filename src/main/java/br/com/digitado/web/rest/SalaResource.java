@@ -53,6 +53,9 @@ public class SalaResource {
         if (sala.getId() != null) {
             throw new BadRequestAlertException("A new sala cannot already have an ID", ENTITY_NAME, "idexists");
         }
+        if (sala.getCodigo() != null && salaRepository.findByCodigo(sala.getCodigo()).isPresent()) {
+            throw new BadRequestAlertException("Código de sala já em uso", ENTITY_NAME, "codigoexists");
+        }
         sala = salaRepository.save(sala);
         return ResponseEntity.created(new URI("/api/salas/" + sala.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, sala.getId().toString()))
@@ -150,8 +153,9 @@ public class SalaResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of salas in body.
      */
     @GetMapping("")
-    public List<Sala> getAllSalas() {
+    public List<Sala> getAllSalas(@RequestParam(required = false) Boolean ativo) {
         LOG.debug("REST request to get all Salas");
+        if (ativo != null) return salaRepository.findByAtivo(ativo);
         return salaRepository.findAll();
     }
 

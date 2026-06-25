@@ -13,6 +13,7 @@ import Home from 'app/modules/home/home';
 import Lobby from 'app/modules/lobby/lobby';
 import CriarSala from 'app/modules/sala/criar-sala';
 import SalaJogo from 'app/modules/sala/sala-jogo';
+import MinhasSalas from 'app/modules/sala/minhas-salas';
 import EntitiesRoutes from 'app/entities/routes';
 import PrivateRoute from 'app/shared/auth/private-route';
 import ErrorBoundaryRoutes from 'app/shared/error/error-boundary-routes';
@@ -40,6 +41,14 @@ const AppRoutes = () => {
           element={
             <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <Lobby />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="minhas-salas"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+              <MinhasSalas />
             </PrivateRoute>
           }
         />

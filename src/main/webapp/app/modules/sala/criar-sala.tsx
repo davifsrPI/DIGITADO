@@ -99,14 +99,25 @@ export const CriarSala = () => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-    try {
-      const res = await axios.post('/api/salas', { nome, codigo, descricao: descricao || null, ativo: true });
-      navigate(`/sala/${res.data.codigo}`, { state: { isProfessor: true } });
-    } catch {
-      setError('Não foi possível criar a sala. Tente novamente.');
-    } finally {
-      setSubmitting(false);
+    let tentativas = 0;
+    let codigoTentativa = codigo;
+    while (tentativas < 5) {
+      try {
+        const res = await axios.post('/api/salas', { nome, codigo: codigoTentativa, descricao: descricao || null, ativo: true });
+        navigate(`/sala/${res.data.codigo}`, { state: { isProfessor: true } });
+        return;
+      } catch (err: any) {
+        if (err?.response?.data?.errorKey === 'codigoexists') {
+          codigoTentativa = generateCode();
+          setCodigo(codigoTentativa);
+          tentativas++;
+        } else {
+          setError('Não foi possível criar a sala. Tente novamente.');
+          break;
+        }
+      }
     }
+    setSubmitting(false);
   };
 
   const total = quantidades.FACIL + quantidades.MEDIO + quantidades.DIFICIL;
