@@ -8,11 +8,14 @@ import { ErroWS, EstadoJogo, FeedbackAluno, useSalaWebSocket } from './hooks/use
 import { SalaJogoAluno } from './sala-jogo-aluno';
 import { SalaJogoProfessor } from './sala-jogo-professor';
 
+// Página principal do jogo — decide se renderiza a visão do professor ou do aluno
+// com base no estado de navegação passado pela tela de criação/entrada na sala
 export const SalaJogo: React.FC = () => {
   const { codigo } = useParams<{ codigo: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const account = useAppSelector(state => state.authentication.account);
+  // Lê as configurações passadas pela tela anterior via React Router state
   const locationState = location.state as {
     isProfessor?: boolean;
     autoStart?: boolean;
@@ -22,13 +25,17 @@ export const SalaJogo: React.FC = () => {
   const autoStart = locationState?.autoStart === true;
   const gameConfig = locationState?.gameConfig;
 
+  // Nome de exibição: usa o primeiro nome do usuário autenticado, ou o login como fallback
   const login = account?.login ?? 'anonimo';
   const nome = account?.firstName ? `${account.firstName} ${account.lastName ?? ''}`.trim() : login;
 
+  // ─── Estado local da página ───────────────────────────────────────────────
   const [estado, setEstado] = useState<EstadoJogo | null>(null);
   const [feedback, setFeedback] = useState<FeedbackAluno | null>(null);
   const [erroWS, setErroWS] = useState<ErroWS | null>(null);
 
+  // ─── Callbacks para o hook de WebSocket ──────────────────────────────────
+  // Quando chega um novo estado do jogo, atualiza e limpa o feedback da palavra anterior
   const handleEstado = useCallback((e: EstadoJogo) => {
     setEstado(e);
     if (e.tipo === 'NOVA_PALAVRA') setFeedback(null);
@@ -38,11 +45,13 @@ export const SalaJogo: React.FC = () => {
     setFeedback(f);
   }, []);
 
+  // Mostra o erro por 6 segundos e depois esconde automaticamente
   const handleErro = useCallback((e: ErroWS) => {
     setErroWS(e);
     setTimeout(() => setErroWS(null), 6000);
   }, []);
 
+  // ─── Conexão WebSocket ────────────────────────────────────────────────────
   const { conectado, iniciar, proxima, pausar, encerrar, responder } = useSalaWebSocket({
     codigoSala: codigo,
     login,

@@ -10,6 +10,7 @@ interface Props {
   conectado: boolean;
 }
 
+// Usa a API de síntese de voz do browser para falar a palavra em português
 function falarPalavra(texto: string) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
@@ -19,6 +20,8 @@ function falarPalavra(texto: string) {
   window.speechSynthesis.speak(utter);
 }
 
+// Tela do aluno durante a partida: aguarda o professor iniciar, recebe a palavra via áudio,
+// digita a resposta e vê o feedback individual e o placar ao vivo dos colegas
 export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onResponder, conectado }) => {
   const [resposta, setResposta] = useState('');
   const [falando, setFalando] = useState(false);
@@ -28,6 +31,7 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
   const inputRef = useRef<HTMLInputElement>(null);
   const palavraAtualId = useRef<number | null>(null);
 
+  // Detecta mudança de palavra e reseta o estado de resposta — fala a palavra automaticamente
   useEffect(() => {
     if (!estado) return;
     if (estado.tipo === 'NOVA_PALAVRA' || estado.tipo === 'INICIADA') {
@@ -48,6 +52,7 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
     }
   }, [estado?.palavraAtual?.id, estado?.tipo]);
 
+  // Conta o tempo restante recalculando a cada 500ms a partir do timestampInicio do servidor
   useEffect(() => {
     if (!estado || (estado.tipo !== 'NOVA_PALAVRA' && estado.tipo !== 'INICIADA')) {
       setTempoRestante(0);
@@ -63,6 +68,7 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
     return () => clearInterval(id);
   }, [estado?.timestampInicio, estado?.tempoLimite, estado?.tipo]);
 
+  // Reproduz a palavra ao clicar no botão de áudio e atualiza o ícone por 2,5s
   const handleFalar = useCallback(() => {
     if (!estado?.palavraAtual) return;
     falarPalavra(estado.palavraAtual.texto);
@@ -70,6 +76,7 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
     setTimeout(() => setFalando(false), 2500);
   }, [estado?.palavraAtual]);
 
+  // Envia a resposta: faz validação local para feedback imediato antes de receber o do servidor
   const handleEnviar = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();

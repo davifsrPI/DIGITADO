@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.ResponseUtil;
 
+// REST controller para gerenciar salas de aula.
+// Um professor cria e controla a sala; alunos só podem listar as salas que participam.
 @RestController
 @RequestMapping("/api/salas")
 @Transactional
@@ -46,26 +48,32 @@ public class SalaResource {
         this.usuarioRepository = usuarioRepository;
     }
 
+    // Cria uma nova sala. Automaticamente associa o usuário logado como professor da sala,
+    // buscando o Usuario correspondente pelo e-mail do User autenticado.
     @PostMapping("")
     public ResponseEntity<SalaResponseVM> createSala(@Valid @RequestBody Sala sala) throws URISyntaxException {
         LOG.debug("REST request to save Sala : {}", sala);
         if (sala.getId() != null) {
             throw new BadRequestAlertException("A new sala cannot already have an ID", ENTITY_NAME, "idexists");
         }
+        // Impede criação com código duplicado
         if (sala.getCodigo() != null && salaRepository.findByCodigo(sala.getCodigo()).isPresent()) {
             throw new BadRequestAlertException("Código de sala já em uso", ENTITY_NAME, "codigoexists");
         }
+        // Vincula o professor logado à sala — se não houver Usuario correspondente, professor fica null
         SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
             .ifPresent(sala::setProfessor);
         sala = salaRepository.save(sala);
+        // Retorna apenas os campos públicos da sala (sem o professor, para não vazar dados)
         SalaResponseVM vm = new SalaResponseVM(sala.getId(), sala.getNome(), sala.getCodigo(), sala.getDescricao(), sala.getAtivo());
         return ResponseEntity.created(new URI("/api/salas/" + sala.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, sala.getId().toString()))
             .body(vm);
     }
 
+    // Atualiza os dados de uma sala — apenas o dono ou admin podem fazer isso
     @PutMapping("/{id}")
     public ResponseEntity<Sala> updateSala(@PathVariable(value = "id", required = false) final Long id, @Valid @RequestBody Sala sala)
         throws URISyntaxException {
@@ -88,6 +96,7 @@ public class SalaResource {
             .body(sala);
     }
 
+    // Atualização parcial da sala (PATCH) — apenas campos enviados são alterados
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Sala> partialUpdateSala(
         @PathVariable(value = "id", required = false) final Long id,
@@ -132,6 +141,8 @@ public class SalaResource {
         );
     }
 
+    // Listagem de salas com controle de visibilidade:
+    // admin vê todas; professores e alunos veem apenas as salas que lhes pertencem
     @GetMapping("")
     public List<Sala> getAllSalas(@RequestParam(required = false) Boolean ativo) {
         LOG.debug("REST request to get all Salas");
@@ -140,7 +151,7 @@ public class SalaResource {
             if (ativo != null) return salaRepository.findByAtivo(ativo);
             return salaRepository.findAll();
         }
-        // Professores e alunos veem apenas as salas que lhes pertencem
+        // Para usuários comuns: une as salas onde é professor com as salas onde é aluno
         return SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
@@ -155,6 +166,7 @@ public class SalaResource {
             .orElse(List.of());
     }
 
+    // Busca uma sala pelo ID — sem restrição de acesso (código é público para quem tiver o link)
     @GetMapping("/{id}")
     public ResponseEntity<Sala> getSala(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Sala : {}", id);
@@ -162,6 +174,7 @@ public class SalaResource {
         return ResponseUtil.wrapOrNotFound(sala);
     }
 
+    // Exclui uma sala — apenas o professor dono ou admin podem excluir
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSala(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Sala : {}", id);
@@ -177,6 +190,7 @@ public class SalaResource {
             .build();
     }
 
+    // Verifica se o usuário logado é dono da sala (como professor) ou administrador do sistema
     private boolean isOwnerOrAdmin(Long salaId) {
         if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
             return true;

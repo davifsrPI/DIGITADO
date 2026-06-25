@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EstadoJogo } from './hooks/useSalaWebSocket';
 
+// Configuração do jogo escolhida pelo professor (quantidade de palavras por dificuldade e tempo)
 interface GameConfig {
   tempoLimite: number;
   qtdFacil: number;
@@ -33,6 +34,7 @@ const DIFICULDADES: Array<{ key: keyof Omit<Cfg, 'tempoLimite'>; label: string; 
 const DEFAULT_CFG: Cfg = { tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
 const RANKING_DURATION = 25;
 
+// Usa a API de síntese de voz do browser para falar a palavra em português
 function falarPalavra(texto: string) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
@@ -42,6 +44,8 @@ function falarPalavra(texto: string) {
   window.speechSynthesis.speak(utter);
 }
 
+// Tela do professor durante a partida: lobby de espera com configurações, tela de jogo com timer,
+// ranking entre palavras com contagem regressiva de 25s, e tela de encerramento com placar final
 export const SalaJogoProfessor: React.FC<Props> = ({
   estado,
   codigoSala,
@@ -52,6 +56,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   autoStart,
   initialGameConfig,
 }) => {
+  // ─── Estado local do componente ───────────────────────────────────────────
   const [cfg, setCfg] = useState<Cfg>(initialGameConfig ?? DEFAULT_CFG);
   const didAutoStart = useRef(false);
 
@@ -67,8 +72,10 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const rankingTriggeredRef = useRef(false);
 
+  // Incrementa/decrementa a quantidade de palavras de uma dificuldade, entre 0 e 30
   const adj = (campo: keyof Cfg, delta: number) => setCfg(prev => ({ ...prev, [campo]: Math.max(0, Math.min(30, prev[campo] + delta)) }));
 
+  // Copia o código da sala para a área de transferência e mostra confirmação por 2s
   const copiarCodigo = () => {
     navigator.clipboard.writeText(codigoSala).then(() => {
       setCopied(true);
@@ -76,6 +83,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     });
   };
 
+  // Reproduz a palavra atual via síntese de voz e controla o estado visual do botão
   const handleFalar = () => {
     if (!estado?.palavraAtual) return;
     setFalando(true);
@@ -88,6 +96,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     window.speechSynthesis.speak(utter);
   };
 
+  // Envia a resposta do professor (ele também pode jogar junto com os alunos)
   const handleEnviar = (e: React.FormEvent) => {
     e.preventDefault();
     if (!resposta.trim() || jaRespondeu) return;
@@ -95,7 +104,8 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     setJaRespondeu(true);
   };
 
-  // Auto-start on connect
+  // Inicia o jogo automaticamente assim que a conexão WebSocket é estabelecida
+  // (quando o professor vem da tela de criação com autoStart=true)
   useEffect(() => {
     if (autoStart && conectado && !didAutoStart.current && (!estado || estado.tipo === 'AGUARDANDO')) {
       didAutoStart.current = true;
@@ -103,7 +113,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     }
   }, [conectado, estado?.tipo]);
 
-  // Reset on new word
+  // Reseta o estado de resposta e fala a palavra automaticamente ao mudar de palavra
   useEffect(() => {
     setResposta('');
     setJaRespondeu(false);
@@ -118,7 +128,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [estado?.palavraAtual?.id]);
 
-  // Timer countdown
+  // Conta o tempo restante da rodada — recalcula a cada 500ms a partir do timestampInicio
   useEffect(() => {
     const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
     if (!ativo) {
@@ -134,7 +144,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     return () => clearInterval(id);
   }, [estado?.timestampInicio, estado?.tempoLimite, estado?.tipo]);
 
-  // Trigger ranking when time runs out
+  // Quando o tempo acaba, exibe a tela de ranking e inicia a contagem para a próxima palavra
   useEffect(() => {
     const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
     if (tempoRestante === 0 && ativo && estado?.palavraAtual != null && !rankingTriggeredRef.current) {
@@ -144,7 +154,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     }
   }, [tempoRestante]);
 
-  // Ranking countdown → advance to next word
+  // Conta regressiva do ranking (25s) — ao chegar a zero avança para a próxima palavra
   useEffect(() => {
     if (!showRanking) return;
     if (rankingTimer <= 0) {

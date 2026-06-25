@@ -11,35 +11,45 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
+// Serviço que gerencia o estado em memória de todos os jogos em andamento.
+// Cada sala tem seu próprio EstadoJogo, identificado pelo código da sala.
+// Como o estado fica em memória (não no banco), reiniciar o servidor reseta todos os jogos.
 @Service
 public class JogoSalaService {
 
+    // Pontuação base por ordem de acerto (1º, 2º, 3º, 4º+) e bônus de velocidade
     private static final int[] PONTOS_BASE = { 20, 15, 12, 8 };
     private static final int[] BONUS_MAX = { 10, 7, 5, 3 };
 
     private final PalavraRepository palavraRepository;
 
+    // Mapa em memória: código da sala → estado do jogo
     private final Map<String, EstadoJogo> jogos = new ConcurrentHashMap<>();
 
     public JogoSalaService(PalavraRepository palavraRepository) {
         this.palavraRepository = palavraRepository;
     }
 
+    // Registra um participante na sala (cria o estado da sala se ainda não existir)
     public void registrarAluno(String codigoSala, String login, String nome) {
         jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo()).registrarAluno(login, nome);
     }
 
+    // Remove um participante da lista de conectados (usado quando desconecta)
     public void removerAluno(String codigoSala, String login) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo != null) jogo.removerAluno(login);
     }
 
+    // Inicia o jogo: sorteia as palavras conforme a configuração escolhida pelo professor,
+    // adiciona quaisquer palavras extras selecionadas manualmente e embaralha tudo
     public EstadoJogoDTO iniciar(String codigoSala, String nomeSala, IniciarPayload payload) {
         EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
         List<Palavra> palavras = new ArrayList<>();
         palavras.addAll(palavraRepository.findRandomByDificuldade(Dificuldade.FACIL.name(), payload.qtdFacil()));
         palavras.addAll(palavraRepository.findRandomByDificuldade(Dificuldade.MEDIO.name(), payload.qtdMedio()));
         palavras.addAll(palavraRepository.findRandomByDificuldade(Dificuldade.DIFICIL.name(), payload.qtdDificil()));
+        // Adiciona as palavras extras escolhidas pelo professor na tela de criação da sala
         if (payload.palavrasExtrasIds() != null) {
             for (Long id : payload.palavrasExtrasIds()) {
                 palavraRepository.findById(id).ifPresent(palavras::add);
@@ -50,6 +60,7 @@ public class JogoSalaService {
         return buildEstado(codigoSala, nomeSala, jogo, "INICIADA");
     }
 
+    // Avança para a próxima palavra; se não houver mais, encerra o jogo
     public EstadoJogoDTO proximaPalavra(String codigoSala, String nomeSala) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null) return null;
@@ -58,6 +69,7 @@ public class JogoSalaService {
         return buildEstado(codigoSala, nomeSala, jogo, tipo);
     }
 
+    // Pausa o jogo (o timer para de correr no frontend)
     public EstadoJogoDTO pausar(String codigoSala, String nomeSala) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null) return null;
@@ -65,6 +77,7 @@ public class JogoSalaService {
         return buildEstado(codigoSala, nomeSala, jogo, "PAUSADA");
     }
 
+    // Encerra o jogo antecipadamente
     public EstadoJogoDTO encerrar(String codigoSala, String nomeSala) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null) return null;
@@ -72,22 +85,29 @@ public class JogoSalaService {
         return buildEstado(codigoSala, nomeSala, jogo, "ENCERRADA");
     }
 
+    // Retorna o estado atual da sala (usado logo após o entrar para sincronizar o cliente)
     public EstadoJogoDTO getEstado(String codigoSala, String nomeSala) {
         EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
         return buildEstado(codigoSala, nomeSala, jogo, jogo.getTipo());
     }
 
+    // Resultado de uma resposta: contém o feedback individual + o estado atualizado da sala
     public record ResultadoResposta(FeedbackAluno feedback, EstadoJogoDTO estado) {}
 
+    // Processa a resposta de um aluno:
+    // compara com a palavra correta, calcula pontos (com bônus de velocidade) e registra no placar
     public ResultadoResposta responder(String codigoSala, String nomeSala, String login, String nomeAluno, String respostaDigitada) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null || jogo.getPalavraAtual() == null) return null;
+        // Cada aluno só pode responder uma vez por palavra
         if (jogo.jaRespondeu(login)) return null;
 
         String textoCorreto = jogo.getPalavraAtual().getTexto();
         String dLower = respostaDigitada.trim().toLowerCase();
         String cLower = textoCorreto.trim().toLowerCase();
         boolean correta = dLower.equals(cLower);
+
+        // Classifica o tipo de erro para dar feedback mais detalhado ao aluno
         String tipoErro = null;
         if (!correta) {
             tipoErro = normalizar(dLower).equals(normalizar(cLower))
@@ -95,9 +115,11 @@ public class JogoSalaService {
                 : classificarErro(normalizar(dLower), normalizar(cLower));
         }
 
+        // Registra a resposta e guarda a ordem de acerto (1º, 2º, 3º...)
         int ordem = jogo.registrarResposta(login, correta);
         int pontos = 0;
         if (correta) {
+            // Pontuação = base (por ordem de acerto) + bônus de velocidade proporcional ao tempo restante
             int idx = Math.min(ordem - 1, PONTOS_BASE.length - 1);
             int base = PONTOS_BASE[idx];
             long elapsed = Instant.now().toEpochMilli() - jogo.getTimestampInicio();
@@ -112,10 +134,12 @@ public class JogoSalaService {
         return new ResultadoResposta(feedback, estado);
     }
 
+    // Remove acentos para comparação sem diferenciar versões acentuadas
     private String normalizar(String s) {
         return Normalizer.normalize(s.trim().toLowerCase(), Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
+    // Classifica o tipo de erro comparando as versões normalizadas com distância de Levenshtein
     private String classificarErro(String digitadoNorm, String corretoNorm) {
         if (digitadoNorm.equals(corretoNorm)) return "ACENTUACAO";
         int dist = levenshtein(digitadoNorm, corretoNorm);
@@ -127,6 +151,8 @@ public class JogoSalaService {
         return "OUTRO";
     }
 
+    // Algoritmo de Levenshtein: calcula o número mínimo de edições (inserção, remoção, substituição)
+    // para transformar uma string na outra — usado para classificar erros de digitação
     private int levenshtein(String a, String b) {
         int m = a.length(), n = b.length();
         int[][] dp = new int[m + 1][n + 1];
@@ -142,9 +168,12 @@ public class JogoSalaService {
         return dp[m][n];
     }
 
+    // Monta o DTO que será enviado via WebSocket para todos os clientes,
+    // incluindo palavra atual, placar, alunos conectados e progresso da rodada
     private EstadoJogoDTO buildEstado(String codigoSala, String nomeSala, EstadoJogo jogo, String tipo) {
         Palavra p = jogo.getPalavraAtual();
         PalavraDTO palavraDTO = p == null ? null : new PalavraDTO(p.getId(), p.getTexto(), p.getDificuldade().name(), p.getCategoria());
+        // Placar ordenado do maior para o menor pontuação
         List<PlacarEntry> placar = jogo
             .getPlacar()
             .entrySet()
@@ -174,6 +203,8 @@ public class JogoSalaService {
         );
     }
 
+    // Estado interno de uma sala de jogo — mantido em memória enquanto o servidor está rodando.
+    // Usa ConcurrentHashMap para suportar múltiplos jogadores respondendo ao mesmo tempo.
     public static class EstadoJogo {
 
         private List<Palavra> palavras = new ArrayList<>();
@@ -183,11 +214,13 @@ public class JogoSalaService {
         private String tipo = "AGUARDANDO";
         private final Map<String, AlunoInfo> placar = new ConcurrentHashMap<>();
         private final Map<String, String> alunosConectados = new ConcurrentHashMap<>();
+        // Conjunto dos logins que já responderam na rodada atual (evita resposta dupla)
         private final Set<String> respondeuNaRodada = ConcurrentHashMap.newKeySet();
         private int ordemRespostas = 0;
 
         public record AlunoInfo(String nome, int pontos, String statusAtual) {}
 
+        // Começa o jogo: define as palavras, redefine o índice para 0 e registra o timestamp de início
         void iniciar(List<Palavra> palavras, int tempoLimite) {
             this.palavras = palavras;
             this.tempoLimite = tempoLimite;
@@ -196,9 +229,11 @@ public class JogoSalaService {
             this.timestampInicio = Instant.now().toEpochMilli();
             respondeuNaRodada.clear();
             ordemRespostas = 0;
+            // Reseta o status de todos para "AGUARDANDO" ao começar
             placar.replaceAll((k, v) -> new AlunoInfo(v.nome(), v.pontos(), "AGUARDANDO"));
         }
 
+        // Avança para a próxima palavra; retorna false se chegou ao fim da lista
         boolean avancar() {
             indiceAtual++;
             if (indiceAtual >= palavras.size()) {
@@ -226,6 +261,7 @@ public class JogoSalaService {
             return respondeuNaRodada.contains(login);
         }
 
+        // Marca que o aluno respondeu e retorna sua posição de chegada (1º, 2º, 3º...)
         int registrarResposta(String login, boolean correta) {
             respondeuNaRodada.add(login);
             int ordem = ++ordemRespostas;
@@ -240,6 +276,7 @@ public class JogoSalaService {
             placar.put(login, new AlunoInfo(atual.nome(), atual.pontos() + pontos, atual.statusAtual()));
         }
 
+        // Garante que o aluno apareça na lista de conectados e no placar (com 0 pontos)
         void registrarAluno(String login, String nome) {
             alunosConectados.put(login, nome);
             placar.computeIfAbsent(login, k -> new AlunoInfo(nome, 0, "AGUARDANDO"));

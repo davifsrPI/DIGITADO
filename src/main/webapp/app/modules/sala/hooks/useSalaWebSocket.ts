@@ -3,6 +3,8 @@ import { Client, IMessage } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Storage } from 'react-jhipster';
 
+// ─── Tipos que trafegam pelo WebSocket ───────────────────────────────────────
+
 export interface PalavraWS {
   id: number;
   texto: string;
@@ -22,6 +24,7 @@ export interface AlunoConectado {
   nome: string;
 }
 
+// Estado completo do jogo enviado pelo servidor a cada evento (nova palavra, resposta, encerramento)
 export interface EstadoJogo {
   tipo: 'AGUARDANDO' | 'INICIADA' | 'NOVA_PALAVRA' | 'PAUSADA' | 'ENCERRADA';
   palavraAtual?: PalavraWS;
@@ -35,6 +38,7 @@ export interface EstadoJogo {
   alunosConectados: AlunoConectado[];
 }
 
+// Feedback individual enviado pelo servidor após uma resposta (só o aluno que respondeu recebe)
 export interface FeedbackAluno {
   correta: boolean;
   pontos: number;
@@ -43,6 +47,7 @@ export interface FeedbackAluno {
   textoCorreto: string;
 }
 
+// Erro enviado pelo servidor via WebSocket (ex: tentativa não autorizada de iniciar)
 export interface ErroWS {
   tipo: string;
   mensagem: string;
@@ -57,10 +62,15 @@ interface UseSalaWebSocketOptions {
   onErro?: (erro: ErroWS) => void;
 }
 
+// ─── Hook principal ───────────────────────────────────────────────────────────
+// Gerencia toda a conexão WebSocket com STOMP/SockJS para uma sala de jogo.
+// Retorna funções para enviar ações (iniciar, responder, próxima...) e o estado de conexão.
 export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback, onErro }: UseSalaWebSocketOptions) {
   const clientRef = useRef<Client | null>(null);
   const [conectado, setConectado] = useState(false);
 
+  // Refs para os callbacks — evitam que o useEffect de conexão precise ser recriado
+  // quando os callbacks mudam (problema clássico de closure em hooks com dependências instáveis)
   const onEstadoRef = useRef(onEstado);
   const onFeedbackRef = useRef(onFeedback);
   const onErroRef = useRef(onErro);
@@ -74,6 +84,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     onErroRef.current = onErro;
   }, [onErro]);
 
+  // ─── Cria e ativa o cliente STOMP ao montar o componente ────────────────────
   useEffect(() => {
     const token = Storage.local.get('jhi-authenticationToken') || Storage.session.get('jhi-authenticationToken');
     const client = new Client({
@@ -82,18 +93,22 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
       reconnectDelay: 3000,
       onConnect() {
         setConectado(true);
+        // Inscreve no tópico público da sala — recebe o estado do jogo para todos
         client.subscribe(`/topic/sala/${codigoSala}`, (msg: IMessage) => {
           const estado: EstadoJogo = JSON.parse(msg.body);
           onEstadoRef.current?.(estado);
         });
+        // Inscreve no canal privado de feedback — só este usuário recebe
         client.subscribe(`/user/queue/sala/${codigoSala}/feedback`, (msg: IMessage) => {
           const feedback: FeedbackAluno = JSON.parse(msg.body);
           onFeedbackRef.current?.(feedback);
         });
+        // Inscreve no canal privado de erros (ex: permissão negada ao tentar iniciar)
         client.subscribe(`/user/queue/sala/${codigoSala}/erro`, (msg: IMessage) => {
           const erro: ErroWS = JSON.parse(msg.body);
           onErroRef.current?.(erro);
         });
+        // Anuncia entrada na sala para o servidor registrar o participante no placar
         client.publish({
           destination: `/app/sala/${codigoSala}/entrar`,
           body: JSON.stringify({ login, nome }),
@@ -103,11 +118,13 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     });
     client.activate();
     clientRef.current = client;
+    // Desconecta ao desmontar o componente (quando o usuário sai da página da sala)
     return () => {
       client.deactivate();
     };
   }, [codigoSala, login, nome]);
 
+  // ─── Função auxiliar para publicar mensagens no servidor ─────────────────────
   const publicar = useCallback(
     (destino: string, payload?: unknown) => {
       clientRef.current?.publish({ destination: `/app/sala/${codigoSala}/${destino}`, body: payload ? JSON.stringify(payload) : '' });
@@ -115,6 +132,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     [codigoSala],
   );
 
+  // ─── Ações disponíveis para o componente que usa este hook ──────────────────
   return {
     conectado,
     iniciar: (payload: { tempoLimite: number; qtdFacil: number; qtdMedio: number; qtdDificil: number; palavrasExtrasIds: number[] }) =>

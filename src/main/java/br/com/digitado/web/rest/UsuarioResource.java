@@ -23,6 +23,9 @@ import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.ResponseUtil;
 
+// REST controller para gerenciar os Usuários do domínio (professores e alunos).
+// Diferente do User do JHipster (autenticação), o Usuario guarda dados do perfil pedagógico.
+// A ligação entre os dois é feita pelo campo e-mail.
 @RestController
 @RequestMapping("/api/usuarios")
 @Transactional
@@ -43,6 +46,8 @@ public class UsuarioResource {
         this.userRepository = userRepository;
     }
 
+    // Cria um novo usuário — restrito a administradores.
+    // A senha é obrigatória na criação (mas nunca é retornada pela API por causa do @JsonIgnore).
     @Secured(AuthoritiesConstants.ADMIN)
     @PostMapping("")
     public ResponseEntity<Usuario> createUsuario(@Valid @RequestBody Usuario usuario) throws URISyntaxException {
@@ -50,6 +55,7 @@ public class UsuarioResource {
         if (usuario.getId() != null) {
             throw new BadRequestAlertException("A new usuario cannot already have an ID", ENTITY_NAME, "idexists");
         }
+        // Garante que a senha foi enviada na criação (não pode ficar em branco)
         if (usuario.getSenha() == null || usuario.getSenha().isBlank()) {
             throw new BadRequestAlertException("Senha é obrigatória", ENTITY_NAME, "senhanull");
         }
@@ -59,6 +65,9 @@ public class UsuarioResource {
             .body(usuario);
     }
 
+    // Atualiza os dados de um usuário.
+    // A senha nunca vem no body (está com @JsonIgnore), então sempre preserva a senha atual do banco.
+    // tipoUsuario e ativo só podem ser alterados por admin — outros usuários não podem se "promover".
     @PutMapping("/{id}")
     public ResponseEntity<Usuario> updateUsuario(
         @PathVariable(value = "id", required = false) final Long id,
@@ -78,7 +87,8 @@ public class UsuarioResource {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
 
-        // senha is @JsonIgnore — always preserve from DB; tipoUsuario/ativo only admin may change
+        // Preserva a senha atual do banco (nunca sobrescreve com null vindo do frontend)
+        // e protege tipoUsuario/ativo de edição por não-admins
         Usuario existing = usuarioRepository.findById(id).orElseThrow();
         if (usuario.getSenha() == null) {
             usuario.setSenha(existing.getSenha());
@@ -94,6 +104,7 @@ public class UsuarioResource {
             .body(usuario);
     }
 
+    // Atualização parcial (PATCH) — altera apenas os campos enviados, mantém o restante intacto
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Usuario> partialUpdateUsuario(
         @PathVariable(value = "id", required = false) final Long id,
@@ -128,7 +139,7 @@ public class UsuarioResource {
                 if (usuario.getSenha() != null) {
                     existingUsuario.setSenha(usuario.getSenha());
                 }
-                // tipoUsuario e ativo só podem ser alterados por ADMIN
+                // tipoUsuario e ativo só podem ser alterados por administrador
                 if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
                     if (usuario.getTipoUsuario() != null) {
                         existingUsuario.setTipoUsuario(usuario.getTipoUsuario());
@@ -147,13 +158,15 @@ public class UsuarioResource {
         );
     }
 
+    // Listagem de usuários com controle de visibilidade:
+    // admin vê todos; usuário comum vê apenas o próprio perfil (buscado pelo e-mail do User autenticado)
     @GetMapping("")
     public List<Usuario> getAllUsuarios(@RequestParam(name = "eagerload", required = false, defaultValue = "true") boolean eagerload) {
         LOG.debug("REST request to get all Usuarios");
         if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
             return eagerload ? usuarioRepository.findAllWithEagerRelationships() : usuarioRepository.findAll();
         }
-        // Usuários comuns recebem apenas o próprio perfil
+        // Usuário comum: retorna somente o próprio registro baseado no e-mail do User autenticado
         return SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
@@ -161,6 +174,7 @@ public class UsuarioResource {
             .orElse(List.of());
     }
 
+    // Busca um usuário pelo ID — verifica permissão antes de retornar
     @GetMapping("/{id}")
     public ResponseEntity<Usuario> getUsuario(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Usuario : {}", id);
@@ -171,6 +185,7 @@ public class UsuarioResource {
         return ResponseUtil.wrapOrNotFound(usuario);
     }
 
+    // Exclui um usuário — apenas o próprio ou admin podem excluir
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUsuario(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Usuario : {}", id);
@@ -186,6 +201,8 @@ public class UsuarioResource {
             .build();
     }
 
+    // Verifica se o usuário logado é o dono do perfil ou administrador do sistema.
+    // A identificação é feita comparando o e-mail do User autenticado com o e-mail do Usuario.
     private boolean isOwnerOrAdmin(Long usuarioId) {
         if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
             return true;

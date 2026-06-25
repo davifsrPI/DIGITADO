@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+// Gera um código de 6 caracteres aleatórios para a sala, excluindo letras/números confusos (O, I, 1, 0)
 const generateCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -34,6 +35,8 @@ const DIFF_LABELS: Record<Dificuldade, string> = { FACIL: 'Fácil', MEDIO: 'Méd
 
 export const CriarSala = () => {
   const navigate = useNavigate();
+
+  // ─── Estado do formulário ──────────────────────────────────────────────────
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [codigo, setCodigo] = useState(generateCode());
@@ -46,15 +49,18 @@ export const CriarSala = () => {
   const [extraWords, setExtraWords] = useState<Palavra[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Adiciona classe ao body para aplicar estilos de fundo específicos desta página
   useEffect(() => {
     document.body.classList.add('criar-sala-page');
     return () => document.body.classList.remove('criar-sala-page');
   }, []);
 
+  // Incrementa/decrementa a quantidade de palavras de uma dificuldade, limitado entre 0 e 30
   const adj = (key: Dificuldade, delta: number) => {
     setQuantidades(prev => ({ ...prev, [key]: Math.max(0, Math.min(30, prev[key] + delta)) }));
   };
 
+  // Busca palavras no banco com debounce de 500ms — evita requisição a cada tecla digitada
   const handleWordSearch = (val: string) => {
     setWordSearch(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -85,6 +91,7 @@ export const CriarSala = () => {
     }, 500);
   };
 
+  // Adiciona a palavra à lista de extras — evita duplicatas pelo ID
   const addWord = (palavra: Palavra) => {
     if (!extraWords.find(w => w.id === palavra.id)) {
       setExtraWords(prev => [...prev, palavra]);
@@ -95,6 +102,8 @@ export const CriarSala = () => {
 
   const removeWord = (id: number) => setExtraWords(prev => prev.filter(w => w.id !== id));
 
+  // Cria a sala via API — tenta até 5 vezes se o código já existir, gerando um novo a cada tentativa.
+  // Ao criar com sucesso, navega direto para o jogo com autoStart=true e a config escolhida.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);

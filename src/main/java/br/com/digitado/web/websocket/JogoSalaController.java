@@ -16,6 +16,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 
+// Controller WebSocket que recebe e processa todas as ações do jogo em tempo real.
+// Cada método responde a uma mensagem STOMP enviada pelo cliente via /app/sala/{codigo}/acao.
+// @Transactional garante que entidades JPA com lazy loading possam ser acessadas sem erro.
 @Controller
 @Transactional
 public class JogoSalaController {
@@ -39,6 +42,8 @@ public class JogoSalaController {
         this.messaging = messaging;
     }
 
+    // Registra um aluno (ou professor) na sala quando ele se conecta.
+    // Depois de registrar, faz broadcast do estado atual para todos na sala.
     @MessageMapping("/sala/{codigo}/entrar")
     public void entrar(@DestinationVariable String codigo, @Payload EntradaAluno entrada, Principal principal) {
         if (principal == null) return;
@@ -49,11 +54,14 @@ public class JogoSalaController {
         broadcast(codigo, estado);
     }
 
+    // Inicia o jogo com a configuração escolhida pelo professor (quantidade de palavras, tempo limite).
+    // Verifica antes se o usuário é realmente o professor da sala; se não for, envia um erro via WebSocket.
     @MessageMapping("/sala/{codigo}/iniciar")
     public void iniciar(@DestinationVariable String codigo, @Payload IniciarPayload payload, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
             LOG.warn("Iniciar negado para sala {} — usuário: {}", codigo, principal != null ? principal.getName() : "anônimo");
             if (principal != null) {
+                // Manda o erro direto para o usuário que tentou iniciar sem permissão
                 messaging.convertAndSendToUser(
                     principal.getName(),
                     "/queue/sala/" + codigo + "/erro",
@@ -67,6 +75,8 @@ public class JogoSalaController {
         broadcast(codigo, estado);
     }
 
+    // Avança para a próxima palavra (chamado automaticamente pelo frontend quando o tempo esgota).
+    // Restrito ao professor da sala.
     @MessageMapping("/sala/{codigo}/proxima")
     public void proxima(@DestinationVariable String codigo, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
@@ -82,6 +92,7 @@ public class JogoSalaController {
         if (estado != null) broadcast(codigo, estado);
     }
 
+    // Pausa o jogo — restrito ao professor
     @MessageMapping("/sala/{codigo}/pausar")
     public void pausar(@DestinationVariable String codigo, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
@@ -93,6 +104,7 @@ public class JogoSalaController {
         if (estado != null) broadcast(codigo, estado);
     }
 
+    // Encerra o jogo antes do tempo — restrito ao professor
     @MessageMapping("/sala/{codigo}/encerrar")
     public void encerrar(@DestinationVariable String codigo, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
@@ -104,6 +116,9 @@ public class JogoSalaController {
         if (estado != null) broadcast(codigo, estado);
     }
 
+    // Recebe a resposta digitada por um aluno (ou professor jogando).
+    // Calcula acerto/erro e pontuação, manda o feedback só para quem respondeu,
+    // e faz broadcast do placar atualizado para todos.
     @MessageMapping("/sala/{codigo}/responder")
     public void responder(@DestinationVariable String codigo, @Payload RespostaPayload payload, Principal principal) {
         if (principal == null) return;
@@ -112,18 +127,25 @@ public class JogoSalaController {
         JogoSalaService.ResultadoResposta resultado = jogoService.responder(codigo, nomeSala, login, login, payload.respostaDigitada());
         if (resultado == null) return;
 
+        // Feedback vai apenas para quem respondeu (via user destination privada)
         messaging.convertAndSendToUser(login, "/queue/sala/" + codigo + "/feedback", resultado.feedback());
+        // Placar atualizado vai para toda a sala
         broadcast(codigo, resultado.estado());
     }
 
+    // Envia o estado do jogo para todos os participantes inscritos no tópico da sala
     private void broadcast(String codigo, EstadoJogoDTO estado) {
         messaging.convertAndSend("/topic/sala/" + codigo, estado);
     }
 
+    // Busca o nome da sala pelo código; usa o código como fallback se não encontrar
     private String getNomeSala(String codigo) {
         return salaRepository.findByCodigo(codigo).map(s -> s.getNome()).orElse(codigo);
     }
 
+    // Verifica se o usuário conectado tem permissão para controlar esta sala.
+    // Admin sempre pode. Para outros usuários, compara o e-mail do User autenticado
+    // com o e-mail do professor cadastrado na sala.
     private boolean isProfessorDaSala(String codigoSala, Principal principal) {
         if (principal == null) return false;
         return salaRepository
@@ -141,7 +163,7 @@ public class JogoSalaController {
                             return false;
                         }
 
-                        // Compara pelo email: User.email == Usuario(professor).email
+                        // Compara pelo email: o User autenticado deve ter o mesmo e-mail que o Usuario professor da sala
                         boolean match = user.getEmail() != null && user.getEmail().equalsIgnoreCase(sala.getProfessor().getEmail());
                         if (!match) {
                             LOG.warn(
