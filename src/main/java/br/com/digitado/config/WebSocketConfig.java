@@ -1,6 +1,8 @@
 package br.com.digitado.config;
 
 import br.com.digitado.web.websocket.JogoSalaJwtInterceptor;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -14,6 +16,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JogoSalaJwtInterceptor jwtInterceptor;
 
+    @Value("${jhipster.cors.allowed-origins:}")
+    private List<String> allowedOrigins;
+
+    @Value("${jhipster.cors.allowed-origin-patterns:}")
+    private List<String> allowedOriginPatterns;
+
     public WebSocketConfig(JogoSalaJwtInterceptor jwtInterceptor) {
         this.jwtInterceptor = jwtInterceptor;
     }
@@ -26,7 +34,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/websocket/sala").setAllowedOriginPatterns("*").withSockJS();
+        var endpoint = registry.addEndpoint("/websocket/sala");
+        if (!allowedOrigins.isEmpty()) {
+            endpoint.setAllowedOrigins(allowedOrigins.toArray(new String[0]));
+        } else if (!allowedOriginPatterns.isEmpty()) {
+            endpoint.setAllowedOriginPatterns(allowedOriginPatterns.toArray(new String[0]));
+        } else {
+            endpoint.setAllowedOriginPatterns("*");
+        }
+        endpoint.withSockJS();
     }
 
     @Override

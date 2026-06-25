@@ -2,6 +2,7 @@ package br.com.digitado.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.time.Instant;
 
@@ -20,7 +21,8 @@ public class Resposta implements Serializable {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "resposta_digitada")
+    @Size(max = 255)
+    @Column(name = "resposta_digitada", length = 255)
     private String respostaDigitada;
 
     @Column(name = "correta")

@@ -1,6 +1,7 @@
 package br.com.digitado.domain;
 
 import br.com.digitado.domain.enumeration.TipoUsuario;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -35,6 +36,7 @@ public class Usuario implements Serializable {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
+    @JsonIgnore
     @NotNull
     @Column(name = "senha", nullable = false)
     private String senha;

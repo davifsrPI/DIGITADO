@@ -1,7 +1,10 @@
 package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.Usuario;
+import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
+import br.com.digitado.security.AuthoritiesConstants;
+import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -14,14 +17,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.ResponseUtil;
 
-/**
- * REST controller for managing {@link br.com.digitado.domain.Usuario}.
- */
 @RestController
 @RequestMapping("/api/usuarios")
 @Transactional
@@ -35,18 +36,14 @@ public class UsuarioResource {
     private String applicationName;
 
     private final UsuarioRepository usuarioRepository;
+    private final UserRepository userRepository;
 
-    public UsuarioResource(UsuarioRepository usuarioRepository) {
+    public UsuarioResource(UsuarioRepository usuarioRepository, UserRepository userRepository) {
         this.usuarioRepository = usuarioRepository;
+        this.userRepository = userRepository;
     }
 
-    /**
-     * {@code POST  /usuarios} : Create a new usuario.
-     *
-     * @param usuario the usuario to create.
-     * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new usuario, or with status {@code 400 (Bad Request)} if the usuario has already an ID.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
+    @Secured(AuthoritiesConstants.ADMIN)
     @PostMapping("")
     public ResponseEntity<Usuario> createUsuario(@Valid @RequestBody Usuario usuario) throws URISyntaxException {
         LOG.debug("REST request to save Usuario : {}", usuario);
@@ -59,16 +56,6 @@ public class UsuarioResource {
             .body(usuario);
     }
 
-    /**
-     * {@code PUT  /usuarios/:id} : Updates an existing usuario.
-     *
-     * @param id the id of the usuario to save.
-     * @param usuario the usuario to update.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated usuario,
-     * or with status {@code 400 (Bad Request)} if the usuario is not valid,
-     * or with status {@code 500 (Internal Server Error)} if the usuario couldn't be updated.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
     @PutMapping("/{id}")
     public ResponseEntity<Usuario> updateUsuario(
         @PathVariable(value = "id", required = false) final Long id,
@@ -81,9 +68,18 @@ public class UsuarioResource {
         if (!Objects.equals(id, usuario.getId())) {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
-
         if (!usuarioRepository.existsById(id)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+        if (!isOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+
+        // Preserve tipoUsuario and ativo from existing record — only admin may change these
+        if (!SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
+            Usuario existing = usuarioRepository.findById(id).orElseThrow();
+            usuario.setTipoUsuario(existing.getTipoUsuario());
+            usuario.setAtivo(existing.getAtivo());
         }
 
         usuario = usuarioRepository.save(usuario);
@@ -92,17 +88,6 @@ public class UsuarioResource {
             .body(usuario);
     }
 
-    /**
-     * {@code PATCH  /usuarios/:id} : Partial updates given fields of an existing usuario, field will ignore if it is null
-     *
-     * @param id the id of the usuario to save.
-     * @param usuario the usuario to update.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated usuario,
-     * or with status {@code 400 (Bad Request)} if the usuario is not valid,
-     * or with status {@code 404 (Not Found)} if the usuario is not found,
-     * or with status {@code 500 (Internal Server Error)} if the usuario couldn't be updated.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Usuario> partialUpdateUsuario(
         @PathVariable(value = "id", required = false) final Long id,
@@ -115,9 +100,11 @@ public class UsuarioResource {
         if (!Objects.equals(id, usuario.getId())) {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
-
         if (!usuarioRepository.existsById(id)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+        if (!isOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
 
         Optional<Usuario> result = usuarioRepository
@@ -135,13 +122,15 @@ public class UsuarioResource {
                 if (usuario.getSenha() != null) {
                     existingUsuario.setSenha(usuario.getSenha());
                 }
-                if (usuario.getTipoUsuario() != null) {
-                    existingUsuario.setTipoUsuario(usuario.getTipoUsuario());
+                // tipoUsuario e ativo só podem ser alterados por ADMIN
+                if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
+                    if (usuario.getTipoUsuario() != null) {
+                        existingUsuario.setTipoUsuario(usuario.getTipoUsuario());
+                    }
+                    if (usuario.getAtivo() != null) {
+                        existingUsuario.setAtivo(usuario.getAtivo());
+                    }
                 }
-                if (usuario.getAtivo() != null) {
-                    existingUsuario.setAtivo(usuario.getAtivo());
-                }
-
                 return existingUsuario;
             })
             .map(usuarioRepository::save);
@@ -152,47 +141,53 @@ public class UsuarioResource {
         );
     }
 
-    /**
-     * {@code GET  /usuarios} : get all the usuarios.
-     *
-     * @param eagerload flag to eager load entities from relationships (This is applicable for many-to-many).
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of usuarios in body.
-     */
     @GetMapping("")
     public List<Usuario> getAllUsuarios(@RequestParam(name = "eagerload", required = false, defaultValue = "true") boolean eagerload) {
         LOG.debug("REST request to get all Usuarios");
-        if (eagerload) {
-            return usuarioRepository.findAllWithEagerRelationships();
-        } else {
-            return usuarioRepository.findAll();
+        if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
+            return eagerload ? usuarioRepository.findAllWithEagerRelationships() : usuarioRepository.findAll();
         }
+        // Usuários comuns recebem apenas o próprio perfil
+        return SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .map(List::of)
+            .orElse(List.of());
     }
 
-    /**
-     * {@code GET  /usuarios/:id} : get the "id" usuario.
-     *
-     * @param id the id of the usuario to retrieve.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the usuario, or with status {@code 404 (Not Found)}.
-     */
     @GetMapping("/{id}")
     public ResponseEntity<Usuario> getUsuario(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Usuario : {}", id);
+        if (!isOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
         Optional<Usuario> usuario = usuarioRepository.findOneWithEagerRelationships(id);
         return ResponseUtil.wrapOrNotFound(usuario);
     }
 
-    /**
-     * {@code DELETE  /usuarios/:id} : delete the "id" usuario.
-     *
-     * @param id the id of the usuario to delete.
-     * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUsuario(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Usuario : {}", id);
+        if (!usuarioRepository.existsById(id)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+        if (!isOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
         usuarioRepository.deleteById(id);
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
+    }
+
+    private boolean isOwnerOrAdmin(Long usuarioId) {
+        if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
+            return true;
+        }
+        return SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .map(usuario -> usuario.getId().equals(usuarioId))
+            .orElse(false);
     }
 }

@@ -2,6 +2,7 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.Ranking;
 import br.com.digitado.repository.RankingRepository;
+import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
@@ -45,6 +47,7 @@ public class RankingResource {
      * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new ranking, or with status {@code 400 (Bad Request)} if the ranking has already an ID.
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
+    @Secured(AuthoritiesConstants.ADMIN)
     @PostMapping("")
     public ResponseEntity<Ranking> createRanking(@RequestBody Ranking ranking) throws URISyntaxException {
         LOG.debug("REST request to save Ranking : {}", ranking);
@@ -67,6 +70,7 @@ public class RankingResource {
      * or with status {@code 500 (Internal Server Error)} if the ranking couldn't be updated.
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
+    @Secured(AuthoritiesConstants.ADMIN)
     @PutMapping("/{id}")
     public ResponseEntity<Ranking> updateRanking(@PathVariable(value = "id", required = false) final Long id, @RequestBody Ranking ranking)
         throws URISyntaxException {
@@ -99,6 +103,7 @@ public class RankingResource {
      * or with status {@code 500 (Internal Server Error)} if the ranking couldn't be updated.
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
+    @Secured(AuthoritiesConstants.ADMIN)
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Ranking> partialUpdateRanking(
         @PathVariable(value = "id", required = false) final Long id,
@@ -169,6 +174,7 @@ public class RankingResource {
      * @param id the id of the ranking to delete.
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
+    @Secured(AuthoritiesConstants.ADMIN)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRanking(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Ranking : {}", id);

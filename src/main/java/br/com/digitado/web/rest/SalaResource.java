@@ -4,6 +4,7 @@ import br.com.digitado.domain.Sala;
 import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
+import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import br.com.digitado.web.rest.vm.SalaResponseVM;
@@ -23,9 +24,6 @@ import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.ResponseUtil;
 
-/**
- * REST controller for managing {@link br.com.digitado.domain.Sala}.
- */
 @RestController
 @RequestMapping("/api/salas")
 @Transactional
@@ -48,13 +46,6 @@ public class SalaResource {
         this.usuarioRepository = usuarioRepository;
     }
 
-    /**
-     * {@code POST  /salas} : Create a new sala.
-     *
-     * @param sala the sala to create.
-     * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new sala, or with status {@code 400 (Bad Request)} if the sala has already an ID.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
     @PostMapping("")
     public ResponseEntity<SalaResponseVM> createSala(@Valid @RequestBody Sala sala) throws URISyntaxException {
         LOG.debug("REST request to save Sala : {}", sala);
@@ -75,16 +66,6 @@ public class SalaResource {
             .body(vm);
     }
 
-    /**
-     * {@code PUT  /salas/:id} : Updates an existing sala.
-     *
-     * @param id the id of the sala to save.
-     * @param sala the sala to update.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated sala,
-     * or with status {@code 400 (Bad Request)} if the sala is not valid,
-     * or with status {@code 500 (Internal Server Error)} if the sala couldn't be updated.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
     @PutMapping("/{id}")
     public ResponseEntity<Sala> updateSala(@PathVariable(value = "id", required = false) final Long id, @Valid @RequestBody Sala sala)
         throws URISyntaxException {
@@ -95,28 +76,18 @@ public class SalaResource {
         if (!Objects.equals(id, sala.getId())) {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
-
         if (!salaRepository.existsById(id)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
-
+        if (!isOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
         sala = salaRepository.save(sala);
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, sala.getId().toString()))
             .body(sala);
     }
 
-    /**
-     * {@code PATCH  /salas/:id} : Partial updates given fields of an existing sala, field will ignore if it is null
-     *
-     * @param id the id of the sala to save.
-     * @param sala the sala to update.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated sala,
-     * or with status {@code 400 (Bad Request)} if the sala is not valid,
-     * or with status {@code 404 (Not Found)} if the sala is not found,
-     * or with status {@code 500 (Internal Server Error)} if the sala couldn't be updated.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Sala> partialUpdateSala(
         @PathVariable(value = "id", required = false) final Long id,
@@ -129,9 +100,11 @@ public class SalaResource {
         if (!Objects.equals(id, sala.getId())) {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
-
         if (!salaRepository.existsById(id)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+        if (!isOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
 
         Optional<Sala> result = salaRepository
@@ -149,7 +122,6 @@ public class SalaResource {
                 if (sala.getAtivo() != null) {
                     existingSala.setAtivo(sala.getAtivo());
                 }
-
                 return existingSala;
             })
             .map(salaRepository::save);
@@ -160,24 +132,29 @@ public class SalaResource {
         );
     }
 
-    /**
-     * {@code GET  /salas} : get all the salas.
-     *
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of salas in body.
-     */
     @GetMapping("")
     public List<Sala> getAllSalas(@RequestParam(required = false) Boolean ativo) {
         LOG.debug("REST request to get all Salas");
-        if (ativo != null) return salaRepository.findByAtivo(ativo);
-        return salaRepository.findAll();
+        boolean isAdmin = SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN);
+        if (isAdmin) {
+            if (ativo != null) return salaRepository.findByAtivo(ativo);
+            return salaRepository.findAll();
+        }
+        // Professores e alunos veem apenas as salas que lhes pertencem
+        return SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .map(usuario -> {
+                List<Sala> salas = new java.util.ArrayList<>(usuario.getSalas());
+                salas.addAll(usuario.getSalasAlunos());
+                if (ativo != null) {
+                    salas.removeIf(s -> !ativo.equals(s.getAtivo()));
+                }
+                return salas;
+            })
+            .orElse(List.of());
     }
 
-    /**
-     * {@code GET  /salas/:id} : get the "id" sala.
-     *
-     * @param id the id of the sala to retrieve.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the sala, or with status {@code 404 (Not Found)}.
-     */
     @GetMapping("/{id}")
     public ResponseEntity<Sala> getSala(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Sala : {}", id);
@@ -185,18 +162,34 @@ public class SalaResource {
         return ResponseUtil.wrapOrNotFound(sala);
     }
 
-    /**
-     * {@code DELETE  /salas/:id} : delete the "id" sala.
-     *
-     * @param id the id of the sala to delete.
-     * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSala(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Sala : {}", id);
+        if (!salaRepository.existsById(id)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+        if (!isOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
         salaRepository.deleteById(id);
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
+    }
+
+    private boolean isOwnerOrAdmin(Long salaId) {
+        if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
+            return true;
+        }
+        return SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .map(usuario ->
+                salaRepository
+                    .findById(salaId)
+                    .map(sala -> sala.getProfessor() != null && sala.getProfessor().getId().equals(usuario.getId()))
+                    .orElse(false)
+            )
+            .orElse(false);
     }
 }

@@ -50,6 +50,20 @@ public class LoggingAspect {
     }
 
     /**
+     * Pointcut that excludes methods that handle sensitive data (passwords, tokens).
+     */
+    @Pointcut(
+        "!execution(* br.com.digitado.service.UserService.changePassword(..))" +
+        " && !execution(* br.com.digitado.service.UserService.completePasswordReset(..))" +
+        " && !execution(* br.com.digitado.web.rest.AuthenticateController.authorize(..))" +
+        " && !execution(* br.com.digitado.web.rest.AccountResource.changePassword(..))" +
+        " && !execution(* br.com.digitado.web.rest.AccountResource.finishPasswordReset(..))"
+    )
+    public void notSensitiveMethodPointcut() {
+        // Excludes methods that receive or handle clear-text passwords / tokens
+    }
+
+    /**
      * Retrieves the {@link Logger} associated to the given {@link JoinPoint}.
      *
      * @param joinPoint join point we want the logger for.
@@ -65,7 +79,7 @@ public class LoggingAspect {
      * @param joinPoint join point for advice.
      * @param e exception.
      */
-    @AfterThrowing(pointcut = "applicationPackagePointcut() && springBeanPointcut()", throwing = "e")
+    @AfterThrowing(pointcut = "applicationPackagePointcut() && springBeanPointcut() && notSensitiveMethodPointcut()", throwing = "e")
     public void logAfterThrowing(JoinPoint joinPoint, Throwable e) {
         if (env.acceptsProfiles(Profiles.of(JHipsterConstants.SPRING_PROFILE_DEVELOPMENT))) {
             logger(joinPoint).error(
@@ -91,7 +105,7 @@ public class LoggingAspect {
      * @return result.
      * @throws Throwable throws {@link IllegalArgumentException}.
      */
-    @Around("applicationPackagePointcut() && springBeanPointcut()")
+    @Around("applicationPackagePointcut() && springBeanPointcut() && notSensitiveMethodPointcut()")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
         Logger log = logger(joinPoint);
         if (log.isDebugEnabled()) {

@@ -2,6 +2,10 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.Atividade;
 import br.com.digitado.repository.AtividadeRepository;
+import br.com.digitado.repository.UserRepository;
+import br.com.digitado.repository.UsuarioRepository;
+import br.com.digitado.security.AuthoritiesConstants;
+import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -19,9 +23,6 @@ import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.ResponseUtil;
 
-/**
- * REST controller for managing {@link br.com.digitado.domain.Atividade}.
- */
 @RestController
 @RequestMapping("/api/atividades")
 @Transactional
@@ -35,18 +36,15 @@ public class AtividadeResource {
     private String applicationName;
 
     private final AtividadeRepository atividadeRepository;
+    private final UserRepository userRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public AtividadeResource(AtividadeRepository atividadeRepository) {
+    public AtividadeResource(AtividadeRepository atividadeRepository, UserRepository userRepository, UsuarioRepository usuarioRepository) {
         this.atividadeRepository = atividadeRepository;
+        this.userRepository = userRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
-    /**
-     * {@code POST  /atividades} : Create a new atividade.
-     *
-     * @param atividade the atividade to create.
-     * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new atividade, or with status {@code 400 (Bad Request)} if the atividade has already an ID.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
     @PostMapping("")
     public ResponseEntity<Atividade> createAtividade(@Valid @RequestBody Atividade atividade) throws URISyntaxException {
         LOG.debug("REST request to save Atividade : {}", atividade);
@@ -59,16 +57,6 @@ public class AtividadeResource {
             .body(atividade);
     }
 
-    /**
-     * {@code PUT  /atividades/:id} : Updates an existing atividade.
-     *
-     * @param id the id of the atividade to save.
-     * @param atividade the atividade to update.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated atividade,
-     * or with status {@code 400 (Bad Request)} if the atividade is not valid,
-     * or with status {@code 500 (Internal Server Error)} if the atividade couldn't be updated.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
     @PutMapping("/{id}")
     public ResponseEntity<Atividade> updateAtividade(
         @PathVariable(value = "id", required = false) final Long id,
@@ -81,28 +69,18 @@ public class AtividadeResource {
         if (!Objects.equals(id, atividade.getId())) {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
-
         if (!atividadeRepository.existsById(id)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
-
+        if (!isSalaOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
         atividade = atividadeRepository.save(atividade);
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, atividade.getId().toString()))
             .body(atividade);
     }
 
-    /**
-     * {@code PATCH  /atividades/:id} : Partial updates given fields of an existing atividade, field will ignore if it is null
-     *
-     * @param id the id of the atividade to save.
-     * @param atividade the atividade to update.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated atividade,
-     * or with status {@code 400 (Bad Request)} if the atividade is not valid,
-     * or with status {@code 404 (Not Found)} if the atividade is not found,
-     * or with status {@code 500 (Internal Server Error)} if the atividade couldn't be updated.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
-     */
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Atividade> partialUpdateAtividade(
         @PathVariable(value = "id", required = false) final Long id,
@@ -115,9 +93,11 @@ public class AtividadeResource {
         if (!Objects.equals(id, atividade.getId())) {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
-
         if (!atividadeRepository.existsById(id)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+        if (!isSalaOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
 
         Optional<Atividade> result = atividadeRepository
@@ -141,7 +121,6 @@ public class AtividadeResource {
                 if (atividade.getStatus() != null) {
                     existingAtividade.setStatus(atividade.getStatus());
                 }
-
                 return existingAtividade;
             })
             .map(atividadeRepository::save);
@@ -152,23 +131,12 @@ public class AtividadeResource {
         );
     }
 
-    /**
-     * {@code GET  /atividades} : get all the atividades.
-     *
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of atividades in body.
-     */
     @GetMapping("")
     public List<Atividade> getAllAtividades() {
         LOG.debug("REST request to get all Atividades");
         return atividadeRepository.findAll();
     }
 
-    /**
-     * {@code GET  /atividades/:id} : get the "id" atividade.
-     *
-     * @param id the id of the atividade to retrieve.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the atividade, or with status {@code 404 (Not Found)}.
-     */
     @GetMapping("/{id}")
     public ResponseEntity<Atividade> getAtividade(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Atividade : {}", id);
@@ -176,18 +144,39 @@ public class AtividadeResource {
         return ResponseUtil.wrapOrNotFound(atividade);
     }
 
-    /**
-     * {@code DELETE  /atividades/:id} : delete the "id" atividade.
-     *
-     * @param id the id of the atividade to delete.
-     * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAtividade(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Atividade : {}", id);
+        if (!atividadeRepository.existsById(id)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+        if (!isSalaOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
         atividadeRepository.deleteById(id);
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
+    }
+
+    private boolean isSalaOwnerOrAdmin(Long atividadeId) {
+        if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
+            return true;
+        }
+        return SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .map(usuario ->
+                atividadeRepository
+                    .findById(atividadeId)
+                    .map(
+                        at ->
+                            at.getSala() != null &&
+                            at.getSala().getProfessor() != null &&
+                            at.getSala().getProfessor().getId().equals(usuario.getId())
+                    )
+                    .orElse(false)
+            )
+            .orElse(false);
     }
 }
