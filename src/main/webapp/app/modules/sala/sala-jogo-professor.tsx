@@ -25,12 +25,22 @@ const DIFF_BG: Record<Dificuldade, string> = {
   DIFICIL: '#FCEBEB',
 };
 
-const DEFAULT_CFG = { tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5, palavrasExtrasIds: [] as number[] };
+type Cfg = { tempoLimite: number; qtdFacil: number; qtdMedio: number; qtdDificil: number };
+
+const DIFICULDADES: Array<{ key: keyof Omit<Cfg, 'tempoLimite'>; label: string; cor: string }> = [
+  { key: 'qtdFacil', label: 'Fáceis', cor: '#4ade80' },
+  { key: 'qtdMedio', label: 'Médias', cor: '#fbbf24' },
+  { key: 'qtdDificil', label: 'Difíceis', cor: '#f87171' },
+];
 
 export const SalaJogoProfessor: React.FC<Props> = ({ estado, codigoSala, conectado, onIniciar, onProxima, onPausar, onEncerrar }) => {
+  const [cfg, setCfg] = useState<Cfg>({ tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 });
   const [tempoRestante, setTempoRestante] = useState(0);
   const [confirmEncerrar, setConfirmEncerrar] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const adj = (campo: keyof Cfg, delta: number, min = 0, max = 30) =>
+    setCfg(prev => ({ ...prev, [campo]: Math.max(min, Math.min(max, prev[campo] + delta)) }));
 
   const copiarCodigo = () => {
     navigator.clipboard.writeText(codigoSala).then(() => {
@@ -74,27 +84,79 @@ export const SalaJogoProfessor: React.FC<Props> = ({ estado, codigoSala, conecta
           <span className="sj-codigo-copy">{copied ? '✓ Copiado!' : 'clique para copiar'}</span>
         </button>
 
-        <div className="sj-alunos-panel">
-          <div className="sj-alunos-header">
-            <span className="sj-alunos-title">Alunos conectados</span>
-            <span className="sj-alunos-badge">{alunos.length}</span>
-          </div>
-          {alunos.length === 0 ? (
-            <p className="sj-no-alunos">Nenhum aluno entrou ainda...</p>
-          ) : (
-            <ul className="sj-alunos-list">
-              {alunos.map(a => (
-                <li key={a.login} className="sj-aluno-item">
-                  <span className="sj-aluno-avatar">{(a.nome || a.login).charAt(0).toUpperCase()}</span>
-                  <span className="sj-aluno-nome">{a.nome || a.login}</span>
-                  <span className="sj-aluno-dot" />
-                </li>
+        <div className="sj-lobby-cols">
+          {/* config */}
+          <div className="sj-cfg-card">
+            <h3 className="sj-cfg-title">Configurar atividade</h3>
+
+            <div className="sj-cfg-field">
+              <div className="sj-cfg-field-label">
+                Tempo por palavra <strong>{cfg.tempoLimite}s</strong>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={60}
+                step={5}
+                value={cfg.tempoLimite}
+                onChange={e => setCfg(prev => ({ ...prev, tempoLimite: Number(e.target.value) }))}
+                className="sj-range"
+              />
+              <div className="sj-range-labels">
+                <span>10s</span>
+                <span>60s</span>
+              </div>
+            </div>
+
+            <div className="sj-cfg-diffs">
+              {DIFICULDADES.map(({ key, label, cor }) => (
+                <div className="sj-cfg-diff-row" key={key}>
+                  <span className="sj-cfg-diff-dot" style={{ background: cor }} />
+                  <span className="sj-cfg-diff-label">{label}</span>
+                  <div className="sj-cfg-stepper">
+                    <button type="button" className="sj-step-btn" onClick={() => adj(key, -1)}>
+                      −
+                    </button>
+                    <span className="sj-step-val">{cfg[key]}</span>
+                    <button type="button" className="sj-step-btn" onClick={() => adj(key, 1)}>
+                      +
+                    </button>
+                  </div>
+                </div>
               ))}
-            </ul>
-          )}
+              <div className="sj-cfg-total">
+                Total: <strong>{cfg.qtdFacil + cfg.qtdMedio + cfg.qtdDificil}</strong> palavras
+              </div>
+            </div>
+          </div>
+
+          {/* alunos */}
+          <div className="sj-alunos-panel">
+            <div className="sj-alunos-header">
+              <span className="sj-alunos-title">Alunos conectados</span>
+              <span className="sj-alunos-badge">{alunos.length}</span>
+            </div>
+            {alunos.length === 0 ? (
+              <p className="sj-no-alunos">Nenhum aluno entrou ainda...</p>
+            ) : (
+              <ul className="sj-alunos-list">
+                {alunos.map(a => (
+                  <li key={a.login} className="sj-aluno-item">
+                    <span className="sj-aluno-avatar">{(a.nome || a.login).charAt(0).toUpperCase()}</span>
+                    <span className="sj-aluno-nome">{a.nome || a.login}</span>
+                    <span className="sj-aluno-dot" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
-        <button className="sj-iniciar-btn" disabled={!conectado} onClick={() => onIniciar(DEFAULT_CFG)}>
+        <button
+          className="sj-iniciar-btn"
+          disabled={!conectado || cfg.qtdFacil + cfg.qtdMedio + cfg.qtdDificil === 0}
+          onClick={() => onIniciar({ ...cfg, palavrasExtrasIds: [] })}
+        >
           {conectado ? '▶ Iniciar partida' : 'Conectando...'}
         </button>
       </div>
