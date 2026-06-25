@@ -9,6 +9,7 @@ import java.security.Principal;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -39,7 +40,7 @@ public class JogoSalaController {
     }
 
     @MessageMapping("/sala/{codigo}/entrar")
-    public void entrar(String codigo, @Payload EntradaAluno entrada, Principal principal) {
+    public void entrar(@DestinationVariable String codigo, @Payload EntradaAluno entrada, Principal principal) {
         if (principal == null) return;
         String login = principal.getName();
         String nomeSala = getNomeSala(codigo);
@@ -49,7 +50,7 @@ public class JogoSalaController {
     }
 
     @MessageMapping("/sala/{codigo}/iniciar")
-    public void iniciar(String codigo, @Payload IniciarPayload payload, Principal principal) {
+    public void iniciar(@DestinationVariable String codigo, @Payload IniciarPayload payload, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
             LOG.warn("Iniciar negado para sala {} — usuário: {}", codigo, principal != null ? principal.getName() : "anônimo");
             if (principal != null) {
@@ -67,7 +68,7 @@ public class JogoSalaController {
     }
 
     @MessageMapping("/sala/{codigo}/proxima")
-    public void proxima(String codigo, Principal principal) {
+    public void proxima(@DestinationVariable String codigo, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
             LOG.warn(
                 "Tentativa não autorizada de avançar palavra em sala {} por {}",
@@ -82,7 +83,7 @@ public class JogoSalaController {
     }
 
     @MessageMapping("/sala/{codigo}/pausar")
-    public void pausar(String codigo, Principal principal) {
+    public void pausar(@DestinationVariable String codigo, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
             LOG.warn("Tentativa não autorizada de pausar sala {} por {}", codigo, principal != null ? principal.getName() : "anônimo");
             return;
@@ -93,7 +94,7 @@ public class JogoSalaController {
     }
 
     @MessageMapping("/sala/{codigo}/encerrar")
-    public void encerrar(String codigo, Principal principal) {
+    public void encerrar(@DestinationVariable String codigo, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
             LOG.warn("Tentativa não autorizada de encerrar sala {} por {}", codigo, principal != null ? principal.getName() : "anônimo");
             return;
@@ -104,7 +105,7 @@ public class JogoSalaController {
     }
 
     @MessageMapping("/sala/{codigo}/responder")
-    public void responder(String codigo, @Payload RespostaPayload payload, Principal principal) {
+    public void responder(@DestinationVariable String codigo, @Payload RespostaPayload payload, Principal principal) {
         if (principal == null) return;
         String login = principal.getName();
         String nomeSala = getNomeSala(codigo);
