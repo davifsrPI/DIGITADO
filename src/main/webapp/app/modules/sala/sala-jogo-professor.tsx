@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EstadoJogo } from './hooks/useSalaWebSocket';
 
-type Dificuldade = 'FACIL' | 'MEDIO' | 'DIFICIL';
-
 interface GameConfig {
   tempoLimite: number;
   qtdFacil: number;
@@ -24,18 +22,6 @@ interface Props {
   initialGameConfig?: GameConfig;
 }
 
-const DIFFS: Array<{ key: Dificuldade; color: string; label: string }> = [
-  { key: 'FACIL', color: '#3B6D11', label: 'Fáceis' },
-  { key: 'MEDIO', color: '#854F0B', label: 'Médias' },
-  { key: 'DIFICIL', color: '#A32D2D', label: 'Difíceis' },
-];
-
-const DIFF_BG: Record<Dificuldade, string> = {
-  FACIL: '#EAF3DE',
-  MEDIO: '#FAEEDA',
-  DIFICIL: '#FCEBEB',
-};
-
 type Cfg = { tempoLimite: number; qtdFacil: number; qtdMedio: number; qtdDificil: number };
 
 const DIFICULDADES: Array<{ key: keyof Omit<Cfg, 'tempoLimite'>; label: string; cor: string }> = [
@@ -43,6 +29,9 @@ const DIFICULDADES: Array<{ key: keyof Omit<Cfg, 'tempoLimite'>; label: string; 
   { key: 'qtdMedio', label: 'Médias', cor: '#fbbf24' },
   { key: 'qtdDificil', label: 'Difíceis', cor: '#f87171' },
 ];
+
+const DEFAULT_CFG: Cfg = { tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
+const RANKING_DURATION = 25;
 
 function falarPalavra(texto: string) {
   if (!window.speechSynthesis) return;
@@ -53,32 +42,32 @@ function falarPalavra(texto: string) {
   window.speechSynthesis.speak(utter);
 }
 
-const DEFAULT_CFG: Cfg = { tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
-
 export const SalaJogoProfessor: React.FC<Props> = ({
   estado,
   codigoSala,
   conectado,
   onIniciar,
   onProxima,
-  onPausar,
-  onEncerrar,
   onResponder,
   autoStart,
   initialGameConfig,
 }) => {
   const [cfg, setCfg] = useState<Cfg>(initialGameConfig ?? DEFAULT_CFG);
   const didAutoStart = useRef(false);
-  const [tempoRestante, setTempoRestante] = useState(0);
-  const [confirmEncerrar, setConfirmEncerrar] = useState(false);
-  const [copied, setCopied] = useState(false);
+
   const [resposta, setResposta] = useState('');
   const [jaRespondeu, setJaRespondeu] = useState(false);
   const [falando, setFalando] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [tempoRestante, setTempoRestante] = useState(0);
+  const [copied, setCopied] = useState(false);
 
-  const adj = (campo: keyof Cfg, delta: number, min = 0, max = 30) =>
-    setCfg(prev => ({ ...prev, [campo]: Math.max(min, Math.min(max, prev[campo] + delta)) }));
+  const [showRanking, setShowRanking] = useState(false);
+  const [rankingTimer, setRankingTimer] = useState(0);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const rankingTriggeredRef = useRef(false);
+
+  const adj = (campo: keyof Cfg, delta: number) => setCfg(prev => ({ ...prev, [campo]: Math.max(0, Math.min(30, prev[campo] + delta)) }));
 
   const copiarCodigo = () => {
     navigator.clipboard.writeText(codigoSala).then(() => {
@@ -106,7 +95,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     setJaRespondeu(true);
   };
 
-  // Auto-start once connected when coming from criar-sala
+  // Auto-start on connect
   useEffect(() => {
     if (autoStart && conectado && !didAutoStart.current && (!estado || estado.tipo === 'AGUARDANDO')) {
       didAutoStart.current = true;
@@ -119,14 +108,20 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     setResposta('');
     setJaRespondeu(false);
     setFalando(false);
+    setShowRanking(false);
+    rankingTriggeredRef.current = false;
     if (estado?.palavraAtual?.texto) {
-      falarPalavra(estado.palavraAtual.texto);
+      setTimeout(() => falarPalavra(estado.palavraAtual.texto), 300);
+      setFalando(true);
+      setTimeout(() => setFalando(false), 3000);
     }
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [estado?.palavraAtual?.id]);
 
+  // Timer countdown
   useEffect(() => {
-    if (!estado || (estado.tipo !== 'NOVA_PALAVRA' && estado.tipo !== 'INICIADA')) {
+    const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
+    if (!ativo) {
       setTempoRestante(0);
       return;
     }
@@ -139,11 +134,33 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     return () => clearInterval(id);
   }, [estado?.timestampInicio, estado?.tempoLimite, estado?.tipo]);
 
-  const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
-  const pausada = estado?.tipo === 'PAUSADA';
-  const pct = estado && estado.tempoLimite > 0 ? (tempoRestante / estado.tempoLimite) * 100 : 0;
+  // Trigger ranking when time runs out
+  useEffect(() => {
+    const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
+    if (tempoRestante === 0 && ativo && estado?.palavraAtual != null && !rankingTriggeredRef.current) {
+      rankingTriggeredRef.current = true;
+      setShowRanking(true);
+      setRankingTimer(RANKING_DURATION);
+    }
+  }, [tempoRestante]);
 
-  /* ── LOBBY (aguardando) ─────────────────────────────────────────── */
+  // Ranking countdown → advance to next word
+  useEffect(() => {
+    if (!showRanking) return;
+    if (rankingTimer <= 0) {
+      setShowRanking(false);
+      onProxima();
+      return;
+    }
+    const id = setTimeout(() => setRankingTimer(t => t - 1), 1000);
+    return () => clearTimeout(id);
+  }, [showRanking, rankingTimer]);
+
+  const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
+  const pct = estado && estado.tempoLimite > 0 ? (tempoRestante / estado.tempoLimite) * 100 : 0;
+  const timerDanger = tempoRestante <= 5;
+
+  /* ── LOBBY ───────────────────────────────────────────────── */
   if (!estado || estado.tipo === 'AGUARDANDO') {
     const alunos = estado?.alunosConectados ?? [];
     return (
@@ -161,10 +178,8 @@ export const SalaJogoProfessor: React.FC<Props> = ({
         </button>
 
         <div className="sj-lobby-cols">
-          {/* config */}
           <div className="sj-cfg-card">
             <h3 className="sj-cfg-title">Configurar atividade</h3>
-
             <div className="sj-cfg-field">
               <div className="sj-cfg-field-label">
                 Tempo por palavra <strong>{cfg.tempoLimite}s</strong>
@@ -183,7 +198,6 @@ export const SalaJogoProfessor: React.FC<Props> = ({
                 <span>60s</span>
               </div>
             </div>
-
             <div className="sj-cfg-diffs">
               {DIFICULDADES.map(({ key, label, cor }) => (
                 <div className="sj-cfg-diff-row" key={key}>
@@ -206,7 +220,6 @@ export const SalaJogoProfessor: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* alunos */}
           <div className="sj-alunos-panel">
             <div className="sj-alunos-header">
               <span className="sj-alunos-title">Alunos conectados</span>
@@ -239,7 +252,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     );
   }
 
-  /* ── ENCERRADA ──────────────────────────────────────────────────── */
+  /* ── ENCERRADA ───────────────────────────────────────────── */
   if (estado.tipo === 'ENCERRADA') {
     return (
       <div className="sj-ended">
@@ -257,131 +270,102 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     );
   }
 
-  /* ── EM JOGO ────────────────────────────────────────────────────── */
-  const diff = (estado.palavraAtual?.dificuldade ?? 'FACIL') as Dificuldade;
+  /* ── RANKING entre palavras ──────────────────────────────── */
+  if (showRanking) {
+    const rankingPct = (rankingTimer / RANKING_DURATION) * 100;
+    return (
+      <div className="sj-ranking-screen">
+        <div className="sj-ranking-header">
+          <div className="sj-lobby-badge">Ranking da rodada</div>
+          <h2 className="sj-ranking-title">
+            palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
+          </h2>
+        </div>
 
-  return (
-    <div className="sj-prof-game">
-      <div className="sj-prof-topbar">
-        <div>
-          <div className="sj-sala-nome">{estado.nomeSala}</div>
-          <div className="sj-palavra-prog">
-            {pausada ? '⏸ Pausada · ' : ''}palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
+        <div className="sj-ranking-countdown">
+          <span className="sj-ranking-next-label">Próxima palavra em</span>
+          <span className="sj-ranking-next-val">{rankingTimer}s</span>
+          <div className="sj-timer-bar-bg" style={{ marginTop: 10 }}>
+            <div className="sj-timer-bar-fill" style={{ width: `${rankingPct}%`, background: '#6366f1', transition: 'width 1s linear' }} />
           </div>
         </div>
+
+        <div className="sj-ranking-list">
+          {estado.placar.length === 0 ? (
+            <p className="sj-no-alunos">Nenhum participante no placar ainda.</p>
+          ) : (
+            estado.placar.map((p, i) => (
+              <div key={p.login} className="sj-ranking-row">
+                <span className="sj-ranking-rank">{i + 1}º</span>
+                <span className="sj-ranking-avatar">{(p.nome || p.login).charAt(0).toUpperCase()}</span>
+                <span className="sj-ranking-nome">{p.nome || p.login}</span>
+                <span className={`sj-status-chip sj-status-${(p.statusAtual ?? 'aguardando').toLowerCase()}`}>
+                  {p.statusAtual === 'ACERTOU' ? 'acertou' : p.statusAtual === 'ERROU' ? 'errou' : 'aguardando'}
+                </span>
+                <span className="sj-ranking-pts">{p.pontos} pts</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── EM JOGO ─────────────────────────────────────────────── */
+  return (
+    <div className="sj-game-centered">
+      <div className="sj-game-topbar">
+        <div className="sj-sala-nome">{estado.nomeSala}</div>
         <div className="sj-topbar-right">
           <span className="sj-conectados">{estado.alunosConectados.length} aluno(s)</span>
           <span className="sj-codigo-pill">{codigoSala}</span>
         </div>
       </div>
 
-      <div className="sj-prof-main">
-        <div className="sj-prof-left">
-          <div className="sj-audio-area">
-            <button
-              type="button"
-              className={`sj-audio-btn${falando ? ' sj-audio-btn--playing' : ''}`}
-              onClick={handleFalar}
-              disabled={!ativo || !estado.palavraAtual}
-              aria-label="Ouvir palavra"
-            >
-              <span className="sj-audio-icon">{falando ? '🔊' : '🔉'}</span>
-              <span className="sj-audio-label">{falando ? 'Reproduzindo...' : 'Ouvir palavra'}</span>
-            </button>
+      <div className="sj-game-card">
+        <p className="sj-game-progress">
+          palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
+        </p>
 
-            <form className="sj-input-form" onSubmit={handleEnviar}>
-              <input
-                id="sj-resposta-prof"
-                ref={inputRef}
-                className="sj-word-input"
-                type="text"
-                value={resposta}
-                onChange={e => setResposta(e.target.value)}
-                placeholder="escreva aqui..."
-                autoComplete="off"
-                spellCheck={false}
-                disabled={jaRespondeu || !ativo}
-              />
-              <button type="submit" className="sj-send-btn" disabled={!resposta.trim() || jaRespondeu || !ativo}>
-                {jaRespondeu ? 'Resposta enviada ✓' : 'Enviar resposta →'}
-              </button>
-            </form>
-          </div>
-
-          <div className="sj-timer-section">
-            <div className="sj-timer-row">
-              <span className="sj-timer-label">Tempo restante</span>
-              <span className={`sj-timer-val${tempoRestante <= 5 ? ' sj-timer-danger' : ''}`}>{tempoRestante}s</span>
-            </div>
-            <div className="sj-timer-bar-bg">
-              <div className="sj-timer-bar-fill" style={{ width: `${pct}%`, background: tempoRestante <= 5 ? '#E24B4A' : '#1D9E75' }} />
-            </div>
-          </div>
-
-          <div className="sj-progress-row">
-            <span className="sj-progress-label">
-              palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
-            </span>
-            <div className="sj-progress-dots">
-              {Array.from({ length: estado.totalPalavras }, (_, i) => (
-                <div
-                  key={i}
-                  className={`sj-pdot${i < estado.indiceAtual ? ' sj-pdot--done' : i === estado.indiceAtual ? ' sj-pdot--current' : ''}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="sj-controls">
-            {ativo ? (
-              <button className="sj-ctrl-btn" onClick={onPausar}>
-                ⏸ Pausar
-              </button>
-            ) : (
-              <button className="sj-ctrl-btn" onClick={onProxima}>
-                ▶ Retomar
-              </button>
-            )}
-            <button className="sj-ctrl-btn sj-ctrl-primary" onClick={onProxima} disabled={estado.indiceAtual >= estado.totalPalavras - 1}>
-              ⏭ Próxima palavra
-            </button>
-            {!confirmEncerrar ? (
-              <button className="sj-ctrl-btn sj-ctrl-danger" onClick={() => setConfirmEncerrar(true)}>
-                ⏹ Encerrar
-              </button>
-            ) : (
-              <div className="sj-confirm-row">
-                <span>Confirmar?</span>
-                <button
-                  className="sj-ctrl-btn sj-ctrl-danger"
-                  onClick={() => {
-                    onEncerrar();
-                    setConfirmEncerrar(false);
-                  }}
-                >
-                  Sim
-                </button>
-                <button className="sj-ctrl-btn" onClick={() => setConfirmEncerrar(false)}>
-                  Não
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="sj-audio-section">
+          <button
+            type="button"
+            className={`sj-audio-btn${falando ? ' sj-audio-btn--playing' : ''}`}
+            onClick={handleFalar}
+            disabled={!ativo || !estado.palavraAtual}
+            aria-label="Ouvir palavra"
+          >
+            <span className="sj-audio-icon">{falando ? '🔊' : '🔉'}</span>
+            <span className="sj-audio-label-text">{falando ? 'Reproduzindo...' : 'Ouvir palavra'}</span>
+          </button>
+          <span className="sj-audio-hint">pode ouvir quantas vezes quiser</span>
         </div>
 
-        <div className="sj-prof-right">
-          <div className="sj-placar-title">🏆 Placar ao vivo</div>
-          {estado.placar.map((p, i) => (
-            <div key={p.login} className="sj-placar-row">
-              <span className="sj-placar-rank">{i + 1}</span>
-              <span className="sj-placar-avatar">{(p.nome || p.login).charAt(0).toUpperCase()}</span>
-              <span className="sj-placar-nome">{p.nome || p.login}</span>
-              <span className={`sj-status-chip sj-status-${p.statusAtual?.toLowerCase() ?? 'aguardando'}`}>
-                {p.statusAtual === 'ACERTOU' ? 'acertou' : p.statusAtual === 'ERROU' ? 'errou' : 'aguardando'}
-              </span>
-              <span className="sj-placar-pts">{p.pontos}</span>
-            </div>
-          ))}
+        <form className="sj-input-form" onSubmit={handleEnviar}>
+          <input
+            ref={inputRef}
+            className="sj-word-input"
+            type="text"
+            value={resposta}
+            onChange={e => setResposta(e.target.value)}
+            placeholder="escreva a palavra ouvida..."
+            autoComplete="off"
+            spellCheck={false}
+            disabled={jaRespondeu || !ativo}
+          />
+          <button type="submit" className="sj-send-btn" disabled={!resposta.trim() || jaRespondeu || !ativo}>
+            {jaRespondeu ? 'Resposta enviada ✓' : 'Enviar resposta →'}
+          </button>
+        </form>
+
+        <div className="sj-timer-section">
+          <div className="sj-timer-row">
+            <span className="sj-timer-label">Tempo restante</span>
+            <span className={`sj-timer-val${timerDanger ? ' sj-timer-danger' : ''}`}>{tempoRestante}s</span>
+          </div>
+          <div className="sj-timer-bar-bg">
+            <div className="sj-timer-bar-fill" style={{ width: `${pct}%`, background: timerDanger ? '#E24B4A' : '#1D9E75' }} />
+          </div>
         </div>
       </div>
     </div>
