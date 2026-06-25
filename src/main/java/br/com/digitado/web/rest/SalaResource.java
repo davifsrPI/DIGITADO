@@ -2,7 +2,11 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.Sala;
 import br.com.digitado.repository.SalaRepository;
+import br.com.digitado.repository.UserRepository;
+import br.com.digitado.repository.UsuarioRepository;
+import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
+import br.com.digitado.web.rest.vm.SalaResponseVM;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
@@ -35,9 +39,13 @@ public class SalaResource {
     private String applicationName;
 
     private final SalaRepository salaRepository;
+    private final UserRepository userRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public SalaResource(SalaRepository salaRepository) {
+    public SalaResource(SalaRepository salaRepository, UserRepository userRepository, UsuarioRepository usuarioRepository) {
         this.salaRepository = salaRepository;
+        this.userRepository = userRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     /**
@@ -48,7 +56,7 @@ public class SalaResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PostMapping("")
-    public ResponseEntity<Sala> createSala(@Valid @RequestBody Sala sala) throws URISyntaxException {
+    public ResponseEntity<SalaResponseVM> createSala(@Valid @RequestBody Sala sala) throws URISyntaxException {
         LOG.debug("REST request to save Sala : {}", sala);
         if (sala.getId() != null) {
             throw new BadRequestAlertException("A new sala cannot already have an ID", ENTITY_NAME, "idexists");
@@ -56,10 +64,15 @@ public class SalaResource {
         if (sala.getCodigo() != null && salaRepository.findByCodigo(sala.getCodigo()).isPresent()) {
             throw new BadRequestAlertException("Código de sala já em uso", ENTITY_NAME, "codigoexists");
         }
+        SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .ifPresent(sala::setProfessor);
         sala = salaRepository.save(sala);
+        SalaResponseVM vm = new SalaResponseVM(sala.getId(), sala.getNome(), sala.getCodigo(), sala.getDescricao(), sala.getAtivo());
         return ResponseEntity.created(new URI("/api/salas/" + sala.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, sala.getId().toString()))
-            .body(sala);
+            .body(vm);
     }
 
     /**

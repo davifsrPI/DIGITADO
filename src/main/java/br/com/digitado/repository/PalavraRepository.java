@@ -15,6 +15,6 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
 
     List<Palavra> findTop5ByTextoContainingIgnoreCaseAndAtivaTrue(String texto);
 
-    @Query(value = "SELECT * FROM palavra WHERE dificuldade = :dif AND ativa = true ORDER BY RANDOM() LIMIT :n", nativeQuery = true)
+    @Query(value = "SELECT * FROM palavra WHERE dificuldade = :dif AND ativa = true ORDER BY RAND() LIMIT :n", nativeQuery = true)
     List<Palavra> findRandomByDificuldade(@Param("dif") String dif, @Param("n") int n);
 }

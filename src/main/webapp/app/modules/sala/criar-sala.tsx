@@ -112,7 +112,8 @@ export const CriarSala = () => {
           setCodigo(codigoTentativa);
           tentativas++;
         } else {
-          setError('Não foi possível criar a sala. Tente novamente.');
+          const detail = err?.response?.data?.detail || err?.response?.data?.title || err?.message;
+          setError(detail ? `Erro: ${detail}` : 'Não foi possível criar a sala. Tente novamente.');
           break;
         }
       }
