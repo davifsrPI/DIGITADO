@@ -1,15 +1,20 @@
+// Classificação dos tipos de erro que o aluno pode cometer ao digitar uma palavra
 export type TipoErro = 'ACENTUACAO' | 'TROCA_LETRA' | 'LETRA_FALTANDO' | 'LETRA_EXTRA' | 'ERRO_FONETICO' | 'OUTRO';
 
+// Resultado da validação local (feita no frontend antes de receber o feedback do servidor)
 export interface ResultadoValidacao {
   correta: boolean;
   tipoErro?: TipoErro;
   similaridade: number;
 }
 
+// Remove acentos da string usando decomposição Unicode (NFD) — permite comparar sem diferenciar versões acentuadas
 function removerAcentos(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
+// Algoritmo de Levenshtein: calcula quantas edições (inserção, remoção, substituição) são necessárias
+// para transformar a string "a" na string "b" — base para medir similaridade entre palavras
 function levenshtein(a: string, b: string): number {
   const m = a.length,
     n = b.length;
@@ -23,6 +28,8 @@ function levenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 
+// Tabela de equivalências fonéticas do português: mapeia grafias diferentes que soam igual.
+// Ex: "ç" e "ss" soam como "s"; "ch" e "x" soam igual em muitas regiões.
 const FONETICO: [RegExp, string][] = [
   [/ç/g, 's'],
   [/ss/g, 's'],
@@ -37,12 +44,20 @@ const FONETICO: [RegExp, string][] = [
   [/[sz]/g, 'z'],
 ];
 
+// Aplica todas as substituições fonéticas da tabela acima — duas palavras foneticamente equivalentes
+// terão o mesmo resultado, permitindo detectar erros de som vs. grafia
 function fonetizar(s: string): string {
   let r = s;
   for (const [from, to] of FONETICO) r = r.replace(from, to);
   return r;
 }
 
+// Valida a resposta do aluno comparando com a palavra correta em várias camadas:
+// 1. Exata → correta
+// 2. Igual sem acentos → erro de acentuação
+// 3. Igual foneticamente → erro fonético (ex: "chave" vs "xave")
+// 4. Levenshtein = 1 → identifica letra trocada, extra ou faltando
+// 5. Qualquer outro → erro genérico com percentual de similaridade
 export function validarResposta(digitado: string, correto: string): ResultadoValidacao {
   const d = digitado.trim().toLowerCase();
   const c = correto.trim().toLowerCase();
@@ -69,6 +84,7 @@ export function validarResposta(digitado: string, correto: string): ResultadoVal
   return { correta: false, tipoErro: 'OUTRO', similaridade };
 }
 
+// Mensagens amigáveis exibidas ao aluno para cada tipo de erro detectado
 export const MENSAGEM_ERRO: Record<TipoErro, string> = {
   ACENTUACAO: 'Atenção com os acentos!',
   TROCA_LETRA: 'Uma letra trocada',

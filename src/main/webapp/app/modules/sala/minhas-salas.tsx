@@ -14,17 +14,21 @@ interface Sala {
   ativo: boolean;
 }
 
+// Página do professor para gerenciar suas salas: lista, filtra por status (abertas/fechadas)
+// e permite entrar como professor direto para a tela de jogo
 export const MinhasSalas = () => {
   const navigate = useNavigate();
   const [salas, setSalas] = useState<Sala[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<Filtro>('todas');
 
+  // Adiciona classe ao body para aplicar o fundo específico desta página
   useEffect(() => {
     document.body.classList.add('minhas-salas-page');
     return () => document.body.classList.remove('minhas-salas-page');
   }, []);
 
+  // Busca as salas do professor sempre que o filtro muda — passa o parâmetro ativo quando necessário
   useEffect(() => {
     setLoading(true);
     const params: Record<string, string> = {};
@@ -37,6 +41,7 @@ export const MinhasSalas = () => {
       .finally(() => setLoading(false));
   }, [filtro]);
 
+  // Alterna o status da sala entre aberta/fechada via PATCH e atualiza o estado local
   const toggleAtivo = async (sala: Sala) => {
     try {
       await axios.patch(`/api/salas/${sala.id}`, { id: sala.id, ativo: !sala.ativo });

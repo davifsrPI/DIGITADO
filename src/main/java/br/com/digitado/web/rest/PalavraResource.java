@@ -21,9 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.ResponseUtil;
 
-/**
- * REST controller for managing {@link br.com.digitado.domain.Palavra}.
- */
+// REST controller para o banco de palavras do DIGITADO.
+// Os métodos CRUD abaixo foram gerados pelo JHipster; o endpoint /buscar é customizado.
 @RestController
 @RequestMapping("/api/palavras")
 @Transactional
@@ -42,6 +41,8 @@ public class PalavraResource {
         this.palavraRepository = palavraRepository;
     }
 
+    // Busca uma palavra pelo texto exato; se não encontrar, retorna até 5 palavras semelhantes
+    // (busca parcial por LIKE). Usado na tela de criação de sala para o professor adicionar palavras extras.
     @GetMapping("/buscar")
     public ResponseEntity<Map<String, Object>> buscarPalavra(@RequestParam String texto) {
         String busca = texto.trim();
