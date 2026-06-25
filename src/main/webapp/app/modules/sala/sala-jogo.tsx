@@ -59,6 +59,7 @@ export const SalaJogo: React.FC = () => {
             onProxima={proxima}
             onPausar={pausar}
             onEncerrar={encerrar}
+            onResponder={responder}
           />
         ) : (
           <SalaJogoAluno estado={estado} feedback={feedback} meuLogin={login} onResponder={responder} conectado={conectado} />

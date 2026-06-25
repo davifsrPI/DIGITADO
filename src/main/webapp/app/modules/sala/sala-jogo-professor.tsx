@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { EstadoJogo } from './hooks/useSalaWebSocket';
 
 type Dificuldade = 'FACIL' | 'MEDIO' | 'DIFICIL';
@@ -11,6 +11,7 @@ interface Props {
   onProxima: () => void;
   onPausar: () => void;
   onEncerrar: () => void;
+  onResponder: (resposta: string) => void;
 }
 
 const DIFFS: Array<{ key: Dificuldade; color: string; label: string }> = [
@@ -33,11 +34,33 @@ const DIFICULDADES: Array<{ key: keyof Omit<Cfg, 'tempoLimite'>; label: string; 
   { key: 'qtdDificil', label: 'Difíceis', cor: '#f87171' },
 ];
 
-export const SalaJogoProfessor: React.FC<Props> = ({ estado, codigoSala, conectado, onIniciar, onProxima, onPausar, onEncerrar }) => {
+function falarPalavra(texto: string) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(texto);
+  utter.lang = 'pt-BR';
+  utter.rate = 0.85;
+  window.speechSynthesis.speak(utter);
+}
+
+export const SalaJogoProfessor: React.FC<Props> = ({
+  estado,
+  codigoSala,
+  conectado,
+  onIniciar,
+  onProxima,
+  onPausar,
+  onEncerrar,
+  onResponder,
+}) => {
   const [cfg, setCfg] = useState<Cfg>({ tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 });
   const [tempoRestante, setTempoRestante] = useState(0);
   const [confirmEncerrar, setConfirmEncerrar] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [resposta, setResposta] = useState('');
+  const [jaRespondeu, setJaRespondeu] = useState(false);
+  const [falando, setFalando] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const adj = (campo: keyof Cfg, delta: number, min = 0, max = 30) =>
     setCfg(prev => ({ ...prev, [campo]: Math.max(min, Math.min(max, prev[campo] + delta)) }));
@@ -48,6 +71,36 @@ export const SalaJogoProfessor: React.FC<Props> = ({ estado, codigoSala, conecta
       setTimeout(() => setCopied(false), 2000);
     });
   };
+
+  const handleFalar = () => {
+    if (!estado?.palavraAtual) return;
+    setFalando(true);
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(estado.palavraAtual.texto);
+    utter.lang = 'pt-BR';
+    utter.rate = 0.85;
+    utter.onend = () => setFalando(false);
+    utter.onerror = () => setFalando(false);
+    window.speechSynthesis.speak(utter);
+  };
+
+  const handleEnviar = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resposta.trim() || jaRespondeu) return;
+    onResponder(resposta.trim());
+    setJaRespondeu(true);
+  };
+
+  // Reset on new word
+  useEffect(() => {
+    setResposta('');
+    setJaRespondeu(false);
+    setFalando(false);
+    if (estado?.palavraAtual?.texto) {
+      falarPalavra(estado.palavraAtual.texto);
+    }
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, [estado?.palavraAtual?.id]);
 
   useEffect(() => {
     if (!estado || (estado.tipo !== 'NOVA_PALAVRA' && estado.tipo !== 'INICIADA')) {
@@ -201,17 +254,35 @@ export const SalaJogoProfessor: React.FC<Props> = ({ estado, codigoSala, conecta
 
       <div className="sj-prof-main">
         <div className="sj-prof-left">
-          <div className="sj-word-card">
-            <div className="sj-word-label">PALAVRA ATUAL</div>
-            <div className="sj-word-text">{estado.palavraAtual?.texto ?? '—'}</div>
-            {estado.palavraAtual && (
-              <div className="sj-word-meta">
-                <span className="sj-diff-badge" style={{ background: DIFF_BG[diff], color: DIFFS.find(d => d.key === diff)?.color }}>
-                  {diff === 'FACIL' ? 'Fácil' : diff === 'MEDIO' ? 'Médio' : 'Difícil'}
-                </span>
-                {estado.palavraAtual.categoria && <span className="sj-cat-tag">{estado.palavraAtual.categoria}</span>}
-              </div>
-            )}
+          <div className="sj-audio-area">
+            <button
+              type="button"
+              className={`sj-audio-btn${falando ? ' sj-audio-btn--playing' : ''}`}
+              onClick={handleFalar}
+              disabled={!ativo || !estado.palavraAtual}
+              aria-label="Ouvir palavra"
+            >
+              <span className="sj-audio-icon">{falando ? '🔊' : '🔉'}</span>
+              <span className="sj-audio-label">{falando ? 'Reproduzindo...' : 'Ouvir palavra'}</span>
+            </button>
+
+            <form className="sj-input-form" onSubmit={handleEnviar}>
+              <input
+                id="sj-resposta-prof"
+                ref={inputRef}
+                className="sj-word-input"
+                type="text"
+                value={resposta}
+                onChange={e => setResposta(e.target.value)}
+                placeholder="escreva aqui..."
+                autoComplete="off"
+                spellCheck={false}
+                disabled={jaRespondeu || !ativo}
+              />
+              <button type="submit" className="sj-send-btn" disabled={!resposta.trim() || jaRespondeu || !ativo}>
+                {jaRespondeu ? 'Resposta enviada ✓' : 'Enviar resposta →'}
+              </button>
+            </form>
           </div>
 
           <div className="sj-timer-section">
