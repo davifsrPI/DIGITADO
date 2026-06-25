@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+.st-wrapper {
+  position: relative;
+  min-height: 100vh;
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Poppins', sans-serif;
+  padding: 40px 20px;
+}
+
+.st-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.st-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.18;
+}
+
+.st-shape.one {
+  width: 500px;
+  height: 500px;
+  background: #6366f1;
+  top: -150px;
+  left: -100px;
+}
+
+.st-shape.two {
+  width: 400px;
+  height: 400px;
+  background: #22c55e;
+  bottom: -120px;
+  right: -100px;
+}
+
+.st-center {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.st-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.st-sub {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 20px;
+  text-align: center;
+}
+
+.st-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 36px 32px;
+  width: 100%;
+  backdrop-filter: blur(10px);
+}
+
+.st-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Override JHipster / Bootstrap form styles inside .st-card */
+.st-card label {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.st-card .form-control,
+.st-card .form-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #fff;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  transition: border-color 0.2s;
+  appearance: none;
+  width: 100%;
+}
+
+.st-card .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.st-card .form-control:focus,
+.st-card .form-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.st-card .form-select option {
+  background: #1e293b;
+  color: #fff;
+}
+
+.st-card .invalid-feedback {
+  color: #f87171;
+  font-size: 12px;
+}
+
+.st-field {
+  margin-bottom: 0;
+}
+
+.st-card .mb-3 {
+  margin-bottom: 20px !important;
+}
+
+.st-save-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 13px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 0.2s,
+    transform 0.1s;
+  letter-spacing: 0.02em;
+}
+
+.st-save-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.st-save-btn:active {
+  transform: translateY(0);
+}

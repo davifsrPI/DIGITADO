@@ -2,6 +2,7 @@ import React from 'react';
 import { Route } from 'react-router';
 
 import Loadable from 'react-loadable';
+import { LoadingSpinner } from 'app/shared/layout/loading/loading-spinner';
 
 import Login from 'app/modules/login/login';
 import Register from 'app/modules/account/register/register';
@@ -20,16 +21,14 @@ import ErrorBoundaryRoutes from 'app/shared/error/error-boundary-routes';
 import PageNotFound from 'app/shared/error/page-not-found';
 import { AUTHORITIES } from 'app/config/constants';
 
-const loading = <div>loading ...</div>;
-
 const Account = Loadable({
   loader: () => import(/* webpackChunkName: "account" */ 'app/modules/account'),
-  loading: () => loading,
+  loading: LoadingSpinner,
 });
 
 const Admin = Loadable({
   loader: () => import(/* webpackChunkName: "administration" */ 'app/modules/administration'),
-  loading: () => loading,
+  loading: LoadingSpinner,
 });
 const AppRoutes = () => {
   return (

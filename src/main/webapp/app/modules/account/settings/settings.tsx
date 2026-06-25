@@ -1,18 +1,21 @@
+import './settings.scss';
+
 import React, { useEffect, useMemo } from 'react';
-import { Button, Col, Row } from 'reactstrap';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
 import { toast } from 'react-toastify';
 
 import { languages, locales } from 'app/config/translation';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { getSession } from 'app/shared/reducers/authentication';
+import { LoadingSpinner } from 'app/shared/layout/loading/loading-spinner';
 import { reset, saveAccountSettings } from './settings.reducer';
 
 export const SettingsPage = () => {
   const dispatch = useAppDispatch();
   const account = useAppSelector(state => state.authentication.account);
+  const loading = useAppSelector(state => state.authentication.loading);
   const successMessage = useAppSelector(state => state.settings.successMessage);
-  const formDefaultValues = useMemo(() => ({ ...account }), [account]);
+  const formDefaultValues = useMemo(() => ({ ...account }), [account?.login]);
 
   useEffect(() => {
     dispatch(getSession());
@@ -28,48 +31,59 @@ export const SettingsPage = () => {
   }, [successMessage]);
 
   const handleValidSubmit = values => {
-    dispatch(
-      saveAccountSettings({
-        ...account,
-        ...values,
-      }),
-    );
+    dispatch(saveAccountSettings({ ...account, ...values }));
   };
 
+  if (loading || !account?.login) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <div>
-      <Row className="justify-content-center">
-        <Col md="8">
-          <h2 id="settings-title">
-            <Translate contentKey="settings.title" interpolate={{ username: account.login }}>
-              User settings for {account.login}
-            </Translate>
-          </h2>
+    <div className="st-wrapper">
+      <div className="st-bg">
+        <div className="st-shape one" />
+        <div className="st-shape two" />
+      </div>
+
+      <div className="st-center">
+        <h2 className="st-title">Configurações da conta</h2>
+        <p className="st-sub">
+          <Translate contentKey="settings.title" interpolate={{ username: account.login }}>
+            Configurações de {account.login}
+          </Translate>
+        </p>
+
+        <div className="st-card">
           <ValidatedForm id="settings-form" onSubmit={handleValidSubmit} defaultValues={formDefaultValues}>
-            <ValidatedField
-              name="firstName"
-              label={translate('settings.form.firstname')}
-              id="firstName"
-              placeholder={translate('settings.form.firstname.placeholder')}
-              validate={{
-                required: { value: true, message: translate('settings.messages.validate.firstname.required') },
-                minLength: { value: 1, message: translate('settings.messages.validate.firstname.minlength') },
-                maxLength: { value: 50, message: translate('settings.messages.validate.firstname.maxlength') },
-              }}
-              data-cy="firstname"
-            />
-            <ValidatedField
-              name="lastName"
-              label={translate('settings.form.lastname')}
-              id="lastName"
-              placeholder={translate('settings.form.lastname.placeholder')}
-              validate={{
-                required: { value: true, message: translate('settings.messages.validate.lastname.required') },
-                minLength: { value: 1, message: translate('settings.messages.validate.lastname.minlength') },
-                maxLength: { value: 50, message: translate('settings.messages.validate.lastname.maxlength') },
-              }}
-              data-cy="lastname"
-            />
+            <div className="st-row">
+              <ValidatedField
+                className="st-field"
+                name="firstName"
+                label={translate('settings.form.firstname')}
+                id="firstName"
+                placeholder={translate('settings.form.firstname.placeholder')}
+                validate={{
+                  required: { value: true, message: translate('settings.messages.validate.firstname.required') },
+                  minLength: { value: 1, message: translate('settings.messages.validate.firstname.minlength') },
+                  maxLength: { value: 50, message: translate('settings.messages.validate.firstname.maxlength') },
+                }}
+                data-cy="firstname"
+              />
+              <ValidatedField
+                className="st-field"
+                name="lastName"
+                label={translate('settings.form.lastname')}
+                id="lastName"
+                placeholder={translate('settings.form.lastname.placeholder')}
+                validate={{
+                  required: { value: true, message: translate('settings.messages.validate.lastname.required') },
+                  minLength: { value: 1, message: translate('settings.messages.validate.lastname.minlength') },
+                  maxLength: { value: 50, message: translate('settings.messages.validate.lastname.maxlength') },
+                }}
+                data-cy="lastname"
+              />
+            </div>
+
             <ValidatedField
               name="email"
               label={translate('global.form.email.label')}
@@ -83,6 +97,7 @@ export const SettingsPage = () => {
               }}
               data-cy="email"
             />
+
             <ValidatedField type="select" id="langKey" name="langKey" label={translate('settings.form.language')} data-cy="langKey">
               {locales.map(locale => (
                 <option value={locale} key={locale}>
@@ -90,12 +105,13 @@ export const SettingsPage = () => {
                 </option>
               ))}
             </ValidatedField>
-            <Button color="primary" type="submit" data-cy="submit">
-              <Translate contentKey="settings.form.button">Save</Translate>
-            </Button>
+
+            <button type="submit" className="st-save-btn" data-cy="submit">
+              <Translate contentKey="settings.form.button">Salvar</Translate>
+            </button>
           </ValidatedForm>
-        </Col>
-      </Row>
+        </div>
+      </div>
     </div>
   );
 };

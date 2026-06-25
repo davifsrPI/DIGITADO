@@ -4,6 +4,7 @@ import { Translate } from 'react-jhipster';
 
 import { useAppSelector } from 'app/config/store';
 import ErrorBoundary from 'app/shared/error/error-boundary';
+import { LoadingSpinner } from 'app/shared/layout/loading/loading-spinner';
 
 interface IOwnProps extends PathRouteProps {
   hasAnyAuthorities?: string[];
@@ -22,7 +23,7 @@ export const PrivateRoute = ({ children, hasAnyAuthorities = [], ...rest }: IOwn
   }
 
   if (!sessionHasBeenFetched) {
-    return <div></div>;
+    return <LoadingSpinner />;
   }
 
   if (isAuthenticated) {
