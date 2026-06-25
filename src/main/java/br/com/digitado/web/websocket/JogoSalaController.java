@@ -2,10 +2,11 @@ package br.com.digitado.web.websocket;
 
 import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.repository.UserRepository;
-import br.com.digitado.repository.UsuarioRepository;
+import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.service.JogoSalaService;
 import br.com.digitado.web.websocket.dto.*;
 import java.security.Principal;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -23,20 +24,17 @@ public class JogoSalaController {
     private final JogoSalaService jogoService;
     private final SalaRepository salaRepository;
     private final UserRepository userRepository;
-    private final UsuarioRepository usuarioRepository;
     private final SimpMessagingTemplate messaging;
 
     public JogoSalaController(
         JogoSalaService jogoService,
         SalaRepository salaRepository,
         UserRepository userRepository,
-        UsuarioRepository usuarioRepository,
         SimpMessagingTemplate messaging
     ) {
         this.jogoService = jogoService;
         this.salaRepository = salaRepository;
         this.userRepository = userRepository;
-        this.usuarioRepository = usuarioRepository;
         this.messaging = messaging;
     }
 
@@ -53,7 +51,14 @@ public class JogoSalaController {
     @MessageMapping("/sala/{codigo}/iniciar")
     public void iniciar(String codigo, @Payload IniciarPayload payload, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
-            LOG.warn("Tentativa não autorizada de iniciar sala {} por {}", codigo, principal != null ? principal.getName() : "anônimo");
+            LOG.warn("Iniciar negado para sala {} — usuário: {}", codigo, principal != null ? principal.getName() : "anônimo");
+            if (principal != null) {
+                messaging.convertAndSendToUser(
+                    principal.getName(),
+                    "/queue/sala/" + codigo + "/erro",
+                    Map.of("tipo", "NAO_AUTORIZADO", "mensagem", "Sem permissão para iniciar esta sala")
+                );
+            }
             return;
         }
         String nomeSala = getNomeSala(codigo);
@@ -122,14 +127,33 @@ public class JogoSalaController {
         if (principal == null) return false;
         return salaRepository
             .findByCodigoWithProfessor(codigoSala)
-            .map(sala -> {
-                if (sala.getProfessor() == null) return false;
-                return userRepository
+            .map(sala ->
+                userRepository
                     .findOneByLogin(principal.getName())
-                    .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
-                    .map(usuario -> usuario.getId().equals(sala.getProfessor().getId()))
-                    .orElse(false);
-            })
+                    .map(user -> {
+                        // Admin pode controlar qualquer sala
+                        boolean isAdmin = user.getAuthorities().stream().anyMatch(a -> a.getName().equals(AuthoritiesConstants.ADMIN));
+                        if (isAdmin) return true;
+
+                        if (sala.getProfessor() == null) {
+                            LOG.warn("Sala {} não tem professor definido — acesso negado para {}", codigoSala, user.getLogin());
+                            return false;
+                        }
+
+                        // Compara pelo email: User.email == Usuario(professor).email
+                        boolean match = user.getEmail() != null && user.getEmail().equalsIgnoreCase(sala.getProfessor().getEmail());
+                        if (!match) {
+                            LOG.warn(
+                                "Email mismatch na sala {}: user.email={}, professor.email={}",
+                                codigoSala,
+                                user.getEmail(),
+                                sala.getProfessor().getEmail()
+                            );
+                        }
+                        return match;
+                    })
+                    .orElse(false)
+            )
             .orElse(false);
     }
 }

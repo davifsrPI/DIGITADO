@@ -43,26 +43,36 @@ export interface FeedbackAluno {
   textoCorreto: string;
 }
 
+export interface ErroWS {
+  tipo: string;
+  mensagem: string;
+}
+
 interface UseSalaWebSocketOptions {
   codigoSala: string;
   login: string;
   nome: string;
   onEstado?: (estado: EstadoJogo) => void;
   onFeedback?: (feedback: FeedbackAluno) => void;
+  onErro?: (erro: ErroWS) => void;
 }
 
-export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback }: UseSalaWebSocketOptions) {
+export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback, onErro }: UseSalaWebSocketOptions) {
   const clientRef = useRef<Client | null>(null);
   const [conectado, setConectado] = useState(false);
 
   const onEstadoRef = useRef(onEstado);
   const onFeedbackRef = useRef(onFeedback);
+  const onErroRef = useRef(onErro);
   useEffect(() => {
     onEstadoRef.current = onEstado;
   }, [onEstado]);
   useEffect(() => {
     onFeedbackRef.current = onFeedback;
   }, [onFeedback]);
+  useEffect(() => {
+    onErroRef.current = onErro;
+  }, [onErro]);
 
   useEffect(() => {
     const token = Storage.local.get('jhi-authenticationToken') || Storage.session.get('jhi-authenticationToken');
@@ -79,6 +89,10 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
         client.subscribe(`/user/queue/sala/${codigoSala}/feedback`, (msg: IMessage) => {
           const feedback: FeedbackAluno = JSON.parse(msg.body);
           onFeedbackRef.current?.(feedback);
+        });
+        client.subscribe(`/user/queue/sala/${codigoSala}/erro`, (msg: IMessage) => {
+          const erro: ErroWS = JSON.parse(msg.body);
+          onErroRef.current?.(erro);
         });
         client.publish({
           destination: `/app/sala/${codigoSala}/entrar`,

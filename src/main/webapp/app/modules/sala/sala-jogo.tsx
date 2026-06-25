@@ -4,7 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
-import { EstadoJogo, FeedbackAluno, useSalaWebSocket } from './hooks/useSalaWebSocket';
+import { ErroWS, EstadoJogo, FeedbackAluno, useSalaWebSocket } from './hooks/useSalaWebSocket';
 import { SalaJogoAluno } from './sala-jogo-aluno';
 import { SalaJogoProfessor } from './sala-jogo-professor';
 
@@ -27,6 +27,7 @@ export const SalaJogo: React.FC = () => {
 
   const [estado, setEstado] = useState<EstadoJogo | null>(null);
   const [feedback, setFeedback] = useState<FeedbackAluno | null>(null);
+  const [erroWS, setErroWS] = useState<ErroWS | null>(null);
 
   const handleEstado = useCallback((e: EstadoJogo) => {
     setEstado(e);
@@ -37,12 +38,18 @@ export const SalaJogo: React.FC = () => {
     setFeedback(f);
   }, []);
 
+  const handleErro = useCallback((e: ErroWS) => {
+    setErroWS(e);
+    setTimeout(() => setErroWS(null), 6000);
+  }, []);
+
   const { conectado, iniciar, proxima, pausar, encerrar, responder } = useSalaWebSocket({
     codigoSala: codigo,
     login,
     nome,
     onEstado: handleEstado,
     onFeedback: handleFeedback,
+    onErro: handleErro,
   });
 
   return (
@@ -56,6 +63,12 @@ export const SalaJogo: React.FC = () => {
         <button className="sj-back-btn" onClick={() => navigate('/lobby')}>
           ← Voltar ao lobby
         </button>
+
+        {erroWS && (
+          <div style={{ background: '#7f1d1d', color: '#fecaca', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontSize: 14 }}>
+            ⚠ {erroWS.mensagem}
+          </div>
+        )}
 
         {isProfessor ? (
           <SalaJogoProfessor
