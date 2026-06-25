@@ -25,13 +25,19 @@ const DIFF_BG: Record<Dificuldade, string> = {
   DIFICIL: '#FCEBEB',
 };
 
+const DEFAULT_CFG = { tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5, palavrasExtrasIds: [] as number[] };
+
 export const SalaJogoProfessor: React.FC<Props> = ({ estado, codigoSala, conectado, onIniciar, onProxima, onPausar, onEncerrar }) => {
-  const [tempo, setTempo] = useState(30);
-  const [qtd, setQtd] = useState<Record<Dificuldade, number>>({ FACIL: 5, MEDIO: 5, DIFICIL: 5 });
   const [tempoRestante, setTempoRestante] = useState(0);
   const [confirmEncerrar, setConfirmEncerrar] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const adj = (k: Dificuldade, d: number) => setQtd(prev => ({ ...prev, [k]: Math.max(0, Math.min(30, prev[k] + d)) }));
+  const copiarCodigo = () => {
+    navigator.clipboard.writeText(codigoSala).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   useEffect(() => {
     if (!estado || (estado.tipo !== 'NOVA_PALAVRA' && estado.tipo !== 'INICIADA')) {
@@ -49,97 +55,57 @@ export const SalaJogoProfessor: React.FC<Props> = ({ estado, codigoSala, conecta
 
   const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
   const pausada = estado?.tipo === 'PAUSADA';
-  const emAndamento = ativo || pausada;
   const pct = estado && estado.tempoLimite > 0 ? (tempoRestante / estado.tempoLimite) * 100 : 0;
 
+  /* ── LOBBY (aguardando) ─────────────────────────────────────────── */
   if (!estado || estado.tipo === 'AGUARDANDO') {
-    const total = qtd.FACIL + qtd.MEDIO + qtd.DIFICIL;
+    const alunos = estado?.alunosConectados ?? [];
     return (
-      <div className="sj-prof-lobby">
-        <div className="sj-prof-lobby-left">
-          <div className="sj-codigo-card">
-            <div className="sj-codigo-label">CÓDIGO DA SALA</div>
-            <div className="sj-codigo-val">{codigoSala}</div>
-            <div className="sj-codigo-hint">Compartilhe com seus alunos</div>
+      <div className="sj-lobby">
+        <div className="sj-lobby-header">
+          <div className="sj-lobby-badge">Aguardando alunos</div>
+          <h1 className="sj-lobby-title">Sala pronta!</h1>
+          <p className="sj-lobby-sub">Compartilhe o código abaixo com seus alunos para eles entrarem</p>
+        </div>
+
+        <button className="sj-codigo-block" onClick={copiarCodigo} title="Clique para copiar">
+          <span className="sj-codigo-label">CÓDIGO DA SALA</span>
+          <span className="sj-codigo-val">{codigoSala}</span>
+          <span className="sj-codigo-copy">{copied ? '✓ Copiado!' : 'clique para copiar'}</span>
+        </button>
+
+        <div className="sj-alunos-panel">
+          <div className="sj-alunos-header">
+            <span className="sj-alunos-title">Alunos conectados</span>
+            <span className="sj-alunos-badge">{alunos.length}</span>
           </div>
-
-          <div className="sj-config-card">
-            <h3 className="sj-config-title">Configurar atividade</h3>
-
-            <div className="sj-config-field">
-              <label>
-                Tempo por palavra: <strong>{tempo}s</strong>
-              </label>
-              <input
-                type="range"
-                min={10}
-                max={60}
-                step={5}
-                value={tempo}
-                onChange={e => setTempo(Number(e.target.value))}
-                className="sj-range"
-              />
-            </div>
-
-            <div className="sj-diffs">
-              {DIFFS.map(({ key, color, label }) => (
-                <div className="sj-diff-row" key={key}>
-                  <span className="sj-diff-dot" style={{ background: color }} />
-                  <span className="sj-diff-label">{label}</span>
-                  <button type="button" className="sj-adj-btn" onClick={() => adj(key, -1)}>
-                    −
-                  </button>
-                  <span className="sj-diff-val">{qtd[key]}</span>
-                  <button type="button" className="sj-adj-btn" onClick={() => adj(key, 1)}>
-                    +
-                  </button>
-                </div>
+          {alunos.length === 0 ? (
+            <p className="sj-no-alunos">Nenhum aluno entrou ainda...</p>
+          ) : (
+            <ul className="sj-alunos-list">
+              {alunos.map(a => (
+                <li key={a.login} className="sj-aluno-item">
+                  <span className="sj-aluno-avatar">{(a.nome || a.login).charAt(0).toUpperCase()}</span>
+                  <span className="sj-aluno-nome">{a.nome || a.login}</span>
+                  <span className="sj-aluno-dot" />
+                </li>
               ))}
-              <div className="sj-diff-total">
-                Total: <strong>{total}</strong> palavras
-              </div>
-            </div>
-
-            <button
-              className="sj-iniciar-btn"
-              disabled={total === 0 || !conectado}
-              onClick={() =>
-                onIniciar({ tempoLimite: tempo, qtdFacil: qtd.FACIL, qtdMedio: qtd.MEDIO, qtdDificil: qtd.DIFICIL, palavrasExtrasIds: [] })
-              }
-            >
-              {conectado ? '▶ Iniciar atividade' : 'Conectando...'}
-            </button>
-          </div>
+            </ul>
+          )}
         </div>
 
-        <div className="sj-prof-lobby-right">
-          <div className="sj-alunos-card">
-            <h3 className="sj-config-title">
-              Alunos na sala
-              <span className="sj-alunos-count">{estado?.alunosConectados.length ?? 0}</span>
-            </h3>
-            {!estado?.alunosConectados || estado.alunosConectados.length === 0 ? (
-              <p className="sj-no-alunos">Nenhum aluno conectado ainda.</p>
-            ) : (
-              <ul className="sj-alunos-list">
-                {estado.alunosConectados.map(a => (
-                  <li key={a.login} className="sj-aluno-item">
-                    <span className="sj-aluno-avatar">{(a.nome || a.login).charAt(0).toUpperCase()}</span>
-                    <span className="sj-aluno-nome">{a.nome || a.login}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        <button className="sj-iniciar-btn" disabled={!conectado} onClick={() => onIniciar(DEFAULT_CFG)}>
+          {conectado ? '▶ Iniciar partida' : 'Conectando...'}
+        </button>
       </div>
     );
   }
 
+  /* ── ENCERRADA ──────────────────────────────────────────────────── */
   if (estado.tipo === 'ENCERRADA') {
     return (
       <div className="sj-ended">
-        <h2>Atividade encerrada!</h2>
+        <h2 className="sj-ended-title">Atividade encerrada!</h2>
         <div className="sj-final-placar">
           {estado.placar.map((p, i) => (
             <div key={p.login} className="sj-final-row">
@@ -153,6 +119,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({ estado, codigoSala, conecta
     );
   }
 
+  /* ── EM JOGO ────────────────────────────────────────────────────── */
   const diff = (estado.palavraAtual?.dificuldade ?? 'FACIL') as Dificuldade;
 
   return (
