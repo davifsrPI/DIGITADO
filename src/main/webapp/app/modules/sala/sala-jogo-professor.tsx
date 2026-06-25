@@ -3,15 +3,25 @@ import { EstadoJogo } from './hooks/useSalaWebSocket';
 
 type Dificuldade = 'FACIL' | 'MEDIO' | 'DIFICIL';
 
+interface GameConfig {
+  tempoLimite: number;
+  qtdFacil: number;
+  qtdMedio: number;
+  qtdDificil: number;
+  palavrasExtrasIds: number[];
+}
+
 interface Props {
   estado: EstadoJogo | null;
   codigoSala: string;
   conectado: boolean;
-  onIniciar: (cfg: { tempoLimite: number; qtdFacil: number; qtdMedio: number; qtdDificil: number; palavrasExtrasIds: number[] }) => void;
+  onIniciar: (cfg: GameConfig) => void;
   onProxima: () => void;
   onPausar: () => void;
   onEncerrar: () => void;
   onResponder: (resposta: string) => void;
+  autoStart?: boolean;
+  initialGameConfig?: GameConfig;
 }
 
 const DIFFS: Array<{ key: Dificuldade; color: string; label: string }> = [
@@ -43,6 +53,8 @@ function falarPalavra(texto: string) {
   window.speechSynthesis.speak(utter);
 }
 
+const DEFAULT_CFG: Cfg = { tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
+
 export const SalaJogoProfessor: React.FC<Props> = ({
   estado,
   codigoSala,
@@ -52,8 +64,11 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   onPausar,
   onEncerrar,
   onResponder,
+  autoStart,
+  initialGameConfig,
 }) => {
-  const [cfg, setCfg] = useState<Cfg>({ tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 });
+  const [cfg, setCfg] = useState<Cfg>(initialGameConfig ?? DEFAULT_CFG);
+  const didAutoStart = useRef(false);
   const [tempoRestante, setTempoRestante] = useState(0);
   const [confirmEncerrar, setConfirmEncerrar] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -90,6 +105,14 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     onResponder(resposta.trim());
     setJaRespondeu(true);
   };
+
+  // Auto-start once connected when coming from criar-sala
+  useEffect(() => {
+    if (autoStart && conectado && !didAutoStart.current && (!estado || estado.tipo === 'AGUARDANDO')) {
+      didAutoStart.current = true;
+      onIniciar(initialGameConfig ?? { ...cfg, palavrasExtrasIds: [] });
+    }
+  }, [conectado, estado?.tipo]);
 
   // Reset on new word
   useEffect(() => {

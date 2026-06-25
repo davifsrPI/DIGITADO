@@ -13,7 +13,14 @@ export const SalaJogo: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const account = useAppSelector(state => state.authentication.account);
-  const isProfessor = (location.state as { isProfessor?: boolean } | null)?.isProfessor === true;
+  const locationState = location.state as {
+    isProfessor?: boolean;
+    autoStart?: boolean;
+    gameConfig?: { tempoLimite: number; qtdFacil: number; qtdMedio: number; qtdDificil: number; palavrasExtrasIds: number[] };
+  } | null;
+  const isProfessor = locationState?.isProfessor === true;
+  const autoStart = locationState?.autoStart === true;
+  const gameConfig = locationState?.gameConfig;
 
   const login = account?.login ?? 'anonimo';
   const nome = account?.firstName ? `${account.firstName} ${account.lastName ?? ''}`.trim() : login;
@@ -60,6 +67,8 @@ export const SalaJogo: React.FC = () => {
             onPausar={pausar}
             onEncerrar={encerrar}
             onResponder={responder}
+            autoStart={autoStart}
+            initialGameConfig={gameConfig}
           />
         ) : (
           <SalaJogoAluno estado={estado} feedback={feedback} meuLogin={login} onResponder={responder} conectado={conectado} />

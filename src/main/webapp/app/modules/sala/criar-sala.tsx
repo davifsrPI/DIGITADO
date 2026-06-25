@@ -104,7 +104,19 @@ export const CriarSala = () => {
     while (tentativas < 5) {
       try {
         const res = await axios.post('/api/salas', { nome, codigo: codigoTentativa, descricao: descricao || null, ativo: true });
-        navigate(`/sala/${res.data.codigo}`, { state: { isProfessor: true } });
+        navigate(`/sala/${res.data.codigo}`, {
+          state: {
+            isProfessor: true,
+            autoStart: true,
+            gameConfig: {
+              tempoLimite: tempo,
+              qtdFacil: quantidades.FACIL,
+              qtdMedio: quantidades.MEDIO,
+              qtdDificil: quantidades.DIFICIL,
+              palavrasExtrasIds: extraWords.map(w => w.id),
+            },
+          },
+        });
         return;
       } catch (err: any) {
         if (err?.response?.data?.errorKey === 'codigoexists') {
@@ -348,7 +360,7 @@ export const CriarSala = () => {
             </div>
 
             <button type="submit" form="sala-form" className="cs-submit-btn" disabled={submitting || !nome.trim()}>
-              {submitting ? 'Criando...' : '🚀 Criar sala'}
+              {submitting ? 'Criando sala...' : '▶ Criar sala e iniciar partida'}
             </button>
           </div>
         </div>
