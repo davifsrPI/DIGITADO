@@ -50,6 +50,9 @@ public class UsuarioResource {
         if (usuario.getId() != null) {
             throw new BadRequestAlertException("A new usuario cannot already have an ID", ENTITY_NAME, "idexists");
         }
+        if (usuario.getSenha() == null || usuario.getSenha().isBlank()) {
+            throw new BadRequestAlertException("Senha é obrigatória", ENTITY_NAME, "senhanull");
+        }
         usuario = usuarioRepository.save(usuario);
         return ResponseEntity.created(new URI("/api/usuarios/" + usuario.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, usuario.getId().toString()))
@@ -75,9 +78,12 @@ public class UsuarioResource {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
 
-        // Preserve tipoUsuario and ativo from existing record — only admin may change these
+        // senha is @JsonIgnore — always preserve from DB; tipoUsuario/ativo only admin may change
+        Usuario existing = usuarioRepository.findById(id).orElseThrow();
+        if (usuario.getSenha() == null) {
+            usuario.setSenha(existing.getSenha());
+        }
         if (!SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
-            Usuario existing = usuarioRepository.findById(id).orElseThrow();
             usuario.setTipoUsuario(existing.getTipoUsuario());
             usuario.setAtivo(existing.getAtivo());
         }
