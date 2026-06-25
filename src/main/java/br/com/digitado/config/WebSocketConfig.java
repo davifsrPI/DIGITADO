@@ -35,10 +35,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         var endpoint = registry.addEndpoint("/websocket/sala");
-        if (!allowedOrigins.isEmpty()) {
-            endpoint.setAllowedOrigins(allowedOrigins.toArray(new String[0]));
-        } else if (!allowedOriginPatterns.isEmpty()) {
-            endpoint.setAllowedOriginPatterns(allowedOriginPatterns.toArray(new String[0]));
+        List<String> origins = allowedOrigins.stream().filter(s -> !s.isBlank()).toList();
+        List<String> patterns = allowedOriginPatterns.stream().filter(s -> !s.isBlank()).toList();
+        if (!origins.isEmpty()) {
+            endpoint.setAllowedOrigins(origins.toArray(new String[0]));
+        } else if (!patterns.isEmpty()) {
+            endpoint.setAllowedOriginPatterns(patterns.toArray(new String[0]));
         } else {
             endpoint.setAllowedOriginPatterns("*");
         }
