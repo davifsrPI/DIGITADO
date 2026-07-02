@@ -32,7 +32,7 @@ const DIFICULDADES: Array<{ key: keyof Omit<Cfg, 'tempoLimite'>; label: string; 
 ];
 
 const DEFAULT_CFG: Cfg = { tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
-const RANKING_DURATION = 25;
+const RANKING_DURATION = 8;
 
 // Usa a API de síntese de voz do browser para falar a palavra em português
 function falarPalavra(texto: string) {
@@ -45,7 +45,7 @@ function falarPalavra(texto: string) {
 }
 
 // Tela do professor durante a partida: lobby de espera com configurações, tela de jogo com timer,
-// ranking entre palavras com contagem regressiva de 25s, e tela de encerramento com placar final
+// ranking entre palavras com contagem regressiva de 8s, e tela de encerramento com placar final
 export const SalaJogoProfessor: React.FC<Props> = ({
   estado,
   codigoSala,
@@ -154,7 +154,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     }
   }, [tempoRestante]);
 
-  // Conta regressiva do ranking (25s) — ao chegar a zero avança para a próxima palavra
+  // Conta regressiva do ranking (8s) — ao chegar a zero avança para a próxima palavra
   useEffect(() => {
     if (!showRanking) return;
     if (rankingTimer <= 0) {
