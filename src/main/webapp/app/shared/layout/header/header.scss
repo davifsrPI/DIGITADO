@@ -1,29 +1,42 @@
 /* ==========================================================================
-Development Ribbon
+Development Ribbon — chip discreto no canto inferior esquerdo
+(mantém a classe .ribbon usada pelo header.spec.tsx, mas sem a faixa
+diagonal que cruzava o logo)
 ========================================================================== */
 .ribbon {
-  background-color: rgba(170, 0, 0, 0.5);
-  left: -3.5em;
-  transform: rotate(-45deg);
+  position: fixed;
+  top: auto;
+  bottom: 16px;
+  left: 16px;
+  transform: none;
+  width: auto;
   overflow: hidden;
-  position: absolute;
-  top: 40px;
   white-space: nowrap;
-  width: 15em;
-  z-index: 99999;
+  z-index: 1040;
   pointer-events: none;
-  opacity: 0.75;
+  opacity: 1;
+  background: rgba(250, 204, 21, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 30px;
+  backdrop-filter: blur(12px);
 
   a {
-    color: #fff;
     display: block;
-    font-weight: 400;
-    margin: 1px 0;
-    padding: 10px 50px;
+    color: #facc15;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
     text-align: center;
     text-decoration: none;
-    text-shadow: 0 0 5px #444;
+    text-shadow: none;
+    margin: 0;
+    padding: 6px 16px;
     pointer-events: none;
+
+    &::before {
+      content: '🚧 ';
+    }
   }
 }
 
@@ -31,33 +44,77 @@ Development Ribbon
 Navbar
 ========================================================================== */
 .jh-navbar {
-  background: rgba(15, 23, 42, 0.9) !important;
+  background: rgba(15, 23, 42, 0.92) !important;
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 0.3em 1.2em;
+  padding: 0.5em 1.4em;
 
   .navbar-toggler {
     border-color: rgba(255, 255, 255, 0.2);
     color: rgba(255, 255, 255, 0.8);
   }
 
+  /* Grupo central de navegação em formato de pílula */
+  #header-tabs {
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 4px 6px;
+  }
+
   a.nav-link,
   .nav-link {
-    color: rgba(255, 255, 255, 0.75) !important;
+    color: rgba(255, 255, 255, 0.72) !important;
     font-weight: 500;
-    transition: color 0.2s;
+    font-size: 0.9rem;
+    border-radius: 999px;
+    padding: 8px 18px !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition:
+      color 0.2s,
+      background 0.2s;
+
+    svg,
+    .fa,
+    [data-icon] {
+      opacity: 0.65;
+      transition: opacity 0.2s;
+    }
 
     &:hover {
       color: white !important;
+      background: rgba(255, 255, 255, 0.09);
+
+      svg,
+      .fa,
+      [data-icon] {
+        opacity: 1;
+      }
+    }
+
+    /* Rota atual em destaque */
+    &.active {
+      color: white !important;
+      background: rgba(99, 102, 241, 0.25);
+
+      svg,
+      .fa,
+      [data-icon] {
+        opacity: 1;
+      }
     }
   }
 
   .dropdown-toggle {
-    color: rgba(255, 255, 255, 0.75) !important;
+    color: rgba(255, 255, 255, 0.72) !important;
 
     &::after {
-      margin-left: 0.25em;
-      opacity: 0.6;
+      margin-left: 0.35em;
+      opacity: 0.55;
     }
 
     &:hover {
@@ -66,10 +123,10 @@ Navbar
   }
 
   ul.navbar-nav {
-    padding: 0.4em 0;
+    padding: 0;
 
     .nav-item {
-      margin-left: 0.5rem;
+      margin-left: 0;
     }
   }
 
@@ -77,6 +134,23 @@ Navbar
   .dropdown-item.active:focus,
   .dropdown-item.active:hover {
     background-color: rgba(99, 102, 241, 0.2);
+  }
+
+  /* No mobile (menu colapsado) a pílula vira uma lista vertical */
+  @media (max-width: 767.98px) {
+    #header-tabs {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 8px 0 4px;
+      align-items: stretch;
+      gap: 2px;
+    }
+
+    a.nav-link,
+    .nav-link {
+      border-radius: 12px;
+    }
   }
 }
 
@@ -120,9 +194,15 @@ Brand
 }
 
 .navbar-version {
-  font-size: 0.6em;
-  color: rgba(255, 255, 255, 0.35);
-  padding: 0 0 0 6px;
+  font-size: 0.58em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 3px 9px;
+  margin-left: 2px;
 }
 
 /* ==========================================================================
@@ -132,43 +212,78 @@ Dropdown menu
   background: rgba(10, 18, 36, 0.97);
   backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 8px;
-  min-width: 190px;
+  min-width: 220px;
   box-shadow:
     0 20px 40px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.04);
-  margin-top: 6px;
+  margin-top: 10px;
 
   .dropdown-item {
     color: rgba(255, 255, 255, 0.78);
-    border-radius: 8px;
-    padding: 9px 14px;
+    border-radius: 10px;
+    padding: 8px 10px;
     font-size: 0.88rem;
     font-weight: 500;
     transition:
       background 0.15s,
-      color 0.15s;
+      color 0.15s,
+      transform 0.15s;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 
+    /* Ícone em "bolha" colorida, estilo app moderno */
     svg,
     .fa,
     [data-icon] {
-      opacity: 0.65;
+      box-sizing: content-box;
       width: 14px;
+      height: 14px;
+      padding: 8px;
+      border-radius: 9px;
+      background: rgba(99, 102, 241, 0.14);
+      color: #a5b4fc;
+      opacity: 1;
+      flex-shrink: 0;
+      transition: background 0.15s;
     }
 
     &:hover,
     &:focus {
-      background: rgba(99, 102, 241, 0.18);
+      background: rgba(99, 102, 241, 0.16);
       color: white;
+      transform: translateX(3px);
 
       svg,
       .fa,
       [data-icon] {
-        opacity: 1;
+        background: rgba(99, 102, 241, 0.3);
+        color: #c7d2fe;
+      }
+    }
+  }
+
+  /* Sair em tom de alerta */
+  .dropdown-item[data-cy='logout'] {
+    svg,
+    .fa,
+    [data-icon] {
+      background: rgba(239, 68, 68, 0.14);
+      color: #f87171;
+    }
+
+    &:hover,
+    &:focus {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+
+      svg,
+      .fa,
+      [data-icon] {
+        background: rgba(239, 68, 68, 0.3);
+        color: #fecaca;
       }
     }
   }

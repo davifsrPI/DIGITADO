@@ -1,0 +1,36 @@
+id;nome;descricao;xp_recompensa
+1;Primeiras Teclas;Complete sua primeira partida no DIGITADO.;50
+2;Bem-vindo à Turma;Entre em uma sala pela primeira vez.;25
+3;Aquecendo os Dedos;Digite 10 palavras corretamente.;50
+4;Vocabulário em Construção;Digite 50 palavras corretamente.;100
+5;Centena Digitada;Digite 100 palavras corretamente.;150
+6;Dicionário Ambulante;Digite 500 palavras corretamente.;300
+7;Mestre das Palavras;Digite 1000 palavras corretamente.;500
+8;Sem Pressa e Sem Erro;Termine uma partida sem errar nenhuma palavra.;150
+9;Perfeccionista;Complete 5 partidas sem nenhum erro.;300
+10;Lenda da Ortografia;Complete 20 partidas sem nenhum erro.;600
+11;Raio Veloz;Acerte uma palavra em menos de 3 segundos.;75
+12;Dedos de Foguete;Acerte 10 palavras em menos de 3 segundos cada.;150
+13;Supersônico;Acerte 50 palavras em menos de 3 segundos cada.;300
+14;Primeira Vitória;Termine uma partida em 1º lugar no placar.;100
+15;Campeão em Série;Vença 5 partidas.;250
+16;Invencível;Vença 10 partidas.;400
+17;Pódio Garantido;Termine entre os 3 primeiros em 10 partidas.;200
+18;Maratonista do Teclado;Participe de 25 partidas.;200
+19;Viciado em Digitar;Participe de 50 partidas.;350
+20;Frequência Perfeita;Jogue em 7 dias diferentes.;150
+21;Sequência de Ouro;Acerte 10 palavras seguidas na mesma partida.;100
+22;Sequência de Diamante;Acerte 25 palavras seguidas na mesma partida.;250
+23;Imparável;Acerte 50 palavras seguidas na mesma partida.;500
+24;Aprendendo com os Erros;Acerte uma palavra que você já tinha errado antes.;50
+25;Superação;Acerte 10 palavras que você já tinha errado antes.;150
+26;Acentuação Nota 10;Acerte 20 palavras com acento.;100
+27;Caçador de Cedilhas;Acerte 15 palavras com a letra ç.;100
+28;Explorador de Salas;Participe de 5 salas diferentes.;100
+29;Aluno Dedicado;Complete 10 atividades.;150
+30;Subindo no Ranking;Entre no top 10 do ranking geral.;200
+31;Elite do Teclado;Alcance o top 3 do ranking geral.;400
+32;Colecionador de XP;Acumule 1000 pontos de experiência.;150
+33;Milionário de XP;Acumule 5000 pontos de experiência.;300
+34;Madrugador;Jogue uma partida antes das 8 horas da manhã.;75
+35;Coruja do Teclado;Jogue uma partida depois das 22 horas.;75

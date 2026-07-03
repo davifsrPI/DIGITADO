@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Substitui as conquistas de teste (geradas pelo Faker) pelo catálogo oficial
+        de 35 conquistas do DIGITADO. Remove primeiro os registros de usuario_conquista
+        (que referenciam as conquistas antigas) e depois o catálogo de teste.
+    -->
+    <changeSet id="20260702120000-1" author="digitado">
+        <delete tableName="usuario_conquista"/>
+        <delete tableName="conquista"/>
+        <loadData
+                  file="config/liquibase/data/conquista_seed.csv"
+                  separator=";"
+                  tableName="conquista"
+                  usePreparedStatements="true">
+            <column name="id" type="numeric"/>
+            <column name="nome" type="string"/>
+            <column name="descricao" type="string"/>
+            <column name="xp_recompensa" type="numeric"/>
+        </loadData>
+    </changeSet>
+</databaseChangeLog>
