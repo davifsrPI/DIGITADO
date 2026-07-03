@@ -31,7 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+// Executa como ADMIN pois o recurso UsuarioConquista agora é restrito a administradores
+@WithMockUser(authorities = { "ROLE_ADMIN", "ROLE_USER" })
 class UsuarioConquistaResourceIT {
 
     private static final Instant DEFAULT_DATA_CONQUISTA = Instant.ofEpochMilli(0L);

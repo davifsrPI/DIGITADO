@@ -72,6 +72,7 @@ export const Lobby = () => {
 
         <div className="lobby-footer-links">
           <Link to="/ranking">🏆 Ver ranking</Link>
+          <Link to="/conquistas">🏅 Minhas conquistas</Link>
           <Link to="/account/settings">⚙️ Configurações</Link>
         </div>
       </div>

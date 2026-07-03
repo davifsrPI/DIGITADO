@@ -29,7 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+// Executa como ADMIN pois as mutações do catálogo de conquistas agora são restritas a administradores
+@WithMockUser(authorities = { "ROLE_ADMIN", "ROLE_USER" })
 class ConquistaResourceIT {
 
     private static final String DEFAULT_NOME = "AAAAAAAAAA";

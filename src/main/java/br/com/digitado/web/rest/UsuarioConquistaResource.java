@@ -2,6 +2,7 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.UsuarioConquista;
 import br.com.digitado.repository.UsuarioConquistaRepository;
+import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
@@ -19,10 +21,16 @@ import tech.jhipster.web.util.ResponseUtil;
 
 /**
  * REST controller for managing {@link br.com.digitado.domain.UsuarioConquista}.
+ *
+ * Restrito a administradores: estes endpoints leem e gravam conquistas de QUALQUER usuário.
+ * O usuário comum consulta as próprias conquistas apenas por GET /api/conquistas/minhas,
+ * onde a identidade é resolvida no backend a partir do token — assim ninguém consegue
+ * ver ou conceder conquistas de/para outra conta.
  */
 @RestController
 @RequestMapping("/api/usuario-conquistas")
 @Transactional
+@Secured(AuthoritiesConstants.ADMIN)
 public class UsuarioConquistaResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(UsuarioConquistaResource.class);
