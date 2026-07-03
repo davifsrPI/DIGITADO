@@ -1,0 +1,75 @@
+# Regras de alerta para anomalias do DIGITADO (regra 9 de monitoramento).
+# Carregadas pelo Prometheus (ver prometheus.yml) e roteadas pelo Alertmanager.
+# Os thresholds são configuráveis: ajuste os valores e recarregue o Prometheus.
+groups:
+  - name: digitado-disponibilidade
+    rules:
+      # Aplicação fora do ar (o scrape falhou por 1 minuto)
+      - alert: AplicacaoFora
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Instância {{ $labels.instance }} fora do ar'
+          description: 'O Prometheus não consegue coletar métricas de {{ $labels.instance }} há mais de 1 minuto.'
+
+  - name: digitado-erros
+    rules:
+      # Mais de 5% das requisições retornando 5xx nos últimos 5 minutos
+      - alert: TaxaDeErro5xxAlta
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            / sum(rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Taxa de erros 5xx acima de 5%'
+          description: 'Verifique os logs JSON filtrando por level=ERROR e correlacione pelo requestId.'
+
+  - name: digitado-latencia
+    rules:
+      # p95 de latência acima de 1s por 5 minutos
+      - alert: LatenciaP95Alta
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Latência p95 acima de 1s'
+          description: 'Confira o log de queries lentas (org.hibernate.SQL_SLOW) e as métricas do Hikari.'
+
+  - name: digitado-recursos
+    rules:
+      # Heap da JVM acima de 90% do máximo por 5 minutos
+      - alert: HeapAlto
+        expr: |
+          sum(jvm_memory_used_bytes{area="heap"}) / sum(jvm_memory_max_bytes{area="heap"}) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Uso de heap acima de 90%'
+          description: 'Risco de OutOfMemoryError. Capture um heap dump antes de reiniciar, se possível.'
+
+      # CPU do processo acima de 90% por 5 minutos
+      - alert: CpuAlta
+        expr: process_cpu_usage > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'CPU do processo acima de 90%'
+          description: 'Use /management/threaddump para identificar threads em loop/contenção.'
+
+      # Pool de conexões esgotado: threads esperando conexão por 2 minutos
+      - alert: PoolDeConexoesEsgotado
+        expr: hikaricp_connections_pending > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Requisições aguardando conexão com o banco'
+          description: 'O pool Hikari está saturado — verifique queries lentas ou vazamento de conexões.'

@@ -23,7 +23,9 @@ management:
   prometheus:
     metrics:
       export:
-        enabled: false
+        # MONITORAMENTO: exporta métricas (tempo de resposta, memória, CPU, pool de
+        # conexões...) em /management/prometheus para scrape do Prometheus
+        enabled: true
 
 spring:
   devtools:
@@ -109,7 +111,10 @@ jhipster:
   mail: # specific JHipster mail property, for standard properties see MailProperties
     base-url: http://my-server-url-to-change # Modify according to your server's URL
   logging:
-    use-json-format: false # By default, logs are not in Json format
+    # MONITORAMENTO: em produção os logs saem estruturados em JSON (um objeto por linha,
+    # com timestamp, nível, logger, mensagem, stack trace e campos do MDC como o requestId),
+    # prontos para ingestão por Loki/ELK/CloudWatch
+    use-json-format: true
     logstash: # Forward logs to logstash over a socket, used by LoggingConfiguration
       enabled: false
       host: localhost

@@ -203,6 +203,23 @@ public class JogoSalaService {
         );
     }
 
+    // ===== Contadores para monitoramento (usados pelo JogoSalaHealthIndicator) =====
+
+    // Total de salas com estado carregado em memória
+    public int totalSalasEmMemoria() {
+        return jogos.size();
+    }
+
+    // Total de jogos efetivamente em andamento (rodada ativa ou pausada)
+    public long totalJogosEmAndamento() {
+        return jogos.values().stream().filter(j -> "NOVA_PALAVRA".equals(j.getTipo()) || "PAUSADA".equals(j.getTipo())).count();
+    }
+
+    // Total de alunos conectados somando todas as salas
+    public int totalAlunosConectados() {
+        return jogos.values().stream().mapToInt(EstadoJogo::totalConectados).sum();
+    }
+
     // Estado interno de uma sala de jogo — mantido em memória enquanto o servidor está rodando.
     // Usa ConcurrentHashMap para suportar múltiplos jogadores respondendo ao mesmo tempo.
     public static class EstadoJogo {
@@ -316,6 +333,11 @@ public class JogoSalaService {
 
         Map<String, String> getAlunosConectados() {
             return alunosConectados;
+        }
+
+        // Quantidade de alunos conectados nesta sala (para monitoramento)
+        int totalConectados() {
+            return alunosConectados.size();
         }
     }
 }

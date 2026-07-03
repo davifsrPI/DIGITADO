@@ -9,6 +9,17 @@ global:
   external_labels:
     monitor: 'jhipster'
 
+# Regras de alerta para anomalias (erros 5xx, latência, heap, CPU, pool de conexões)
+rule_files:
+  - alert-rules.yml
+
+# Envia os alertas disparados para o Alertmanager (ver monitoring.yml)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - localhost:9093
+
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:

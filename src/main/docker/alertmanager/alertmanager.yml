@@ -1,0 +1,33 @@
+# Roteamento dos alertas do DIGITADO (regra 9 de monitoramento).
+# Configure um receiver real (Slack, e-mail, webhook) para o seu ambiente.
+route:
+  receiver: 'default'
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Alertas críticos repetem com mais frequência
+    - matchers:
+        - severity = "critical"
+      receiver: 'default'
+      repeat_interval: 1h
+
+receivers:
+  - name: 'default'
+    # Placeholder: troque pelo canal real do time.
+    # Exemplos:
+    #
+    # Slack:
+    #   slack_configs:
+    #     - api_url: 'https://hooks.slack.com/services/XXX/YYY/ZZZ'
+    #       channel: '#digitado-alertas'
+    #
+    # E-mail:
+    #   email_configs:
+    #     - to: 'time@exemplo.com'
+    #       from: 'alertas@exemplo.com'
+    #       smarthost: 'smtp.exemplo.com:587'
+    webhook_configs:
+      - url: 'http://localhost:9999/alertas' # troque por um endpoint real
+        send_resolved: true

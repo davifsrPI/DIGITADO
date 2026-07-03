@@ -63,9 +63,30 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler
     public ResponseEntity<Object> handleAnyException(Throwable ex, NativeWebRequest request) {
-        LOG.debug("Converting Exception to Problem Details:", ex);
         ProblemDetailWithCause pdCause = wrapAndCustomizeProblem(ex, request);
+        logWithContext(ex, request, pdCause.getStatus());
         return handleExceptionInternal((Exception) ex, pdCause, buildHeaders(ex), HttpStatusCode.valueOf(pdCause.getStatus()), request);
+    }
+
+    /**
+     * Loga todo erro com contexto completo para debugging em produção:
+     * método HTTP, path, status, usuário autenticado e a exceção.
+     * O request ID já sai em toda linha via MDC (ver RequestIdFilter).
+     *
+     * - 5xx: ERROR com stack trace completo (falha do servidor — precisa de investigação)
+     * - 4xx: WARN sem stack trace (erro do cliente — stack só polui o log)
+     */
+    private void logWithContext(Throwable ex, NativeWebRequest request, int status) {
+        HttpServletRequest nativeRequest = request.getNativeRequest(HttpServletRequest.class);
+        String method = nativeRequest != null ? nativeRequest.getMethod() : "?";
+        String path = extractURI(request);
+        String user = br.com.digitado.security.SecurityUtils.getCurrentUserLogin().orElse("anonymous");
+
+        if (status >= 500) {
+            LOG.error("Erro {} em {} {} (usuário={}): {}", status, method, path, user, ex.getMessage(), ex);
+        } else {
+            LOG.warn("Erro {} em {} {} (usuário={}): {} - {}", status, method, path, user, ex.getClass().getSimpleName(), ex.getMessage());
+        }
     }
 
     @Nullable
