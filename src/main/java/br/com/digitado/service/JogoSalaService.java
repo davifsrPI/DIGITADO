@@ -22,12 +22,14 @@ public class JogoSalaService {
     private static final int[] BONUS_MAX = { 10, 7, 5, 3 };
 
     private final PalavraRepository palavraRepository;
+    private final PalavraEstatisticaService palavraEstatisticaService;
 
     // Mapa em memória: código da sala → estado do jogo
     private final Map<String, EstadoJogo> jogos = new ConcurrentHashMap<>();
 
-    public JogoSalaService(PalavraRepository palavraRepository) {
+    public JogoSalaService(PalavraRepository palavraRepository, PalavraEstatisticaService palavraEstatisticaService) {
         this.palavraRepository = palavraRepository;
+        this.palavraEstatisticaService = palavraEstatisticaService;
     }
 
     // Registra um participante na sala (cria o estado da sala se ainda não existir)
@@ -114,6 +116,11 @@ public class JogoSalaService {
                 ? "ACENTUACAO"
                 : classificarErro(normalizar(dLower), normalizar(cLower));
         }
+
+        // Contabiliza a tentativa nas estatísticas da palavra (tabela palavra_estatistica):
+        // toda pessoa que respondeu conta em total_tentativas; acertos somam em total_acertos.
+        // Feito aqui no backend, onde a resposta é validada — o front não envia contadores.
+        palavraEstatisticaService.registrarTentativa(jogo.getPalavraAtual().getId(), correta);
 
         // Registra a resposta e guarda a ordem de acerto (1º, 2º, 3º...)
         int ordem = jogo.registrarResposta(login, correta);

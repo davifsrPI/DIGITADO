@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Palavra do Dia e estatísticas por palavra.
+
+        palavra_estatistica: contadores agregados (1 linha por palavra) — quantas
+        pessoas tentaram a palavra (na palavra do dia ou nas partidas) e quantas
+        acertaram. Atualizada somente pelo backend na validação da resposta.
+
+        palavra_do_dia_tentativa: registro individual de cada tentativa na palavra
+        do dia. A constraint única (data, login) garante uma chance por conta por
+        dia; anônimos entram com login NULL (MySQL permite vários NULL no unique).
+    -->
+    <changeSet id="20260703120000-1" author="digitado">
+        <createTable tableName="palavra_estatistica">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="palavra_id" type="bigint">
+                <constraints nullable="false" unique="true" uniqueConstraintName="ux_palavra_estatistica_palavra"/>
+            </column>
+            <column name="total_tentativas" type="bigint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_acertos" type="bigint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseColumnNames="palavra_id"
+            baseTableName="palavra_estatistica"
+            constraintName="fk_palavra_estatistica_palavra"
+            referencedColumnNames="id"
+            referencedTableName="palavra"/>
+    </changeSet>
+
+    <changeSet id="20260703120000-2" author="digitado">
+        <createTable tableName="palavra_do_dia_tentativa">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="data" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="login" type="varchar(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="acertou" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="palavra_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="criado_em" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseColumnNames="palavra_id"
+            baseTableName="palavra_do_dia_tentativa"
+            constraintName="fk_pdd_tentativa_palavra"
+            referencedColumnNames="id"
+            referencedTableName="palavra"/>
+
+        <!-- Uma tentativa por conta por dia (logados); NULL de anônimos não colide -->
+        <addUniqueConstraint
+            tableName="palavra_do_dia_tentativa"
+            columnNames="data, login"
+            constraintName="ux_pdd_tentativa_data_login"/>
+
+        <createIndex tableName="palavra_do_dia_tentativa" indexName="ix_pdd_tentativa_data">
+            <column name="data"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

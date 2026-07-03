@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
+import PalavraDoDia from 'app/modules/home/palavra-do-dia';
 
 export const Home = () => {
   const account = useAppSelector(state => state.authentication.account);
@@ -80,6 +81,9 @@ export const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* PALAVRA DO DIA — desafio público, uma chance por pessoa (controle no backend) */}
+      <PalavraDoDia />
 
       {/* COMO FUNCIONA */}
       <section className="how-section">

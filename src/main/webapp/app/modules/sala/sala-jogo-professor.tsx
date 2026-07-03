@@ -40,7 +40,7 @@ function falarPalavra(texto: string) {
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(texto);
   utter.lang = 'pt-BR';
-  utter.rate = 0.85;
+  utter.rate = 0.5;
   window.speechSynthesis.speak(utter);
 }
 
