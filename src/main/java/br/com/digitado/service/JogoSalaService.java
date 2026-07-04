@@ -117,7 +117,7 @@ public class JogoSalaService {
                 : classificarErro(normalizar(dLower), normalizar(cLower));
         }
 
-        // Contabiliza a tentativa nas estatísticas da palavra (tabela palavra_estatistica):
+        // Contabiliza a tentativa nas colunas de estatística da tabela palavra:
         // toda pessoa que respondeu conta em total_tentativas; acertos somam em total_acertos.
         // Feito aqui no backend, onde a resposta é validada — o front não envia contadores.
         palavraEstatisticaService.registrarTentativa(jogo.getPalavraAtual().getId(), correta);

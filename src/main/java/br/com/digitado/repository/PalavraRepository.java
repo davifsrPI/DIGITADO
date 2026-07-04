@@ -30,4 +30,19 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     long countByAtivaTrue();
 
     Page<Palavra> findByAtivaTrue(Pageable pageable);
+
+    // Incremento atômico das colunas de estatística da palavra (total_tentativas e
+    // total_acertos) — único ponto que escreve nesses contadores. Seguro mesmo com
+    // vários jogadores respondendo ao mesmo tempo em salas diferentes.
+    @Modifying
+    @Query(
+        value = "update palavra set total_tentativas = total_tentativas + 1, total_acertos = total_acertos + :acerto where id = :palavraId",
+        nativeQuery = true
+    )
+    void incrementarEstatistica(@Param("palavraId") long palavraId, @Param("acerto") int acerto);
+
+    // Leitura direta dos contadores no banco (ignora o cache de entidades do JPA,
+    // garantindo o valor recém-incrementado)
+    @Query(value = "select total_tentativas, total_acertos from palavra where id = :palavraId", nativeQuery = true)
+    List<Object[]> buscarEstatistica(@Param("palavraId") long palavraId);
 }

@@ -3,7 +3,6 @@ package br.com.digitado.service;
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.PalavraDoDiaTentativa;
 import br.com.digitado.repository.PalavraDoDiaTentativaRepository;
-import br.com.digitado.repository.PalavraEstatisticaRepository;
 import br.com.digitado.repository.PalavraRepository;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -34,18 +33,15 @@ public class PalavraDoDiaService {
 
     private final PalavraRepository palavraRepository;
     private final PalavraDoDiaTentativaRepository tentativaRepository;
-    private final PalavraEstatisticaRepository estatisticaRepository;
     private final PalavraEstatisticaService estatisticaService;
 
     public PalavraDoDiaService(
         PalavraRepository palavraRepository,
         PalavraDoDiaTentativaRepository tentativaRepository,
-        PalavraEstatisticaRepository estatisticaRepository,
         PalavraEstatisticaService estatisticaService
     ) {
         this.palavraRepository = palavraRepository;
         this.tentativaRepository = tentativaRepository;
-        this.estatisticaRepository = estatisticaRepository;
         this.estatisticaService = estatisticaService;
     }
 
@@ -103,11 +99,14 @@ public class PalavraDoDiaService {
         return acertou;
     }
 
-    // Contadores agregados da palavra (para exibir "% de acerto" após a tentativa)
+    // Contadores agregados da palavra (para exibir "% de acerto" após a tentativa).
+    // Leitura direta no banco, nas colunas total_tentativas/total_acertos da tabela palavra
     public long[] estatisticasDaPalavra(Long palavraId) {
-        return estatisticaRepository
-            .findByPalavraId(palavraId)
-            .map(e -> new long[] { e.getTotalTentativas(), e.getTotalAcertos() })
-            .orElse(new long[] { 0, 0 });
+        List<Object[]> linhas = palavraRepository.buscarEstatistica(palavraId);
+        if (linhas.isEmpty()) {
+            return new long[] { 0, 0 };
+        }
+        Object[] linha = linhas.get(0);
+        return new long[] { ((Number) linha[0]).longValue(), ((Number) linha[1]).longValue() };
     }
 }

@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.digitado.IntegrationTest;
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.enumeration.Dificuldade;
-import br.com.digitado.repository.PalavraEstatisticaRepository;
 import br.com.digitado.repository.PalavraRepository;
 import br.com.digitado.service.PalavraDoDiaService;
 import jakarta.servlet.http.Cookie;
@@ -42,9 +41,6 @@ class PalavraDoDiaResourceIT {
 
     @Autowired
     private PalavraRepository palavraRepository;
-
-    @Autowired
-    private PalavraEstatisticaRepository estatisticaRepository;
 
     @Autowired
     private MockMvc restMockMvc;
@@ -115,7 +111,10 @@ class PalavraDoDiaResourceIT {
             .andExpect(jsonPath("$.totalTentativas").value(1))
             .andExpect(jsonPath("$.totalAcertos").value(0));
 
-        assertThat(estatisticaRepository.findByPalavraId(palavraDoDia.getId()).orElseThrow().getTotalTentativas()).isEqualTo(1);
+        // Confere direto nas colunas total_tentativas/total_acertos da tabela palavra
+        Object[] estatistica = palavraRepository.buscarEstatistica(palavraDoDia.getId()).get(0);
+        assertThat(((Number) estatistica[0]).longValue()).isEqualTo(1);
+        assertThat(((Number) estatistica[1]).longValue()).isZero();
 
         // Com o cookie do dia, nova tentativa anônima é recusada
         Cookie cookieDeHoje = new Cookie("pddTentativa", LocalDate.now(PalavraDoDiaService.FUSO) + "_0");

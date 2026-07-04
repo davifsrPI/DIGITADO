@@ -1,6 +1,7 @@
 package br.com.digitado.domain;
 
 import br.com.digitado.domain.enumeration.Dificuldade;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -44,6 +45,24 @@ public class Palavra implements Serializable {
     @Column(name = "ativa")
     private Boolean ativa;
 
+    /**
+     * Estatísticas da palavra: total de pessoas que a fizeram (acertando ou não)
+     * e total de acertos — somando palavra do dia e partidas.
+     *
+     * - @JsonIgnore: os contadores nunca saem nas respostas da API que serializam
+     *   Palavra (o backend só expõe quando quer, via VM da palavra do dia);
+     * - insertable/updatable = false: o JPA nunca escreve nessas colunas — o
+     *   incremento é feito exclusivamente por SQL atômico (PalavraRepository),
+     *   então o CRUD de palavras não zera nem adultera os números.
+     */
+    @JsonIgnore
+    @Column(name = "total_tentativas", insertable = false, updatable = false)
+    private Long totalTentativas;
+
+    @JsonIgnore
+    @Column(name = "total_acertos", insertable = false, updatable = false)
+    private Long totalAcertos;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(value = { "salas", "listasPalavras", "palavrasCriadas", "salasAlunos" }, allowSetters = true)
     private Usuario criador;
@@ -53,6 +72,14 @@ public class Palavra implements Serializable {
     private Set<ListaPalavras> listas = new HashSet<>();
 
     // jhipster-needle-entity-add-field - JHipster will add fields here
+
+    public Long getTotalTentativas() {
+        return totalTentativas != null ? totalTentativas : 0L;
+    }
+
+    public Long getTotalAcertos() {
+        return totalAcertos != null ? totalAcertos : 0L;
+    }
 
     public Long getId() {
         return this.id;

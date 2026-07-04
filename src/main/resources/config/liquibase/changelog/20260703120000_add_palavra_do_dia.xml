@@ -7,36 +7,25 @@
     <!--
         Palavra do Dia e estatísticas por palavra.
 
-        palavra_estatistica: contadores agregados (1 linha por palavra) — quantas
-        pessoas tentaram a palavra (na palavra do dia ou nas partidas) e quantas
-        acertaram. Atualizada somente pelo backend na validação da resposta.
+        Colunas novas na tabela palavra: contadores agregados — quantas pessoas
+        tentaram a palavra (na palavra do dia ou nas partidas) e quantas acertaram.
+        Atualizadas somente pelo backend, por SQL direto, na validação da resposta.
 
         palavra_do_dia_tentativa: registro individual de cada tentativa na palavra
         do dia. A constraint única (data, login) garante uma chance por conta por
         dia; anônimos entram com login NULL (MySQL permite vários NULL no unique).
     -->
     <changeSet id="20260703120000-1" author="digitado">
-        <createTable tableName="palavra_estatistica">
-            <column name="id" type="bigint" autoIncrement="true">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="palavra_id" type="bigint">
-                <constraints nullable="false" unique="true" uniqueConstraintName="ux_palavra_estatistica_palavra"/>
-            </column>
+        <addColumn tableName="palavra">
+            <!-- Registro geral: total de pessoas que fizeram a palavra (acertando ou não) -->
             <column name="total_tentativas" type="bigint" defaultValueNumeric="0">
                 <constraints nullable="false"/>
             </column>
+            <!-- Quantas dessas tentativas foram acertos -->
             <column name="total_acertos" type="bigint" defaultValueNumeric="0">
                 <constraints nullable="false"/>
             </column>
-        </createTable>
-
-        <addForeignKeyConstraint
-            baseColumnNames="palavra_id"
-            baseTableName="palavra_estatistica"
-            constraintName="fk_palavra_estatistica_palavra"
-            referencedColumnNames="id"
-            referencedTableName="palavra"/>
+        </addColumn>
     </changeSet>
 
     <changeSet id="20260703120000-2" author="digitado">
