@@ -228,4 +228,10 @@ jhipster:
 # https://www.jhipster.tech/common-application-properties/
 # ===================================================================
 
-# application:
+application:
+  # Limite de requisições por identidade (login ou IP) — proteção contra abuso.
+  # Estourou: HTTP 429 com Retry-After. Ajuste por ambiente se necessário.
+  rate-limit:
+    enabled: true
+    requisicoes-por-minuto: 100
+    autenticacao-por-minuto: 10

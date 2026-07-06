@@ -94,3 +94,12 @@ management:
   health:
     mail:
       enabled: false
+
+# Limites de requisição bem altos nos testes: as suítes de IT disparam centenas de
+# chamadas por minuto com a mesma identidade e não podem tropeçar no rate limit
+# (o comportamento do filtro em si é coberto por teste unitário dedicado)
+application:
+  rate-limit:
+    enabled: true
+    requisicoes-por-minuto: 1000000
+    autenticacao-por-minuto: 1000000
