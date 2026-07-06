@@ -35,11 +35,17 @@ spring:
       enabled: false
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    # SEGURANÇA: tenho que trocar o usuário root por um usuário com permissões mínimas (só no schema DIGITADO)
-    # SEGURANÇA: use SSL=true em produção e remova allowPublicKeyRetrieval
-    url: jdbc:mysql://localhost:3306/DIGITADO?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&createDatabaseIfNotExist=true
-    username: root
-    # SEGURANÇA: defina a senha via variável de ambiente SPRING_DATASOURCE_PASSWORD — nao posso deixar a senha aqui em prod
+    # A URL padrão abaixo serve para TESTE LOCAL (localhost): sem SSL, a flag
+    # allowPublicKeyRetrieval é necessária para o caching_sha2_password do MySQL 8
+    # e é segura porque a conexão não sai da máquina.
+    # SEGURANÇA: com banco REMOTO, defina SPRING_DATASOURCE_URL com
+    # useSSL=true&requireSSL=true e SEM allowPublicKeyRetrieval.
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/DIGITADO?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&useLegacyDatetimeCode=false}
+    # Usuário DEDICADO com permissões só no schema DIGITADO (nunca root).
+    # A SENHA vem exclusivamente de variável de ambiente — NUNCA escreva a senha
+    # real neste arquivo: ele vai para o git e o histórico é permanente.
+    # Para teste local use o script iniciar-prod.local.ps1 (fora do git).
+    username: ${SPRING_DATASOURCE_USERNAME:digitado}
     password: ${SPRING_DATASOURCE_PASSWORD:}
     hikari:
       poolName: Hikari

@@ -151,3 +151,6 @@ Desktop.ini
 ######################
 coverage/
 .nyc_output/
+
+# Credenciais locais de teste do perfil prod — nunca commitar
+*.local.ps1
