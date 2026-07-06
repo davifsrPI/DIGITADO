@@ -259,6 +259,13 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <!-- Logs estruturados em JSON no perfil prod (jhipster.logging.use-json-format)
+                 — exigida em runtime pelo LoggingConfiguration/LoggingUtils do JHipster -->
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>8.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>jdbc</artifactId>
             <scope>test</scope>
