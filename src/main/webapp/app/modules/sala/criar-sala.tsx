@@ -103,7 +103,8 @@ export const CriarSala = () => {
   const removeWord = (id: number) => setExtraWords(prev => prev.filter(w => w.id !== id));
 
   // Cria a sala via API — tenta até 5 vezes se o código já existir, gerando um novo a cada tentativa.
-  // Ao criar com sucesso, navega direto para o jogo com autoStart=true e a config escolhida.
+  // Ao criar com sucesso, navega para a tela de espera da sala: o professor vê quem
+  // está entrando e inicia quando quiser — inclusive com a sala vazia.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -116,7 +117,6 @@ export const CriarSala = () => {
         navigate(`/sala/${res.data.codigo}`, {
           state: {
             isProfessor: true,
-            autoStart: true,
             gameConfig: {
               tempoLimite: tempo,
               qtdFacil: quantidades.FACIL,

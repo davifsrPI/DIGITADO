@@ -18,11 +18,9 @@ export const SalaJogo: React.FC = () => {
   // Lê as configurações passadas pela tela anterior via React Router state
   const locationState = location.state as {
     isProfessor?: boolean;
-    autoStart?: boolean;
     gameConfig?: { tempoLimite: number; qtdFacil: number; qtdMedio: number; qtdDificil: number; palavrasExtrasIds: number[] };
   } | null;
   const isProfessor = locationState?.isProfessor === true;
-  const autoStart = locationState?.autoStart === true;
   const gameConfig = locationState?.gameConfig;
 
   // Nome de exibição: usa o primeiro nome do usuário autenticado, ou o login como fallback
@@ -89,7 +87,6 @@ export const SalaJogo: React.FC = () => {
             onPausar={pausar}
             onEncerrar={encerrar}
             onResponder={responder}
-            autoStart={autoStart}
             initialGameConfig={gameConfig}
           />
         ) : (

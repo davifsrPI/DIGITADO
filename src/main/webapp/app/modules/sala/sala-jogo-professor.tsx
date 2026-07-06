@@ -19,7 +19,6 @@ interface Props {
   onPausar: () => void;
   onEncerrar: () => void;
   onResponder: (resposta: string) => void;
-  autoStart?: boolean;
   initialGameConfig?: GameConfig;
 }
 
@@ -53,12 +52,10 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   onIniciar,
   onProxima,
   onResponder,
-  autoStart,
   initialGameConfig,
 }) => {
   // ─── Estado local do componente ───────────────────────────────────────────
   const [cfg, setCfg] = useState<Cfg>(initialGameConfig ?? DEFAULT_CFG);
-  const didAutoStart = useRef(false);
 
   const [resposta, setResposta] = useState('');
   const [jaRespondeu, setJaRespondeu] = useState(false);
@@ -103,15 +100,6 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     onResponder(resposta.trim());
     setJaRespondeu(true);
   };
-
-  // Inicia o jogo automaticamente assim que a conexão WebSocket é estabelecida
-  // (quando o professor vem da tela de criação com autoStart=true)
-  useEffect(() => {
-    if (autoStart && conectado && !didAutoStart.current && (!estado || estado.tipo === 'AGUARDANDO')) {
-      didAutoStart.current = true;
-      onIniciar(initialGameConfig ?? { ...cfg, palavrasExtrasIds: [] });
-    }
-  }, [conectado, estado?.tipo]);
 
   // Reseta o estado de resposta e fala a palavra automaticamente ao mudar de palavra
   useEffect(() => {
@@ -253,8 +241,11 @@ export const SalaJogoProfessor: React.FC<Props> = ({
 
         <button
           className="sj-iniciar-btn"
-          disabled={!conectado || cfg.qtdFacil + cfg.qtdMedio + cfg.qtdDificil === 0}
-          onClick={() => onIniciar({ ...cfg, palavrasExtrasIds: [] })}
+          disabled={
+            !conectado || (cfg.qtdFacil + cfg.qtdMedio + cfg.qtdDificil === 0 && (initialGameConfig?.palavrasExtrasIds?.length ?? 0) === 0)
+          }
+          // Preserva as palavras extras escolhidas na tela de criação da sala
+          onClick={() => onIniciar({ ...cfg, palavrasExtrasIds: initialGameConfig?.palavrasExtrasIds ?? [] })}
         >
           {conectado ? '▶ Iniciar partida' : 'Conectando...'}
         </button>
