@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { EstadoJogo, FeedbackAluno, PlacarEntry } from './hooks/useSalaWebSocket';
 import { MENSAGEM_ERRO, validarResposta } from './utils/validarResposta';
+import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 
 interface Props {
   estado: EstadoJogo | null;
@@ -131,9 +132,12 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
 
   const pct = estado.tempoLimite > 0 ? (tempoRestante / estado.tempoLimite) * 100 : 0;
   const timerDanger = tempoRestante <= 5;
+  const rodadaRapida = estado.tempoLimite <= RODADA_RAPIDA_LIMITE;
 
   return (
     <div className="sj-aluno-body">
+      {/* Vinheta de 3s no início de cada rodada: relógio voando, ponteiros rápidos se o tempo for curto */}
+      <RelogioRodada tempoLimite={estado.tempoLimite} palavraId={estado.palavraAtual?.id} />
       <div className="sj-aluno-topbar">
         <div>
           <div className="sj-sala-nome">{estado.nomeSala}</div>
@@ -150,7 +154,7 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
       <div className="sj-aluno-main">
         <div className={`sj-timer-num${timerDanger ? ' sj-timer-danger' : ''}`}>{tempoRestante}</div>
         <div className="sj-timer-label">segundos para responder</div>
-        <div className="sj-timer-bar-bg">
+        <div className={`sj-timer-bar-bg${rodadaRapida ? ' sj-timer-bar--curto' : ''}`}>
           <div className="sj-timer-bar-fill" style={{ width: `${pct}%`, background: timerDanger ? '#E24B4A' : '#378ADD' }} />
         </div>
 

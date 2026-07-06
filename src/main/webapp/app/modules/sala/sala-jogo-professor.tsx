@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EstadoJogo } from './hooks/useSalaWebSocket';
+import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 
 // Configuração do jogo escolhida pelo professor (quantidade de palavras por dificuldade e tempo)
 interface GameConfig {
@@ -315,6 +316,8 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   /* ── EM JOGO ─────────────────────────────────────────────── */
   return (
     <div className="sj-game-centered">
+      {/* Vinheta de 3s no início de cada rodada: relógio voando, ponteiros rápidos se o tempo for curto */}
+      <RelogioRodada tempoLimite={estado.tempoLimite} palavraId={estado.palavraAtual?.id} />
       <div className="sj-game-topbar">
         <div className="sj-sala-nome">{estado.nomeSala}</div>
         <div className="sj-topbar-right">
@@ -364,7 +367,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
             <span className="sj-timer-label">Tempo restante</span>
             <span className={`sj-timer-val${timerDanger ? ' sj-timer-danger' : ''}`}>{tempoRestante}s</span>
           </div>
-          <div className="sj-timer-bar-bg">
+          <div className={`sj-timer-bar-bg${estado.tempoLimite <= RODADA_RAPIDA_LIMITE ? ' sj-timer-bar--curto' : ''}`}>
             <div className="sj-timer-bar-fill" style={{ width: `${pct}%`, background: timerDanger ? '#E24B4A' : '#1D9E75' }} />
           </div>
         </div>

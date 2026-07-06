@@ -1382,3 +1382,268 @@
   min-width: 28px;
   text-align: right;
 }
+
+/* ============ MOBILE (telas da sala/partida) ============ */
+@media (max-width: 768px) {
+  .sj-container {
+    padding: 16px 14px 32px;
+  }
+
+  /* lobby de espera do professor */
+  .sj-lobby-title {
+    font-size: 24px;
+  }
+
+  .sj-codigo-val {
+    font-size: 32px;
+  }
+
+  .sj-lobby-cols {
+    grid-template-columns: 1fr;
+  }
+
+  /* partida do professor: placar vai para baixo do jogo */
+  .sj-prof-main {
+    grid-template-columns: 1fr;
+  }
+
+  .sj-prof-topbar {
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .sj-controls {
+    flex-wrap: wrap;
+  }
+
+  /* cartão do jogo (professor e aluno) */
+  .sj-game-card {
+    padding: 24px 16px;
+  }
+
+  .sj-aluno-topbar {
+    flex-wrap: wrap;
+    gap: 10px 14px;
+  }
+
+  .sj-ended-title {
+    font-size: 24px;
+  }
+
+  .sj-ranking-next-val {
+    font-size: 28px;
+  }
+}
+
+/* ============ VINHETA DE INÍCIO DE RODADA (relógio voador) ============ */
+
+.rr-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  animation: rr-fade 3s ease forwards;
+}
+
+/* O relógio: mostrador com dois ponteiros girando */
+.rr-clock {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.18), rgba(15, 23, 42, 0.95));
+  border: 5px solid #e2e8f0;
+  box-shadow:
+    0 0 40px rgba(226, 232, 240, 0.35),
+    inset 0 0 18px rgba(0, 0, 0, 0.45);
+  animation: rr-voar 3s ease-in-out forwards;
+}
+
+.rr-hand {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  transform-origin: 50% 100%;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+
+/* Ponteiro dos minutos: fino e comprido, gira em velocidade normal */
+.rr-hand--min {
+  width: 5px;
+  height: 42px;
+  margin-left: -2.5px;
+  animation: rr-girar 1.4s linear infinite;
+}
+
+/* Ponteiro das horas: curto e grosso, meia velocidade */
+.rr-hand--hr {
+  width: 7px;
+  height: 28px;
+  margin-left: -3.5px;
+  opacity: 0.85;
+  animation: rr-girar 2.8s linear infinite;
+}
+
+.rr-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: #facc15;
+}
+
+.rr-label {
+  font-size: 22px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 30px;
+  padding: 10px 26px;
+  backdrop-filter: blur(10px);
+  animation: rr-label-pop 0.5s ease;
+}
+
+/* Rodada RÁPIDA: relógio vermelho, ponteiros em disparada e leve tremida */
+.rr-overlay--rapida .rr-clock {
+  border-color: #f87171;
+  box-shadow:
+    0 0 50px rgba(239, 68, 68, 0.55),
+    inset 0 0 18px rgba(0, 0, 0, 0.45);
+  animation:
+    rr-voar 3s ease-in-out forwards,
+    rr-tremer 0.15s linear infinite;
+}
+
+.rr-overlay--rapida .rr-hand--min {
+  background: #fca5a5;
+  animation: rr-girar 0.3s linear infinite;
+}
+
+.rr-overlay--rapida .rr-hand--hr {
+  background: #fca5a5;
+  animation: rr-girar 0.6s linear infinite;
+}
+
+.rr-overlay--rapida .rr-label {
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.45);
+  animation:
+    rr-label-pop 0.5s ease,
+    rr-pulsar-texto 0.6s ease-in-out infinite;
+}
+
+/* Voo do relógio: entra pela esquerda, faz um arco pelo centro e sai pela direita */
+@keyframes rr-voar {
+  0% {
+    transform: translateX(-55vw) translateY(14vh) rotate(-18deg) scale(0.6);
+    opacity: 0;
+  }
+  22% {
+    transform: translateX(-18vw) translateY(-7vh) rotate(8deg) scale(1.05);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(0) translateY(0) rotate(-4deg) scale(1.15);
+  }
+  78% {
+    transform: translateX(18vw) translateY(-7vh) rotate(10deg) scale(1.05);
+  }
+  100% {
+    transform: translateX(55vw) translateY(12vh) rotate(20deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes rr-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rr-tremer {
+  0%,
+  100% {
+    margin-top: 0;
+  }
+  25% {
+    margin-top: -2px;
+  }
+  75% {
+    margin-top: 2px;
+  }
+}
+
+@keyframes rr-fade {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes rr-label-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes rr-pulsar-texto {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+/* ============ BARRA DE TEMPO EM RODADA CURTA ============ */
+
+/* Quando o tempo por palavra é curto (<= 20s), a barra pulsa em tom de alerta
+   o tempo inteiro — reforçando que a rodada é acelerada */
+.sj-timer-bar--curto {
+  animation: sj-barra-alerta 0.9s ease-in-out infinite;
+  outline: 1px solid rgba(239, 68, 68, 0.5);
+
+  .sj-timer-bar-fill {
+    animation: sj-fill-pulso 0.9s ease-in-out infinite;
+  }
+}
+
+@keyframes sj-barra-alerta {
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.75);
+  }
+}
+
+@keyframes sj-fill-pulso {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.45);
+  }
+}
