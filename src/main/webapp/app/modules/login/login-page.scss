@@ -235,3 +235,10 @@ body.login-page .view-container {
     }
   }
 }
+
+/* ============ MOBILE ============ */
+@media (max-width: 640px) {
+  .login-card {
+    padding: 28px 20px;
+  }
+}

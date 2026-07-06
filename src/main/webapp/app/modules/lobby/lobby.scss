@@ -396,3 +396,38 @@ body.lobby-page {
     }
   }
 }
+
+/* ============ MOBILE ============ */
+@media (max-width: 640px) {
+  .lobby-content {
+    padding: 90px 20px 40px;
+    gap: 32px;
+  }
+
+  .lobby-greeting h1 {
+    font-size: 30px;
+  }
+
+  .lobby-greeting p {
+    font-size: 15px;
+  }
+
+  .enter-room-box {
+    padding: 30px 20px;
+    border-radius: 20px;
+  }
+
+  .room-code-form {
+    flex-direction: column;
+  }
+
+  .room-enter-btn {
+    width: 100%;
+  }
+
+  .lobby-footer-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px 28px;
+  }
+}
