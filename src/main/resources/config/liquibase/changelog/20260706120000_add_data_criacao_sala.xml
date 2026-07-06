@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Adiciona a data de criação da sala.
+
+        A identificação única da sala já é garantida pela constraint ux_sala__codigo
+        (nenhuma sala repete código); a data de criação complementa a identificação
+        e permite auditar quando cada sala nasceu. Preenchida sempre pelo servidor.
+        Salas antigas ficam com o valor nulo (data desconhecida).
+    -->
+    <changeSet id="20260706120000-1" author="digitado">
+        <addColumn tableName="sala">
+            <column name="data_criacao" type="${datetimeType}">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

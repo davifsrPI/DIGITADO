@@ -35,5 +35,7 @@
     <!-- jhipster-needle-liquibase-add-constraints-changelog - JHipster will add liquibase constraints changelogs here -->
     <include file="config/liquibase/changelog/20260702120000_seed_conquistas.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20260703120000_add_palavra_do_dia.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260704120000_remove_dificuldade_palavra.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260706120000_add_data_criacao_sala.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
 </databaseChangeLog>

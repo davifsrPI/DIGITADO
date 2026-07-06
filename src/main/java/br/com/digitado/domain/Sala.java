@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -37,6 +38,14 @@ public class Sala implements Serializable {
     @Column(name = "ativo")
     private Boolean ativo;
 
+    /**
+     * Data/hora em que a sala foi criada. Junto com o código (que tem constraint
+     * única no banco — ux_sala__codigo), identifica a sala sem ambiguidade.
+     * updatable = false: uma vez criada, a data nunca muda (nem via PUT).
+     */
+    @Column(name = "data_criacao", updatable = false)
+    private Instant dataCriacao = Instant.now();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(value = { "salas", "listasPalavras", "palavrasCriadas", "salasAlunos" }, allowSetters = true)
     private Usuario professor;
@@ -46,6 +55,19 @@ public class Sala implements Serializable {
     private Set<Usuario> alunos = new HashSet<>();
 
     // jhipster-needle-entity-add-field - JHipster will add fields here
+
+    public Instant getDataCriacao() {
+        return dataCriacao;
+    }
+
+    public void setDataCriacao(Instant dataCriacao) {
+        this.dataCriacao = dataCriacao;
+    }
+
+    public Sala dataCriacao(Instant dataCriacao) {
+        this.setDataCriacao(dataCriacao);
+        return this;
+    }
 
     public Long getId() {
         return this.id;

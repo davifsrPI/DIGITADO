@@ -29,7 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+// Executa como ADMIN: o SalaResource aplica regras de dono (professor) que o
+// usuário mock genérico não satisfaz — admin enxerga e edita qualquer sala
+@WithMockUser(authorities = { "ROLE_ADMIN", "ROLE_USER" })
 class SalaResourceIT {
 
     private static final String DEFAULT_NOME = "AAAAAAAAAA";

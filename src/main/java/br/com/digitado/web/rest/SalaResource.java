@@ -65,6 +65,8 @@ public class SalaResource {
             .flatMap(userRepository::findOneByLogin)
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
             .ifPresent(sala::setProfessor);
+        // Data de criação é definida pelo servidor — o cliente não consegue forjar
+        sala.setDataCriacao(java.time.Instant.now());
         sala = salaRepository.save(sala);
         // Retorna apenas os campos públicos da sala (sem o professor, para não vazar dados)
         SalaResponseVM vm = new SalaResponseVM(sala.getId(), sala.getNome(), sala.getCodigo(), sala.getDescricao(), sala.getAtivo());
