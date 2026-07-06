@@ -36,9 +36,6 @@ class PalavraResourceIT {
     private static final String DEFAULT_TEXTO = "AAAAAAAAAA";
     private static final String UPDATED_TEXTO = "BBBBBBBBBB";
 
-    private static final Dificuldade DEFAULT_DIFICULDADE = Dificuldade.FACIL;
-    private static final Dificuldade UPDATED_DIFICULDADE = Dificuldade.MEDIO;
-
     private static final String DEFAULT_CATEGORIA = "AAAAAAAAAA";
     private static final String UPDATED_CATEGORIA = "BBBBBBBBBB";
 
@@ -82,7 +79,6 @@ class PalavraResourceIT {
     public static Palavra createEntity() {
         return new Palavra()
             .texto(DEFAULT_TEXTO)
-            .dificuldade(DEFAULT_DIFICULDADE)
             .categoria(DEFAULT_CATEGORIA)
             .idioma(DEFAULT_IDIOMA)
             .possuiAcento(DEFAULT_POSSUI_ACENTO)
@@ -98,7 +94,6 @@ class PalavraResourceIT {
     public static Palavra createUpdatedEntity() {
         return new Palavra()
             .texto(UPDATED_TEXTO)
-            .dificuldade(UPDATED_DIFICULDADE)
             .categoria(UPDATED_CATEGORIA)
             .idioma(UPDATED_IDIOMA)
             .possuiAcento(UPDATED_POSSUI_ACENTO)
@@ -173,21 +168,8 @@ class PalavraResourceIT {
         assertSameRepositoryCount(databaseSizeBeforeTest);
     }
 
-    @Test
-    @Transactional
-    void checkDificuldadeIsRequired() throws Exception {
-        long databaseSizeBeforeTest = getRepositoryCount();
-        // set the field null
-        palavra.setDificuldade(null);
-
-        // Create the Palavra, which fails.
-
-        restPalavraMockMvc
-            .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(palavra)))
-            .andExpect(status().isBadRequest());
-
-        assertSameRepositoryCount(databaseSizeBeforeTest);
-    }
+    // O teste checkDificuldadeIsRequired foi removido: dificuldade deixou de ser
+    // campo persistido — agora é calculada pela taxa de acerto da palavra
 
     @Test
     @Transactional
@@ -202,7 +184,8 @@ class PalavraResourceIT {
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(jsonPath("$.[*].id").value(hasItem(palavra.getId().intValue())))
             .andExpect(jsonPath("$.[*].texto").value(hasItem(DEFAULT_TEXTO)))
-            .andExpect(jsonPath("$.[*].dificuldade").value(hasItem(DEFAULT_DIFICULDADE.toString())))
+            // dificuldade agora é calculada: palavra sem tentativas nasce MEDIO
+            .andExpect(jsonPath("$.[*].dificuldade").value(hasItem(Dificuldade.MEDIO.toString())))
             .andExpect(jsonPath("$.[*].categoria").value(hasItem(DEFAULT_CATEGORIA)))
             .andExpect(jsonPath("$.[*].idioma").value(hasItem(DEFAULT_IDIOMA)))
             .andExpect(jsonPath("$.[*].possuiAcento").value(hasItem(DEFAULT_POSSUI_ACENTO)))
@@ -222,7 +205,8 @@ class PalavraResourceIT {
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(jsonPath("$.id").value(palavra.getId().intValue()))
             .andExpect(jsonPath("$.texto").value(DEFAULT_TEXTO))
-            .andExpect(jsonPath("$.dificuldade").value(DEFAULT_DIFICULDADE.toString()))
+            // dificuldade agora é calculada: palavra sem tentativas nasce MEDIO
+            .andExpect(jsonPath("$.dificuldade").value(Dificuldade.MEDIO.toString()))
             .andExpect(jsonPath("$.categoria").value(DEFAULT_CATEGORIA))
             .andExpect(jsonPath("$.idioma").value(DEFAULT_IDIOMA))
             .andExpect(jsonPath("$.possuiAcento").value(DEFAULT_POSSUI_ACENTO))
@@ -250,7 +234,6 @@ class PalavraResourceIT {
         em.detach(updatedPalavra);
         updatedPalavra
             .texto(UPDATED_TEXTO)
-            .dificuldade(UPDATED_DIFICULDADE)
             .categoria(UPDATED_CATEGORIA)
             .idioma(UPDATED_IDIOMA)
             .possuiAcento(UPDATED_POSSUI_ACENTO)
@@ -330,7 +313,7 @@ class PalavraResourceIT {
         Palavra partialUpdatedPalavra = new Palavra();
         partialUpdatedPalavra.setId(palavra.getId());
 
-        partialUpdatedPalavra.dificuldade(UPDATED_DIFICULDADE).categoria(UPDATED_CATEGORIA).ativa(UPDATED_ATIVA);
+        partialUpdatedPalavra.categoria(UPDATED_CATEGORIA).ativa(UPDATED_ATIVA);
 
         restPalavraMockMvc
             .perform(
@@ -360,7 +343,6 @@ class PalavraResourceIT {
 
         partialUpdatedPalavra
             .texto(UPDATED_TEXTO)
-            .dificuldade(UPDATED_DIFICULDADE)
             .categoria(UPDATED_CATEGORIA)
             .idioma(UPDATED_IDIOMA)
             .possuiAcento(UPDATED_POSSUI_ACENTO)

@@ -9,7 +9,6 @@ import { useAppDispatch, useAppSelector } from 'app/config/store';
 
 import { getEntities as getUsuarios } from 'app/entities/usuario/usuario.reducer';
 import { getEntities as getListaPalavras } from 'app/entities/lista-palavras/lista-palavras.reducer';
-import { Dificuldade } from 'app/shared/model/enumerations/dificuldade.model';
 import { createEntity, getEntity, reset, updateEntity } from './palavra.reducer';
 
 export const PalavraUpdate = () => {
@@ -26,7 +25,6 @@ export const PalavraUpdate = () => {
   const loading = useAppSelector(state => state.palavra.loading);
   const updating = useAppSelector(state => state.palavra.updating);
   const updateSuccess = useAppSelector(state => state.palavra.updateSuccess);
-  const dificuldadeValues = Object.keys(Dificuldade);
 
   const handleClose = () => {
     navigate('/palavra');
@@ -72,7 +70,6 @@ export const PalavraUpdate = () => {
     isNew
       ? {}
       : {
-          dificuldade: 'FACIL',
           ...palavraEntity,
           criador: palavraEntity?.criador?.id,
           listas: palavraEntity?.listas?.map(e => e.id.toString()),
@@ -113,19 +110,7 @@ export const PalavraUpdate = () => {
                   required: { value: true, message: translate('entity.validation.required') },
                 }}
               />
-              <ValidatedField
-                label={translate('digitadoApp.palavra.dificuldade')}
-                id="palavra-dificuldade"
-                name="dificuldade"
-                data-cy="dificuldade"
-                type="select"
-              >
-                {dificuldadeValues.map(dificuldade => (
-                  <option value={dificuldade} key={dificuldade}>
-                    {translate(`digitadoApp.Dificuldade.${dificuldade}`)}
-                  </option>
-                ))}
-              </ValidatedField>
+              {/* dificuldade não é mais editável: é calculada pela taxa de acerto da palavra */}
               <ValidatedField
                 label={translate('digitadoApp.palavra.categoria')}
                 id="palavra-categoria"

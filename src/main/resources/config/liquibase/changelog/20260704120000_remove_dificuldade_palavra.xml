@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Remove a coluna dificuldade da tabela palavra.
+
+        A dificuldade deixou de ser um valor fixo cadastrado: agora é uma MÉTRICA
+        calculada pela taxa de acerto (total_acertos / total_tentativas):
+          0–35%  -> DIFICIL
+          36–65% -> MEDIO
+          66%+   -> FACIL
+        Palavras sem tentativas começam como MEDIO. A regra vive em
+        Palavra.getDificuldade() e no SQL de PalavraRepository.findRandomByDificuldade.
+    -->
+    <changeSet id="20260704120000-1" author="digitado">
+        <dropColumn tableName="palavra" columnName="dificuldade"/>
+    </changeSet>
+</databaseChangeLog>

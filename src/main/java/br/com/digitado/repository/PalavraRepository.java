@@ -20,9 +20,19 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     // Retorna até 5 palavras ativas cujo texto contenha o trecho digitado — usada no autocomplete
     List<Palavra> findTop5ByTextoContainingIgnoreCaseAndAtivaTrue(String texto);
 
-    // Sorteia N palavras ativas de uma determinada dificuldade usando ORDER BY RAND()
-    // Usado ao iniciar o jogo para montar a lista de palavras da rodada
-    @Query(value = "SELECT * FROM palavra WHERE dificuldade = :dif AND ativa = true ORDER BY RAND() LIMIT :n", nativeQuery = true)
+    // Sorteia N palavras ativas de uma determinada dificuldade usando ORDER BY RAND().
+    // A dificuldade não é mais coluna: é CALCULADA pela taxa de acerto
+    // (0–35% = DIFICIL, 36–65% = MEDIO, 66%+ = FACIL; sem tentativas = MEDIO) —
+    // mesma regra do getter Palavra.getDificuldade(), mantenha as duas em sincronia
+    @Query(
+        value = "SELECT * FROM palavra WHERE ativa = true AND " +
+        "(CASE WHEN total_tentativas = 0 THEN 'MEDIO' " +
+        "WHEN total_acertos * 100.0 / total_tentativas <= 35 THEN 'DIFICIL' " +
+        "WHEN total_acertos * 100.0 / total_tentativas <= 65 THEN 'MEDIO' " +
+        "ELSE 'FACIL' END) = :dif " +
+        "ORDER BY RAND() LIMIT :n",
+        nativeQuery = true
+    )
     List<Palavra> findRandomByDificuldade(@Param("dif") String dif, @Param("n") int n);
 
     // Usados pela Palavra do Dia: total de palavras ativas e busca paginada em ordem

@@ -147,9 +147,7 @@ public class PalavraResource {
                 if (palavra.getTexto() != null) {
                     existingPalavra.setTexto(palavra.getTexto());
                 }
-                if (palavra.getDificuldade() != null) {
-                    existingPalavra.setDificuldade(palavra.getDificuldade());
-                }
+                // dificuldade não é mais editável: é calculada pela taxa de acerto
                 if (palavra.getCategoria() != null) {
                     existingPalavra.setCategoria(palavra.getCategoria());
                 }

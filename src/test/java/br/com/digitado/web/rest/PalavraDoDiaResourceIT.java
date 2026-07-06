@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.digitado.IntegrationTest;
 import br.com.digitado.domain.Palavra;
-import br.com.digitado.domain.enumeration.Dificuldade;
 import br.com.digitado.repository.PalavraRepository;
 import br.com.digitado.service.PalavraDoDiaService;
 import jakarta.servlet.http.Cookie;
@@ -54,9 +53,7 @@ class PalavraDoDiaResourceIT {
         java.util.List<Palavra> todas = palavraRepository.findAll();
         todas.forEach(p -> p.setAtiva(false));
         palavraRepository.saveAllAndFlush(todas);
-        palavraDoDia = palavraRepository.saveAndFlush(
-            new Palavra().texto("escola").dificuldade(Dificuldade.FACIL).categoria("Educação").ativa(true)
-        );
+        palavraDoDia = palavraRepository.saveAndFlush(new Palavra().texto("escola").categoria("Educação").ativa(true));
     }
 
     @Test

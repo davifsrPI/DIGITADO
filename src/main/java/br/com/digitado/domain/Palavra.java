@@ -3,6 +3,7 @@ package br.com.digitado.domain;
 import br.com.digitado.domain.enumeration.Dificuldade;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
@@ -27,11 +28,6 @@ public class Palavra implements Serializable {
     @NotNull
     @Column(name = "texto", nullable = false)
     private String texto;
-
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "dificuldade", nullable = false)
-    private Dificuldade dificuldade;
 
     @Column(name = "categoria")
     private String categoria;
@@ -107,17 +103,36 @@ public class Palavra implements Serializable {
         this.texto = texto;
     }
 
+    /**
+     * Dificuldade CALCULADA pela taxa de acerto da palavra (não é mais coluna no banco):
+     *
+     *   percentual = total_acertos / total_tentativas
+     *   0–35%  -> DIFICIL   (poucas pessoas acertam)
+     *   36–65% -> MEDIO
+     *   66%+   -> FACIL     (maioria acerta)
+     *
+     * Palavra sem nenhuma tentativa ainda começa como MEDIO (neutro) e migra de
+     * faixa conforme as pessoas jogam. A mesma regra existe em SQL no
+     * PalavraRepository.findRandomByDificuldade — mantenha as duas em sincronia.
+     *
+     * Sem @Transient de propósito: a entidade usa acesso por campo (anotações nos
+     * atributos), então o Hibernate ignora getters sem campo correspondente — e o
+     * @Transient faria o Hibernate6Module do Jackson suprimir a propriedade do JSON.
+     */
+    @JsonProperty("dificuldade")
     public Dificuldade getDificuldade() {
-        return this.dificuldade;
-    }
-
-    public Palavra dificuldade(Dificuldade dificuldade) {
-        this.setDificuldade(dificuldade);
-        return this;
-    }
-
-    public void setDificuldade(Dificuldade dificuldade) {
-        this.dificuldade = dificuldade;
+        long tentativas = getTotalTentativas();
+        if (tentativas == 0) {
+            return Dificuldade.MEDIO;
+        }
+        double percentual = (getTotalAcertos() * 100.0) / tentativas;
+        if (percentual <= 35) {
+            return Dificuldade.DIFICIL;
+        }
+        if (percentual <= 65) {
+            return Dificuldade.MEDIO;
+        }
+        return Dificuldade.FACIL;
     }
 
     public String getCategoria() {
