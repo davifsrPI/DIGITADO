@@ -304,3 +304,58 @@ Loading bar
   top: 0;
   z-index: 1031;
 }
+
+/* ==========================================================================
+Nome do usuário + chama da palavra do dia
+========================================================================== */
+.account-menu-nome {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Chama animada de quem acertou a palavra do dia: duas camadas de fogo
+   tremulando fora de fase, com brilho pulsante */
+.pdd-fogo {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.pdd-fogo-chama {
+  position: absolute;
+  inset: 0;
+  font-size: 15px;
+  line-height: 18px;
+  transform-origin: 50% 90%;
+  animation: pdd-tremular 0.7s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.9));
+}
+
+.pdd-fogo-chama--tras {
+  opacity: 0.6;
+  animation: pdd-tremular 0.5s ease-in-out infinite reverse;
+  filter: blur(1px) drop-shadow(0 0 8px rgba(239, 68, 68, 0.8));
+}
+
+@keyframes pdd-tremular {
+  0%,
+  100% {
+    transform: scale(1) rotate(-4deg);
+    filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.7)) brightness(1);
+  }
+  35% {
+    transform: scale(1.15, 1.25) rotate(3deg);
+    filter: drop-shadow(0 0 9px rgba(251, 146, 60, 1)) brightness(1.25);
+  }
+  70% {
+    transform: scale(0.95, 1.05) rotate(-2deg);
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.85)) brightness(1.1);
+  }
+}

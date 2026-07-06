@@ -34,8 +34,27 @@ const accountMenuItems = () => (
   </>
 );
 
-export const AccountMenu = ({ isAuthenticated = false }) => (
-  <NavDropdown icon="user" name={translate('global.menu.account.main')} id="account-menu" data-cy="accountMenu">
+// Rótulo do menu: nome do usuário logado (em vez de "Conta") e, se ele acertou a
+// palavra do dia de hoje (informação vinda do backend), uma chama animada 🔥
+const rotuloDoMenu = (isAuthenticated: boolean, displayName?: string, acertouPalavraDoDia?: boolean) => {
+  if (!isAuthenticated || !displayName) {
+    return translate('global.menu.account.main');
+  }
+  return (
+    <span className="account-menu-nome">
+      {displayName}
+      {acertouPalavraDoDia && (
+        <span className="pdd-fogo" title="Acertou a palavra do dia! 🔥">
+          <span className="pdd-fogo-chama pdd-fogo-chama--tras">🔥</span>
+          <span className="pdd-fogo-chama">🔥</span>
+        </span>
+      )}
+    </span>
+  );
+};
+
+export const AccountMenu = ({ isAuthenticated = false, displayName = undefined as string | undefined, acertouPalavraDoDia = false }) => (
+  <NavDropdown icon="user" name={rotuloDoMenu(isAuthenticated, displayName, acertouPalavraDoDia)} id="account-menu" data-cy="accountMenu">
     {isAuthenticated && accountMenuItemsAuthenticated()}
     {!isAuthenticated && accountMenuItems()}
   </NavDropdown>

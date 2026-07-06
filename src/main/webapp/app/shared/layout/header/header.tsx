@@ -1,11 +1,12 @@
 import './header.scss';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Storage, Translate } from 'react-jhipster';
 import { Collapse, Nav, Navbar, NavbarToggler } from 'reactstrap';
 import LoadingBar from 'react-redux-loading-bar';
 
-import { useAppDispatch } from 'app/config/store';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { setLocale } from 'app/shared/reducers/locale';
 import { AccountMenu, AdminMenu, EntitiesMenu, LocaleMenu } from '../menus';
 import { Brand, Home } from './header-components';
@@ -21,8 +22,24 @@ export interface IHeaderProps {
 
 const Header = (props: IHeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const account = useAppSelector(state => state.authentication.account);
+  const [acertouPalavraDoDia, setAcertouPalavraDoDia] = useState(false);
 
   const dispatch = useAppDispatch();
+
+  // Consulta no BACKEND se o usuário logado já acertou a palavra do dia — a
+  // resposta vem do banco (nada é guardado/decidido no front). Quem acertou
+  // ganha a chama animada ao lado do nome no menu.
+  useEffect(() => {
+    if (!props.isAuthenticated) {
+      setAcertouPalavraDoDia(false);
+      return;
+    }
+    axios
+      .get('/api/public/palavra-do-dia')
+      .then(res => setAcertouPalavraDoDia(res.data?.resultado?.acertou === true))
+      .catch(() => setAcertouPalavraDoDia(false));
+  }, [props.isAuthenticated, account?.login]);
 
   const handleLocaleChange = event => {
     const langKey = event.target.value;
@@ -57,7 +74,11 @@ const Header = (props: IHeaderProps) => {
             {props.isAuthenticated && props.isAdmin && <EntitiesMenu />}
             {props.isAuthenticated && props.isAdmin && <AdminMenu showOpenAPI={props.isOpenAPIEnabled} />}
             <LocaleMenu currentLocale={props.currentLocale} onClick={handleLocaleChange} />
-            <AccountMenu isAuthenticated={props.isAuthenticated} />
+            <AccountMenu
+              isAuthenticated={props.isAuthenticated}
+              displayName={account?.firstName || account?.login}
+              acertouPalavraDoDia={acertouPalavraDoDia}
+            />
           </Nav>
         </Collapse>
       </Navbar>
