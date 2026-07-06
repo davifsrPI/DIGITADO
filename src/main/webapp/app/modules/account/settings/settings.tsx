@@ -1,8 +1,9 @@
 import './settings.scss';
 
-import React, { useEffect, useMemo } from 'react';
-import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Storage, Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 
 import { languages, locales } from 'app/config/translation';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -32,6 +33,46 @@ export const SettingsPage = () => {
 
   const handleValidSubmit = values => {
     dispatch(saveAccountSettings({ ...account, ...values }));
+  };
+
+  // ─── Direitos do titular (LGPD art. 18) ────────────────────────────────────
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [senhaExclusao, setSenhaExclusao] = useState('');
+  const [processando, setProcessando] = useState(false);
+
+  // Portabilidade: baixa o JSON com todos os dados do titular — montado
+  // inteiramente no backend a partir do token (o front não envia nada)
+  const baixarMeusDados = async () => {
+    setProcessando(true);
+    try {
+      const res = await axios.get('/api/account/export', { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'meus-dados-digitado.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Não foi possível exportar seus dados. Tente novamente.');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  // Exclusão: exige a senha atual (validada no backend) — token roubado não basta.
+  // Após excluir, remove o token local e recarrega como visitante.
+  const excluirConta = async () => {
+    if (!senhaExclusao.trim() || processando) return;
+    setProcessando(true);
+    try {
+      await axios.delete('/api/account', { data: { senha: senhaExclusao } });
+      Storage.local.remove('jhi-authenticationToken');
+      Storage.session.remove('jhi-authenticationToken');
+      window.location.href = '/';
+    } catch {
+      toast.error('Senha incorreta ou falha na exclusão.');
+      setProcessando(false);
+    }
   };
 
   if (loading || !account?.login) {
@@ -110,6 +151,51 @@ export const SettingsPage = () => {
               <Translate contentKey="settings.form.button">Salvar</Translate>
             </button>
           </ValidatedForm>
+        </div>
+
+        {/* ── Meus dados (LGPD art. 18): portabilidade e exclusão ── */}
+        <div className="st-card st-lgpd">
+          <h3 className="st-lgpd-titulo">Meus dados (LGPD)</h3>
+          <p className="st-lgpd-sub">Você pode baixar uma cópia de todos os seus dados pessoais ou excluir sua conta definitivamente.</p>
+
+          <button type="button" className="st-lgpd-btn" onClick={baixarMeusDados} disabled={processando} data-cy="exportarDados">
+            ⬇ Baixar meus dados (JSON)
+          </button>
+
+          {!confirmandoExclusao ? (
+            <button type="button" className="st-lgpd-btn st-lgpd-btn--perigo" onClick={() => setConfirmandoExclusao(true)}>
+              Excluir minha conta
+            </button>
+          ) : (
+            <div className="st-lgpd-confirmacao" role="alertdialog" aria-label="Confirmar exclusão da conta">
+              <p>
+                <strong>Esta ação é irreversível.</strong> Sua conta, seu histórico de jogo, conquistas e pontuações serão apagados. Digite
+                sua senha para confirmar:
+              </p>
+              <input
+                type="password"
+                className="st-lgpd-senha"
+                placeholder="Sua senha atual"
+                value={senhaExclusao}
+                onChange={e => setSenhaExclusao(e.target.value)}
+                autoComplete="current-password"
+              />
+              <div className="st-lgpd-confirmacao-acoes">
+                <button type="button" className="st-lgpd-btn" onClick={() => setConfirmandoExclusao(false)}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="st-lgpd-btn st-lgpd-btn--perigo"
+                  onClick={excluirConta}
+                  disabled={!senhaExclusao.trim() || processando}
+                  data-cy="confirmarExclusao"
+                >
+                  {processando ? 'Excluindo...' : 'Excluir definitivamente'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

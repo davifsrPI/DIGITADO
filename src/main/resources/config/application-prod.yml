@@ -100,11 +100,11 @@ jhipster:
   security:
     authentication:
       jwt:
-        # SEGURANÇA CRÍTICA: esta chave é a mesma do perfil dev (chave padrão JHipster — pública!).
-        # Gere uma chave exclusiva para produção: openssl rand -base64 64
-        # Defina via variável de ambiente: JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET
-        # NUNCA deixe a chave de dev aqui em produção.
-        base64-secret: ${JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET:MTg0YTZkOTAwYzEzZGI4ZmE3YjQxMTZiZDk1NWMxOWExM2E4OGU3ZDVmZmRlZGNlZTlmNWQyYzIzMTlkNDYwMzYwM2RhN2RlOGIyN2M1OTVlNjk2NWJiMzI4YzdlNzU2NDgwZTk2ZjgyOWY3ZjA4MGZlZjEyZGNiMGE3OWI3N2U=}
+        # SEGURANÇA: SEM fallback de propósito — em produção a aplicação NÃO SOBE
+        # sem a variável de ambiente JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET
+        # (fail-fast é melhor do que rodar com a chave pública padrão do JHipster).
+        # Gere a sua: openssl rand -base64 64
+        base64-secret: ${JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET:}
         # Token is valid 24 hours
         token-validity-in-seconds: 86400
         token-validity-in-seconds-for-remember-me: 2592000

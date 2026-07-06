@@ -298,6 +298,8 @@ public class Usuario implements Serializable {
     }
 
     // prettier-ignore
+    // LGPD/segurança: a senha (mesmo sendo hash) NUNCA entra no toString —
+    // qualquer log de Usuario vazaria o hash para arquivos de log
     @Override
     public String toString() {
         return "Usuario{" +
@@ -305,7 +307,6 @@ public class Usuario implements Serializable {
             ", nome='" + getNome() + "'" +
             ", sobrenome='" + getSobrenome() + "'" +
             ", email='" + getEmail() + "'" +
-            ", senha='" + getSenha() + "'" +
             ", tipoUsuario='" + getTipoUsuario() + "'" +
             ", ativo='" + getAtivo() + "'" +
             "}";

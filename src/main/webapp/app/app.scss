@@ -2,6 +2,15 @@
 @import 'bootstrap-variables';
 // Import Bootstrap source files from node_modules
 @import 'bootstrap/scss/bootstrap';
+// Fonte Poppins AUTO-HOSPEDADA (LGPD): antes vinha do fonts.googleapis.com, o que
+// enviava o IP de todo visitante ao Google antes de qualquer consentimento.
+// Servida do nosso próprio bundle, nenhum dado sai do domínio.
+@import '@fontsource/poppins/300.css';
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+@import '@fontsource/poppins/800.css';
 body {
   background: #fafafa;
   margin: 0;

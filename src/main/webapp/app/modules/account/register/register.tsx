@@ -145,6 +145,12 @@ export const RegisterPage = () => {
               }}
               data-cy="secondPassword"
             />
+            {/* LGPD art. 9º: informação clara no ato da coleta (a base legal do
+                cadastro é execução de contrato — por isso aviso, não checkbox) */}
+            <p className="register-aviso-privacidade">
+              Ao criar a conta, seus dados (nome, e-mail e desempenho no jogo) serão tratados conforme a{' '}
+              <RouterLink to="/privacidade">Política de Privacidade</RouterLink>.
+            </p>
             <Button id="register-submit" color="primary" type="submit" data-cy="submit">
               <Translate contentKey="register.form.button">Register</Translate>
             </Button>

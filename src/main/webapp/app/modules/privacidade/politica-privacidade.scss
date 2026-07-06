@@ -1,0 +1,71 @@
+/* Política de Privacidade — segue o tema escuro do projeto */
+body.pp-page {
+  background: #0f172a !important;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+
+  .jh-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}
+
+.pp-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px 80px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.pp-card {
+  max-width: 760px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
+  padding: 40px 36px;
+  color: #e2e8f0;
+
+  h1 {
+    font-size: 30px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 4px;
+  }
+
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    margin: 30px 0 10px;
+  }
+
+  p,
+  li {
+    font-size: 14px;
+    line-height: 1.75;
+    color: #cbd5e1;
+  }
+
+  ul {
+    padding-left: 20px;
+  }
+
+  a {
+    color: #a5b4fc;
+  }
+}
+
+.pp-atualizacao {
+  font-size: 12px !important;
+  color: #64748b !important;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 640px) {
+  .pp-card {
+    padding: 26px 18px;
+  }
+}

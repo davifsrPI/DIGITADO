@@ -16,6 +16,7 @@ import CriarSala from 'app/modules/sala/criar-sala';
 import SalaJogo from 'app/modules/sala/sala-jogo';
 import MinhasSalas from 'app/modules/sala/minhas-salas';
 import Conquistas from 'app/modules/conquistas/conquistas';
+import PoliticaPrivacidade from 'app/modules/privacidade/politica-privacidade';
 import EntitiesRoutes from 'app/entities/routes';
 import PrivateRoute from 'app/shared/auth/private-route';
 import ErrorBoundaryRoutes from 'app/shared/error/error-boundary-routes';
@@ -76,6 +77,8 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        {/* Pública de propósito: a LGPD exige a política acessível sem login */}
+        <Route path="privacidade" element={<PoliticaPrivacidade />} />
         <Route path="login" element={<Login />} />
         <Route path="logout" element={<Logout />} />
         <Route path="account">
