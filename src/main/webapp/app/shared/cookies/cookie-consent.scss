@@ -1,0 +1,369 @@
+/* ==========================================================================
+Consentimento de cookies (LGPD) — banner + modal "Gerenciar Cookies"
+Segue o visual do projeto: fundo #0f172a, vidro fosco, Poppins, acentos suaves.
+Sem dark patterns: "Aceitar todos" e "Recusar opcionais" têm o MESMO peso visual.
+========================================================================== */
+
+/* ── Banner (primeira visita) ── */
+.cc-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  background: rgba(10, 18, 36, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  backdrop-filter: blur(24px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  animation: cc-subir 0.45s ease;
+}
+
+.cc-banner-texto {
+  flex: 1;
+  min-width: 260px;
+
+  strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #94a3b8;
+  }
+}
+
+.cc-banner-acoes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Botões ── */
+.cc-btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 11px 22px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.15s;
+
+  &:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* Aceitar e Recusar: exatamente a mesma aparência (exigência anti dark pattern) */
+.cc-btn-decisao {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: white;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.16);
+  }
+}
+
+.cc-btn-link {
+  background: transparent;
+  border: none;
+  color: #a5b4fc;
+  text-decoration: underline;
+  padding: 11px 8px;
+
+  &:hover {
+    color: #c7d2fe;
+  }
+}
+
+.cc-btn-salvar {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border: none;
+  color: white;
+  box-shadow: 0 8px 22px rgba(99, 102, 241, 0.35);
+
+  &:hover {
+    box-shadow: 0 12px 26px rgba(99, 102, 241, 0.5);
+  }
+}
+
+/* ── Modal ── */
+.cc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2001;
+  background: rgba(2, 6, 18, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: cc-fade 0.25s ease;
+}
+
+.cc-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: rgba(10, 18, 36, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 28px;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  animation: cc-pop 0.3s ease;
+}
+
+.cc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    outline: none;
+  }
+}
+
+.cc-fechar {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.7);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: white;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+}
+
+.cc-modal-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 10px 0 22px;
+}
+
+/* ── Categorias ── */
+.cc-categorias {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cc-categoria {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.cc-categoria-nome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cc-sempre-ativo {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 20px;
+  padding: 2px 10px;
+}
+
+.cc-categoria-desc {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #94a3b8;
+}
+
+/* ── Switch acessível ── */
+.cc-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 26px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: background 0.25s;
+  margin-top: 2px;
+
+  &:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+
+  &--on {
+    background: #22c55e;
+    border-color: #22c55e;
+  }
+
+  &--fixo {
+    cursor: not-allowed;
+    opacity: 0.75;
+  }
+}
+
+.cc-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.25s ease;
+
+  .cc-switch--on & {
+    transform: translateX(20px);
+  }
+}
+
+.cc-modal-acoes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+/* ── Botão permanente do rodapé ── */
+.cc-footer-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: white;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* ── Animações ── */
+@keyframes cc-subir {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes cc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cc-pop {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Acessibilidade: quem pediu menos movimento não recebe animações */
+@media (prefers-reduced-motion: reduce) {
+  .cc-banner,
+  .cc-modal,
+  .cc-modal-overlay {
+    animation: none;
+  }
+
+  .cc-btn:hover {
+    transform: none;
+  }
+}
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .cc-banner {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    padding: 16px;
+  }
+
+  .cc-banner-acoes,
+  .cc-modal-acoes {
+    width: 100%;
+
+    .cc-btn {
+      flex: 1;
+      min-width: 130px;
+    }
+  }
+
+  .cc-modal {
+    padding: 20px 16px;
+  }
+}

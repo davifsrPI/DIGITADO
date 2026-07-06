@@ -12,6 +12,7 @@ import { getSession } from 'app/shared/reducers/authentication';
 import { getProfile } from 'app/shared/reducers/application-profile';
 import Header from 'app/shared/layout/header/header';
 import Footer from 'app/shared/layout/footer/footer';
+import CookieConsentBanner from 'app/shared/cookies/cookie-consent-banner';
 import { hasAnyAuthority } from 'app/shared/auth/private-route';
 import ErrorBoundary from 'app/shared/error/error-boundary';
 import { AUTHORITIES } from 'app/config/constants';
@@ -57,6 +58,9 @@ export const App = () => {
           </Card>
           <Footer />
         </div>
+        {/* Consentimento de cookies (LGPD): banner na primeira visita e modal
+            "Gerenciar Cookies" — nenhum rastreador carrega sem consentimento */}
+        <CookieConsentBanner />
       </div>
     </BrowserRouter>
   );
