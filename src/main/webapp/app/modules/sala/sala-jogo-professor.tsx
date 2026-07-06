@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EstadoJogo } from './hooks/useSalaWebSocket';
 import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
+import { falarPalavra } from './utils/falar-palavra';
 
 // Configuração do jogo escolhida pelo professor (quantidade de palavras por dificuldade e tempo)
 interface GameConfig {
@@ -33,16 +34,6 @@ const DIFICULDADES: Array<{ key: keyof Omit<Cfg, 'tempoLimite'>; label: string; 
 
 const DEFAULT_CFG: Cfg = { tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
 const RANKING_DURATION = 8;
-
-// Usa a API de síntese de voz do browser para falar a palavra em português
-function falarPalavra(texto: string) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(texto);
-  utter.lang = 'pt-BR';
-  utter.rate = 0.5;
-  window.speechSynthesis.speak(utter);
-}
 
 // Tela do professor durante a partida: lobby de espera com configurações, tela de jogo com timer,
 // ranking entre palavras com contagem regressiva de 8s, e tela de encerramento com placar final
@@ -82,16 +73,11 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   };
 
   // Reproduz a palavra atual via síntese de voz e controla o estado visual do botão
+  // (a pausa de 1s e a escolha da melhor voz pt-BR ficam no módulo falar-palavra)
   const handleFalar = () => {
     if (!estado?.palavraAtual) return;
     setFalando(true);
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(estado.palavraAtual.texto);
-    utter.lang = 'pt-BR';
-    utter.rate = 0.85;
-    utter.onend = () => setFalando(false);
-    utter.onerror = () => setFalando(false);
-    window.speechSynthesis.speak(utter);
+    falarPalavra(estado.palavraAtual.texto, { onEnd: () => setFalando(false) });
   };
 
   // Envia a resposta do professor (ele também pode jogar junto com os alunos)
@@ -110,9 +96,9 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     setShowRanking(false);
     rankingTriggeredRef.current = false;
     if (estado?.palavraAtual?.texto) {
-      setTimeout(() => falarPalavra(estado.palavraAtual.texto), 300);
+      // O módulo já aplica a pausa de 1s antes de falar; rate menor para o ditado
       setFalando(true);
-      setTimeout(() => setFalando(false), 3000);
+      falarPalavra(estado.palavraAtual.texto, { rate: 0.5, onEnd: () => setFalando(false) });
     }
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [estado?.palavraAtual?.id]);

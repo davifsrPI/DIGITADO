@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { EstadoJogo, FeedbackAluno, PlacarEntry } from './hooks/useSalaWebSocket';
 import { MENSAGEM_ERRO, validarResposta } from './utils/validarResposta';
 import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
+import { falarPalavra } from './utils/falar-palavra';
 
 interface Props {
   estado: EstadoJogo | null;
@@ -9,16 +10,6 @@ interface Props {
   meuLogin: string;
   onResponder: (resposta: string) => void;
   conectado: boolean;
-}
-
-// Usa a API de síntese de voz do browser para falar a palavra em português
-function falarPalavra(texto: string) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(texto);
-  utter.lang = 'pt-BR';
-  utter.rate = 0.85;
-  window.speechSynthesis.speak(utter);
 }
 
 // Tela do aluno durante a partida: aguarda o professor iniciar, recebe a palavra via áudio,
@@ -44,9 +35,9 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
         setValidacaoLocal(null);
         setFalando(false);
         if (estado.palavraAtual) {
-          setTimeout(() => falarPalavra(estado.palavraAtual.texto), 400);
+          // O módulo já aplica a pausa de 1s antes de falar
           setFalando(true);
-          setTimeout(() => setFalando(false), 3000);
+          falarPalavra(estado.palavraAtual.texto, { onEnd: () => setFalando(false) });
         }
         inputRef.current?.focus();
       }
@@ -69,12 +60,11 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
     return () => clearInterval(id);
   }, [estado?.timestampInicio, estado?.tempoLimite, estado?.tipo]);
 
-  // Reproduz a palavra ao clicar no botão de áudio e atualiza o ícone por 2,5s
+  // Reproduz a palavra ao clicar no botão de áudio e atualiza o ícone enquanto fala
   const handleFalar = useCallback(() => {
     if (!estado?.palavraAtual) return;
-    falarPalavra(estado.palavraAtual.texto);
     setFalando(true);
-    setTimeout(() => setFalando(false), 2500);
+    falarPalavra(estado.palavraAtual.texto, { onEnd: () => setFalando(false) });
   }, [estado?.palavraAtual]);
 
   // Envia a resposta: faz validação local para feedback imediato antes de receber o do servidor
