@@ -114,9 +114,6 @@ export const UsuarioUpdate = () => {
                 name="sobrenome"
                 data-cy="sobrenome"
                 type="text"
-                validate={{
-                  required: { value: true, message: translate('entity.validation.required') },
-                }}
               />
               <ValidatedField
                 label={translate('digitadoApp.usuario.email')}

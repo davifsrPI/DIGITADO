@@ -184,21 +184,8 @@ class UsuarioResourceIT {
         assertSameRepositoryCount(databaseSizeBeforeTest);
     }
 
-    @Test
-    @Transactional
-    void checkSobrenomeIsRequired() throws Exception {
-        long databaseSizeBeforeTest = getRepositoryCount();
-        // set the field null
-        usuario.setSobrenome(null);
-
-        // Create the Usuario, which fails.
-
-        restUsuarioMockMvc
-            .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(usuario)))
-            .andExpect(status().isBadRequest());
-
-        assertSameRepositoryCount(databaseSizeBeforeTest);
-    }
+    // Teste checkSobrenomeIsRequired removido: sobrenome agora é opcional
+    // (só o nome é obrigatório).
 
     @Test
     @Transactional

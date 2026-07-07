@@ -28,8 +28,9 @@ public class Usuario implements Serializable {
     @Column(name = "nome", nullable = false)
     private String nome;
 
-    @NotNull
-    @Column(name = "sobrenome", nullable = false)
+    // Sobrenome é opcional: a validação da conta pelo admin não deve forçar
+    // preenchê-lo (registro público nem coleta esse campo)
+    @Column(name = "sobrenome")
     private String sobrenome;
 
     @NotNull
