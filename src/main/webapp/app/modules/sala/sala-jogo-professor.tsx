@@ -2,10 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { EstadoJogo } from './hooks/useSalaWebSocket';
 import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 import { falarPalavra } from './utils/falar-palavra';
+import { RankingNuvem } from './ranking-nuvem';
 
-// Configuração do jogo escolhida pelo professor (quantidade de palavras por dificuldade e tempo)
+// Configuração do jogo escolhida pelo professor: quantidade de palavras e
+// TEMPO por dificuldade (fácil/médio/difícil)
 interface GameConfig {
-  tempoLimite: number;
+  tempoFacil: number;
+  tempoMedio: number;
+  tempoDificil: number;
   qtdFacil: number;
   qtdMedio: number;
   qtdDificil: number;
@@ -24,15 +28,30 @@ interface Props {
   initialGameConfig?: GameConfig;
 }
 
-type Cfg = { tempoLimite: number; qtdFacil: number; qtdMedio: number; qtdDificil: number };
+type Cfg = {
+  tempoFacil: number;
+  tempoMedio: number;
+  tempoDificil: number;
+  qtdFacil: number;
+  qtdMedio: number;
+  qtdDificil: number;
+};
 
-const DIFICULDADES: Array<{ key: keyof Omit<Cfg, 'tempoLimite'>; label: string; cor: string }> = [
+// Quantidade de palavras por dificuldade (steppers)
+const DIFICULDADES: Array<{ key: 'qtdFacil' | 'qtdMedio' | 'qtdDificil'; label: string; cor: string }> = [
   { key: 'qtdFacil', label: 'Fáceis', cor: '#4ade80' },
   { key: 'qtdMedio', label: 'Médias', cor: '#fbbf24' },
   { key: 'qtdDificil', label: 'Difíceis', cor: '#f87171' },
 ];
 
-const DEFAULT_CFG: Cfg = { tempoLimite: 30, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
+// Tempo de rodada por dificuldade (sliders)
+const TEMPOS: Array<{ key: 'tempoFacil' | 'tempoMedio' | 'tempoDificil'; label: string; cor: string }> = [
+  { key: 'tempoFacil', label: 'Fácil', cor: '#4ade80' },
+  { key: 'tempoMedio', label: 'Médio', cor: '#fbbf24' },
+  { key: 'tempoDificil', label: 'Difícil', cor: '#f87171' },
+];
+
+const DEFAULT_CFG: Cfg = { tempoFacil: 20, tempoMedio: 30, tempoDificil: 45, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
 const RANKING_DURATION = 8;
 
 // Tela do professor durante a partida: lobby de espera com configurações, tela de jogo com timer,
@@ -60,6 +79,8 @@ export const SalaJogoProfessor: React.FC<Props> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const rankingTriggeredRef = useRef(false);
+  // Posições da rodada anterior no top 5 — usado pela animação de ultrapassagem
+  const posRef = useRef<Map<string, number>>(new Map());
 
   // Incrementa/decrementa a quantidade de palavras de uma dificuldade, entre 0 e 30
   const adj = (campo: keyof Cfg, delta: number) => setCfg(prev => ({ ...prev, [campo]: Math.max(0, Math.min(30, prev[campo] + delta)) }));
@@ -165,24 +186,23 @@ export const SalaJogoProfessor: React.FC<Props> = ({
         <div className="sj-lobby-cols">
           <div className="sj-cfg-card">
             <h3 className="sj-cfg-title">Configurar atividade</h3>
-            <div className="sj-cfg-field">
-              <div className="sj-cfg-field-label">
-                Tempo por palavra <strong>{cfg.tempoLimite}s</strong>
+            {/* Um tempo de rodada para cada dificuldade */}
+            {TEMPOS.map(({ key, label, cor }) => (
+              <div className="sj-cfg-field" key={key}>
+                <div className="sj-cfg-field-label">
+                  <span className="sj-cfg-diff-dot" style={{ background: cor }} /> Tempo — {label} <strong>{cfg[key]}s</strong>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={60}
+                  step={5}
+                  value={cfg[key]}
+                  onChange={e => setCfg(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                  className="sj-range"
+                />
               </div>
-              <input
-                type="range"
-                min={10}
-                max={60}
-                step={5}
-                value={cfg.tempoLimite}
-                onChange={e => setCfg(prev => ({ ...prev, tempoLimite: Number(e.target.value) }))}
-                className="sj-range"
-              />
-              <div className="sj-range-labels">
-                <span>10s</span>
-                <span>60s</span>
-              </div>
-            </div>
+            ))}
             <div className="sj-cfg-diffs">
               {DIFICULDADES.map(({ key, label, cor }) => (
                 <div className="sj-cfg-diff-row" key={key}>
@@ -270,6 +290,14 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           </h2>
         </div>
 
+        {/* Palavra correta da rodada — visível para todos ao fim do tempo */}
+        {estado.palavraAtual && (
+          <div className="sj-palavra-correta">
+            <span className="sj-palavra-correta-label">Palavra correta</span>
+            <span className="sj-palavra-correta-val">{estado.palavraAtual.texto}</span>
+          </div>
+        )}
+
         <div className="sj-ranking-countdown">
           <span className="sj-ranking-next-label">Próxima palavra em</span>
           <span className="sj-ranking-next-val">{rankingTimer}s</span>
@@ -278,23 +306,11 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="sj-ranking-list">
-          {estado.placar.length === 0 ? (
-            <p className="sj-no-alunos">Nenhum participante no placar ainda.</p>
-          ) : (
-            estado.placar.map((p, i) => (
-              <div key={p.login} className="sj-ranking-row">
-                <span className="sj-ranking-rank">{i + 1}º</span>
-                <span className="sj-ranking-avatar">{(p.nome || p.login).charAt(0).toUpperCase()}</span>
-                <span className="sj-ranking-nome">{p.nome || p.login}</span>
-                <span className={`sj-status-chip sj-status-${(p.statusAtual ?? 'aguardando').toLowerCase()}`}>
-                  {p.statusAtual === 'ACERTOU' ? 'acertou' : p.statusAtual === 'ERROU' ? 'errou' : 'aguardando'}
-                </span>
-                <span className="sj-ranking-pts">{p.pontos} pts</span>
-              </div>
-            ))
-          )}
-        </div>
+        {estado.placar.length === 0 ? (
+          <p className="sj-no-alunos">Nenhum participante no placar ainda.</p>
+        ) : (
+          <RankingNuvem placar={estado.placar} posRef={posRef} />
+        )}
       </div>
     );
   }

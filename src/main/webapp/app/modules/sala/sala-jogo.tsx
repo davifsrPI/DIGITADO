@@ -18,7 +18,15 @@ export const SalaJogo: React.FC = () => {
   // Lê as configurações passadas pela tela anterior via React Router state
   const locationState = location.state as {
     isProfessor?: boolean;
-    gameConfig?: { tempoLimite: number; qtdFacil: number; qtdMedio: number; qtdDificil: number; palavrasExtrasIds: number[] };
+    gameConfig?: {
+      tempoFacil: number;
+      tempoMedio: number;
+      tempoDificil: number;
+      qtdFacil: number;
+      qtdMedio: number;
+      qtdDificil: number;
+      palavrasExtrasIds: number[];
+    };
   } | null;
   const isProfessor = locationState?.isProfessor === true;
   const gameConfig = locationState?.gameConfig;

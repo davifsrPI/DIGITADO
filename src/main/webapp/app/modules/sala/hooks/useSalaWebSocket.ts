@@ -135,8 +135,15 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
   // ─── Ações disponíveis para o componente que usa este hook ──────────────────
   return {
     conectado,
-    iniciar: (payload: { tempoLimite: number; qtdFacil: number; qtdMedio: number; qtdDificil: number; palavrasExtrasIds: number[] }) =>
-      publicar('iniciar', payload),
+    iniciar: (payload: {
+      tempoFacil: number;
+      tempoMedio: number;
+      tempoDificil: number;
+      qtdFacil: number;
+      qtdMedio: number;
+      qtdDificil: number;
+      palavrasExtrasIds: number[];
+    }) => publicar('iniciar', payload),
     proxima: () => publicar('proxima'),
     pausar: () => publicar('pausar'),
     encerrar: () => publicar('encerrar'),

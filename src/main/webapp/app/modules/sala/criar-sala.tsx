@@ -42,7 +42,8 @@ export const CriarSala = () => {
   const [codigo, setCodigo] = useState(generateCode());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tempo, setTempo] = useState(30);
+  // Tempo de rodada POR DIFICULDADE (padrão: fáceis mais rápidas, difíceis mais lentas)
+  const [tempos, setTempos] = useState<Record<Dificuldade, number>>({ FACIL: 20, MEDIO: 30, DIFICIL: 45 });
   const [quantidades, setQuantidades] = useState<Record<Dificuldade, number>>({ FACIL: 5, MEDIO: 5, DIFICIL: 5 });
   const [wordSearch, setWordSearch] = useState('');
   const [busca, setBusca] = useState<BuscaResult>({ status: 'idle' });
@@ -118,7 +119,9 @@ export const CriarSala = () => {
           state: {
             isProfessor: true,
             gameConfig: {
-              tempoLimite: tempo,
+              tempoFacil: tempos.FACIL,
+              tempoMedio: tempos.MEDIO,
+              tempoDificil: tempos.DIFICIL,
               qtdFacil: quantidades.FACIL,
               qtdMedio: quantidades.MEDIO,
               qtdDificil: quantidades.DIFICIL,
@@ -195,20 +198,24 @@ export const CriarSala = () => {
                   />
                 </div>
 
-                <div className="cs-field">
-                  <label>
-                    Tempo por rodada: <span className="cs-range-val">{tempo}s</span>
-                  </label>
-                  <input
-                    type="range"
-                    min={10}
-                    max={60}
-                    step={5}
-                    value={tempo}
-                    onChange={e => setTempo(Number(e.target.value))}
-                    className="cs-range"
-                  />
-                </div>
+                {/* Tempo de rodada por dificuldade — um slider para cada nível */}
+                {DIFFS.map(({ key, color, label }) => (
+                  <div className="cs-field" key={key}>
+                    <label>
+                      <span className="cs-diff-dot" style={{ background: color, display: 'inline-block', marginRight: 6 }} />
+                      Tempo — {label}: <span className="cs-range-val">{tempos[key]}s</span>
+                    </label>
+                    <input
+                      type="range"
+                      min={10}
+                      max={60}
+                      step={5}
+                      value={tempos[key]}
+                      onChange={e => setTempos(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                      className="cs-range"
+                    />
+                  </div>
+                ))}
               </form>
             </div>
 
@@ -344,7 +351,9 @@ export const CriarSala = () => {
               <div className="cs-summary">
                 <div className="cs-summary-row">
                   <span>Tempo por rodada</span>
-                  <strong>{tempo}s</strong>
+                  <strong>
+                    {tempos.FACIL}s / {tempos.MEDIO}s / {tempos.DIFICIL}s
+                  </strong>
                 </div>
                 <div className="cs-summary-divider" />
                 {DIFFS.map(({ key, color, label }) => (

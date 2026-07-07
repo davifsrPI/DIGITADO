@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { EstadoJogo, FeedbackAluno, PlacarEntry } from './hooks/useSalaWebSocket';
+import { EstadoJogo, FeedbackAluno } from './hooks/useSalaWebSocket';
 import { MENSAGEM_ERRO, validarResposta } from './utils/validarResposta';
 import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 import { falarPalavra } from './utils/falar-palavra';
+import { RankingNuvem } from './ranking-nuvem';
 
 interface Props {
   estado: EstadoJogo | null;
@@ -20,8 +21,16 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
   const [jaRespondeu, setJaRespondeu] = useState(false);
   const [tempoRestante, setTempoRestante] = useState(0);
   const [validacaoLocal, setValidacaoLocal] = useState<ReturnType<typeof validarResposta> | null>(null);
+  // Ranking exibido quando o tempo da rodada acaba (mesma tela que o professor vê)
+  const [showRanking, setShowRanking] = useState(false);
+  // Pontuação/posição "congeladas" no início da rodada — só atualizam quando o tempo acaba,
+  // para o aluno não descobrir o resultado dos colegas pelo placar enquanto digita
+  const [scoreCongelado, setScoreCongelado] = useState<{ pontos: number; posicao: number }>({ pontos: 0, posicao: -1 });
   const inputRef = useRef<HTMLInputElement>(null);
   const palavraAtualId = useRef<number | null>(null);
+  const rankingTriggeredRef = useRef(false);
+  // Posições da rodada anterior no top 5 — usado pela animação de ultrapassagem
+  const posRef = useRef<Map<string, number>>(new Map());
 
   // Detecta mudança de palavra e reseta o estado de resposta — fala a palavra automaticamente
   useEffect(() => {
@@ -34,6 +43,11 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
         setJaRespondeu(false);
         setValidacaoLocal(null);
         setFalando(false);
+        setShowRanking(false);
+        rankingTriggeredRef.current = false;
+        // Congela a pontuação/posição atuais para exibir durante toda a rodada
+        const idx = estado.placar.findIndex(p => p.login === meuLogin);
+        setScoreCongelado({ pontos: idx >= 0 ? estado.placar[idx].pontos : 0, posicao: idx });
         if (estado.palavraAtual) {
           // O módulo já aplica a pausa de 1s antes de falar
           setFalando(true);
@@ -82,8 +96,14 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
   );
 
   const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
-  const meuPlacar = estado?.placar.find(p => p.login === meuLogin);
-  const minhaPosicao = estado?.placar.findIndex(p => p.login === meuLogin) ?? -1;
+
+  // Quando o tempo acaba, exibe a tela de ranking (igual à do professor) até chegar a próxima palavra
+  useEffect(() => {
+    if (tempoRestante === 0 && ativo && estado?.palavraAtual != null && !rankingTriggeredRef.current) {
+      rankingTriggeredRef.current = true;
+      setShowRanking(true);
+    }
+  }, [tempoRestante, ativo, estado?.palavraAtual]);
 
   if (!estado || estado.tipo === 'AGUARDANDO') {
     return (
@@ -120,6 +140,41 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
     );
   }
 
+  /* ── RANKING entre palavras (tempo esgotado) ─────────────── */
+  if (showRanking && ativo) {
+    return (
+      <div className="sj-ranking-screen">
+        <div className="sj-ranking-header">
+          <div className="sj-lobby-badge">Ranking da rodada</div>
+          <h2 className="sj-ranking-title">
+            palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
+          </h2>
+        </div>
+
+        {estado.palavraAtual && (
+          <div className="sj-palavra-correta">
+            <span className="sj-palavra-correta-label">Palavra correta</span>
+            <span className="sj-palavra-correta-val">{estado.palavraAtual.texto}</span>
+            {/* Só o aluno vê a própria similaridade */}
+            {jaRespondeu && validacaoLocal ? (
+              validacaoLocal.correta ? (
+                <span className="sj-similaridade sj-similaridade--ok">✓ Você acertou!</span>
+              ) : (
+                <span className="sj-similaridade sj-similaridade--err">
+                  ✗ Você errou · similaridade: {Math.round(validacaoLocal.similaridade * 100)}%
+                </span>
+              )
+            ) : (
+              <span className="sj-similaridade sj-similaridade--warn">Você não respondeu a tempo</span>
+            )}
+          </div>
+        )}
+
+        <RankingNuvem placar={estado.placar} meuLogin={meuLogin} posRef={posRef} />
+      </div>
+    );
+  }
+
   const pct = estado.tempoLimite > 0 ? (tempoRestante / estado.tempoLimite) * 100 : 0;
   const timerDanger = tempoRestante <= 5;
   const rodadaRapida = estado.tempoLimite <= RODADA_RAPIDA_LIMITE;
@@ -135,9 +190,10 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
             palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
           </div>
         </div>
+        {/* Pontuação congelada no início da rodada — só atualiza quando o tempo acaba */}
         <div className="sj-score-block">
-          <div className="sj-score-pts">{meuPlacar?.pontos ?? 0} pts</div>
-          {minhaPosicao >= 0 && <div className="sj-score-pos">{minhaPosicao + 1}º lugar</div>}
+          <div className="sj-score-pts">{scoreCongelado.pontos} pts</div>
+          {scoreCongelado.posicao >= 0 && <div className="sj-score-pos">{scoreCongelado.posicao + 1}º lugar</div>}
         </div>
       </div>
 
@@ -195,6 +251,7 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
                 <>
                   <strong>Errou</strong> ·{' '}
                   {feedback.tipoErro ? MENSAGEM_ERRO[feedback.tipoErro as keyof typeof MENSAGEM_ERRO] : 'Resposta incorreta'}
+                  {validacaoLocal && <> · similaridade: {Math.round(validacaoLocal.similaridade * 100)}%</>}
                 </>
               )}
             </div>
@@ -211,23 +268,6 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
             </div>
           </div>
         )}
-
-        <div className="sj-mini-rank">
-          <div className="sj-mini-rank-title">🏆 Placar ao vivo</div>
-          {estado.placar.slice(0, 5).map((p, i) => (
-            <div key={p.login} className={`sj-mini-row${p.login === meuLogin ? ' sj-mini-me' : ''}`}>
-              <span className="sj-mini-n">{i + 1}</span>
-              <span className="sj-mini-nome">
-                {p.nome || p.login}
-                {p.login === meuLogin ? ' (você)' : ''}
-              </span>
-              <span className={`sj-mini-status sj-status-${p.statusAtual?.toLowerCase() ?? 'aguardando'}`}>
-                {p.statusAtual === 'ACERTOU' ? '✓' : p.statusAtual === 'ERROU' ? '✗' : '…'}
-              </span>
-              <span className="sj-mini-pts">{p.pontos}</span>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

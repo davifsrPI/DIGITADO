@@ -58,7 +58,7 @@ public class JogoSalaService {
             }
         }
         Collections.shuffle(palavras);
-        jogo.iniciar(palavras, payload.tempoLimite());
+        jogo.iniciar(palavras, payload.tempoFacil(), payload.tempoMedio(), payload.tempoDificil());
         return buildEstado(codigoSala, nomeSala, jogo, "INICIADA");
     }
 
@@ -233,7 +233,10 @@ public class JogoSalaService {
 
         private List<Palavra> palavras = new ArrayList<>();
         private int indiceAtual = -1;
-        private int tempoLimite = 30;
+        // Tempo de rodada por dificuldade — o tempo efetivo depende da palavra atual
+        private int tempoFacil = 30;
+        private int tempoMedio = 30;
+        private int tempoDificil = 30;
         private long timestampInicio = 0;
         private String tipo = "AGUARDANDO";
         private final Map<String, AlunoInfo> placar = new ConcurrentHashMap<>();
@@ -245,9 +248,11 @@ public class JogoSalaService {
         public record AlunoInfo(String nome, int pontos, String statusAtual) {}
 
         // Começa o jogo: define as palavras, redefine o índice para 0 e registra o timestamp de início
-        void iniciar(List<Palavra> palavras, int tempoLimite) {
+        void iniciar(List<Palavra> palavras, int tempoFacil, int tempoMedio, int tempoDificil) {
             this.palavras = palavras;
-            this.tempoLimite = tempoLimite;
+            this.tempoFacil = tempoFacil;
+            this.tempoMedio = tempoMedio;
+            this.tempoDificil = tempoDificil;
             this.indiceAtual = 0;
             this.tipo = "NOVA_PALAVRA";
             this.timestampInicio = Instant.now().toEpochMilli();
@@ -322,8 +327,18 @@ public class JogoSalaService {
             return palavras.size();
         }
 
+        // Tempo da rodada ATUAL: depende da dificuldade (calculada) da palavra em jogo.
+        // Assim cada palavra pode ter um tempo diferente sem mudar nada no frontend.
         int getTempoLimite() {
-            return tempoLimite;
+            Palavra atual = getPalavraAtual();
+            if (atual == null || atual.getDificuldade() == null) {
+                return tempoMedio;
+            }
+            return switch (atual.getDificuldade()) {
+                case FACIL -> tempoFacil;
+                case DIFICIL -> tempoDificil;
+                default -> tempoMedio;
+            };
         }
 
         long getTimestampInicio() {
