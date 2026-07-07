@@ -122,6 +122,16 @@ public class Palavra implements Serializable {
      * atributos), então o Hibernate ignora getters sem campo correspondente — e o
      * @Transient faria o Hibernate6Module do Jackson suprimir a propriedade do JSON.
      */
+    /**
+     * Indica se a palavra já tem estatística registrada (alguém já a jogou).
+     * Usado pelo frontend para não exibir a dificuldade provisória (id % 3)
+     * como se fosse real — sem registros, a UI mostra "Sem registros".
+     */
+    @JsonProperty("temRegistros")
+    public boolean getTemRegistros() {
+        return getTotalTentativas() > 0;
+    }
+
     @JsonProperty("dificuldade")
     public Dificuldade getDificuldade() {
         long tentativas = getTotalTentativas();

@@ -16,8 +16,14 @@ interface Palavra {
   id: number;
   texto: string;
   dificuldade: Dificuldade;
+  // false enquanto ninguém jogou a palavra — a dificuldade ainda é provisória
+  temRegistros?: boolean;
   categoria?: string;
 }
+
+// Rótulo da dificuldade exibido na busca: palavra sem estatística ainda não tem
+// dificuldade real (a métrica depende de tentativas), então mostra "Sem registros"
+const labelDificuldade = (p: Palavra) => (p.temRegistros ? DIFF_LABELS[p.dificuldade] : 'Sem registros');
 
 interface BuscaResult {
   status: 'idle' | 'loading' | 'found' | 'similar' | 'notfound';
@@ -280,7 +286,7 @@ export const CriarSala = () => {
                       <strong>{busca.palavra.texto}</strong>
                       <span className="cs-search-meta">
                         {' '}
-                        · {DIFF_LABELS[busca.palavra.dificuldade]}
+                        · {labelDificuldade(busca.palavra)}
                         {busca.palavra.categoria ? ` · ${busca.palavra.categoria}` : ''}
                       </span>
                     </div>
@@ -298,7 +304,7 @@ export const CriarSala = () => {
                     <div key={p.id} className="cs-similar-row">
                       <div>
                         <strong>{p.texto}</strong>
-                        <span className="cs-search-meta"> · {DIFF_LABELS[p.dificuldade]}</span>
+                        <span className="cs-search-meta"> · {labelDificuldade(p)}</span>
                       </div>
                       <button type="button" className="cs-add-word-btn cs-add-word-btn--sm" onClick={() => addWord(p)}>
                         + Adicionar

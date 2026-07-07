@@ -246,6 +246,8 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
             onChange={e => setResposta(e.target.value)}
             placeholder="escreva aqui..."
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
             spellCheck={false}
             disabled={jaRespondeu || !ativo}
           />

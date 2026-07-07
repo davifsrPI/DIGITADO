@@ -363,6 +363,8 @@ export const SalaJogoProfessor: React.FC<Props> = ({
             onChange={e => setResposta(e.target.value)}
             placeholder="escreva a palavra ouvida..."
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
             spellCheck={false}
             disabled={jaRespondeu || !ativo}
           />
