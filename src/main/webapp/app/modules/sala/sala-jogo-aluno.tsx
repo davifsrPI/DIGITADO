@@ -97,13 +97,18 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
 
   const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
 
-  // Quando o tempo acaba, exibe a tela de ranking (igual à do professor) até chegar a próxima palavra
+  // Quando o tempo acaba, exibe a tela de ranking (igual à do professor) até chegar a próxima palavra.
+  // Confere contra o timestamp do servidor: no início da rodada tempoRestante ainda é 0 (valor
+  // inicial do estado, antes de o timer calcular), e sem essa checagem o ranking apareceria na hora.
   useEffect(() => {
     if (tempoRestante === 0 && ativo && estado?.palavraAtual != null && !rankingTriggeredRef.current) {
-      rankingTriggeredRef.current = true;
-      setShowRanking(true);
+      const tempoEsgotado = Date.now() - estado.timestampInicio >= estado.tempoLimite * 1000;
+      if (tempoEsgotado) {
+        rankingTriggeredRef.current = true;
+        setShowRanking(true);
+      }
     }
-  }, [tempoRestante, ativo, estado?.palavraAtual]);
+  }, [tempoRestante, ativo, estado]);
 
   if (!estado || estado.tipo === 'AGUARDANDO') {
     return (
