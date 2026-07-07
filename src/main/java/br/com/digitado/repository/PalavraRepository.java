@@ -22,11 +22,13 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
 
     // Sorteia N palavras ativas de uma determinada dificuldade usando ORDER BY RAND().
     // A dificuldade não é mais coluna: é CALCULADA pela taxa de acerto
-    // (0–35% = DIFICIL, 36–65% = MEDIO, 66%+ = FACIL; sem tentativas = MEDIO) —
+    // (0–35% = DIFICIL, 36–65% = MEDIO, 66%+ = FACIL). Palavra sem tentativas entra
+    // "aleatoriamente" numa das faixas via id % 3 (determinístico, estável) —
     // mesma regra do getter Palavra.getDificuldade(), mantenha as duas em sincronia
     @Query(
         value = "SELECT * FROM palavra WHERE ativa = true AND " +
-        "(CASE WHEN total_tentativas = 0 THEN 'MEDIO' " +
+        "(CASE WHEN total_tentativas = 0 THEN " +
+        "(CASE MOD(id, 3) WHEN 0 THEN 'FACIL' WHEN 1 THEN 'MEDIO' ELSE 'DIFICIL' END) " +
         "WHEN total_acertos * 100.0 / total_tentativas <= 35 THEN 'DIFICIL' " +
         "WHEN total_acertos * 100.0 / total_tentativas <= 65 THEN 'MEDIO' " +
         "ELSE 'FACIL' END) = :dif " +
@@ -34,6 +36,12 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
         nativeQuery = true
     )
     List<Palavra> findRandomByDificuldade(@Param("dif") String dif, @Param("n") int n);
+
+    // Sorteia N palavras ativas quaisquer, excluindo as já escolhidas — usado para
+    // completar a partida quando alguma faixa de dificuldade (calculada pela taxa
+    // de acerto) não tem palavras suficientes, ex: banco novo onde quase tudo é MEDIO
+    @Query(value = "SELECT * FROM palavra WHERE ativa = true AND id NOT IN (:ids) ORDER BY RAND() LIMIT :n", nativeQuery = true)
+    List<Palavra> findRandomAtivasExcluindo(@Param("ids") List<Long> ids, @Param("n") int n);
 
     // Usados pela Palavra do Dia: total de palavras ativas e busca paginada em ordem
     // estável de id, para o sorteio determinístico do dia (mesma palavra o dia todo)

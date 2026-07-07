@@ -2,6 +2,19 @@
    WRAPPER / BACKGROUND
 ═══════════════════════════════════════════════════════════ */
 
+/* Remove o card branco padrão do layout — a página tem fundo escuro próprio
+   (mesmo padrão de criar-sala, lobby, minhas-salas etc.) */
+body.sala-jogo-page .jh-card {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+body.sala-jogo-page .view-container {
+  padding: 0 !important;
+}
+
 .sj-wrapper {
   position: relative;
   min-height: 100vh;
@@ -1603,6 +1616,161 @@
 
 .sj-waiting-icon {
   font-size: 48px;
+}
+
+/* ── Ampulheta animada da tela de espera ──
+   Ciclo de 4s: a areia escoa (0–68%), a ampulheta pula e gira 180° (68–92%)
+   e o loop recomeça — como pós-giro o bulbo cheio fica em cima, o reinício
+   do ciclo é visualmente contínuo. */
+
+.amp-svg {
+  overflow: visible;
+  transform-origin: 50% 50%;
+  animation: amp-pulo 4s linear infinite;
+  filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 18px rgba(251, 191, 36, 0.12));
+}
+
+/* Pulo com giro: antecipação (agacha), salto com rotação contínua ao longo de
+   toda a trajetória, aterrissagem amassando (squash & stretch) e quique leve.
+   Cada trecho tem seu próprio easing para o movimento fluir sem "travadas". */
+@keyframes amp-pulo {
+  0%,
+  72% {
+    transform: translateY(0) rotate(0deg) scale(1, 1);
+    animation-timing-function: ease-in;
+  }
+  76% {
+    /* agacha antes de saltar */
+    transform: translateY(3px) rotate(0deg) scale(1.06, 0.92);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  85% {
+    /* ápice do salto, ainda girando */
+    transform: translateY(-26px) rotate(135deg) scale(0.97, 1.05);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.8, 0.4);
+  }
+  92% {
+    /* aterrissa completando o giro, amassa com o impacto */
+    transform: translateY(1px) rotate(180deg) scale(1.05, 0.93);
+    animation-timing-function: ease-out;
+  }
+  96% {
+    /* quique leve de acomodação — a areia já recomeça a cair no pouso */
+    transform: translateY(-4px) rotate(180deg) scale(0.99, 1.02);
+    animation-timing-function: ease-in;
+  }
+  100% {
+    transform: translateY(0) rotate(180deg) scale(1, 1);
+  }
+}
+
+.amp-vidro {
+  fill: rgba(199, 210, 254, 0.07);
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+/* Reflexo curvo do vidro */
+.amp-brilho {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* Friso de luz nas tampas de madeira */
+.amp-madeira-friso {
+  fill: rgba(255, 255, 255, 0.18);
+}
+
+/* Nível da areia de cima desce até sair do bulbo pelo gargalo */
+.amp-areia-topo {
+  animation: amp-areia-topo 4s linear infinite;
+}
+
+@keyframes amp-areia-topo {
+  0% {
+    transform: translateY(0);
+  }
+  72%,
+  100% {
+    transform: translateY(62px);
+  }
+}
+
+/* Monte da areia de baixo sobe até encher o bulbo */
+.amp-areia-base {
+  animation: amp-areia-base 4s linear infinite;
+}
+
+@keyframes amp-areia-base {
+  0% {
+    transform: translateY(64px);
+  }
+  72%,
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Fio de areia: o grupo inteiro (véu + grãos) some quando a areia de cima acaba */
+.amp-fio-grupo {
+  animation: amp-fio-vis 4s linear infinite;
+}
+
+/* Jato contínuo de areia — afunilado, sem tracejado */
+.amp-fio {
+  opacity: 0.9;
+}
+
+/* Grãos por cima do jato: mesma velocidade e espaçamento uniforme,
+   formando um fluxo constante e homogêneo.
+   fill-mode backwards mantém o grão invisível durante o delay inicial. */
+.amp-grao {
+  fill: #fef3c7;
+  animation: amp-grao-cair 0.6s linear infinite;
+  animation-fill-mode: backwards;
+}
+
+.amp-grao-2 {
+  animation-delay: 0.15s;
+}
+
+.amp-grao-3 {
+  animation-delay: 0.3s;
+}
+
+.amp-grao-4 {
+  animation-delay: 0.45s;
+}
+
+@keyframes amp-grao-cair {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(54px);
+    opacity: 0;
+  }
+}
+
+@keyframes amp-fio-vis {
+  0%,
+  66% {
+    opacity: 1;
+  }
+  71%,
+  100% {
+    opacity: 0;
+  }
 }
 
 .sj-waiting h2 {

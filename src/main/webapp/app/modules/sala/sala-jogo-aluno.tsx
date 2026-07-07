@@ -5,6 +5,7 @@ import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
 import { VinhetaPodio } from './vinheta-podio';
+import { AmpulhetaAnimada } from './ampulheta-animada';
 
 interface Props {
   estado: EstadoJogo | null;
@@ -116,7 +117,9 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
   if (!estado || estado.tipo === 'AGUARDANDO') {
     return (
       <div className="sj-waiting">
-        <div className="sj-waiting-icon">⌛</div>
+        <div className="sj-waiting-icon">
+          <AmpulhetaAnimada />
+        </div>
         <h2>Aguardando o professor iniciar...</h2>
         <p className="sj-waiting-sub">{conectado ? `Conectado à sala ${estado?.nomeSala ?? ''}` : 'Conectando...'}</p>
         {estado && estado.alunosConectados.length > 0 && (

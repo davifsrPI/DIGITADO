@@ -111,8 +111,11 @@ public class Palavra implements Serializable {
      *   36–65% -> MEDIO
      *   66%+   -> FACIL     (maioria acerta)
      *
-     * Palavra sem nenhuma tentativa ainda começa como MEDIO (neutro) e migra de
-     * faixa conforme as pessoas jogam. A mesma regra existe em SQL no
+     * Palavra sem nenhuma tentativa entra "aleatoriamente" numa das três faixas —
+     * de forma determinística pelo id (id % 3), porque a classificação precisa ser
+     * estável: o tempo da rodada é recalculado a partir dela durante o jogo, e o
+     * sorteio em SQL precisa classificar exatamente igual. Assim que houver
+     * registros, a palavra passa a seguir a métrica. A mesma regra existe em SQL no
      * PalavraRepository.findRandomByDificuldade — mantenha as duas em sincronia.
      *
      * Sem @Transient de propósito: a entidade usa acesso por campo (anotações nos
@@ -123,7 +126,14 @@ public class Palavra implements Serializable {
     public Dificuldade getDificuldade() {
         long tentativas = getTotalTentativas();
         if (tentativas == 0) {
-            return Dificuldade.MEDIO;
+            if (id == null) {
+                return Dificuldade.MEDIO;
+            }
+            return switch ((int) (id % 3)) {
+                case 0 -> Dificuldade.FACIL;
+                case 1 -> Dificuldade.MEDIO;
+                default -> Dificuldade.DIFICIL;
+            };
         }
         double percentual = (getTotalAcertos() * 100.0) / tentativas;
         if (percentual <= 35) {

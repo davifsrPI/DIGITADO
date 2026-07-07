@@ -51,10 +51,23 @@ public class JogoSalaService {
         palavras.addAll(palavraRepository.findRandomByDificuldade(Dificuldade.FACIL.name(), payload.qtdFacil()));
         palavras.addAll(palavraRepository.findRandomByDificuldade(Dificuldade.MEDIO.name(), payload.qtdMedio()));
         palavras.addAll(palavraRepository.findRandomByDificuldade(Dificuldade.DIFICIL.name(), payload.qtdDificil()));
-        // Adiciona as palavras extras escolhidas pelo professor na tela de criação da sala
+        // A dificuldade é uma MÉTRICA (taxa de acerto), então alguma faixa pode não ter
+        // palavras suficientes (ex: banco novo, onde quase tudo ainda é MEDIO).
+        // Completa a diferença sorteando entre as demais palavras ativas, para a
+        // partida sempre ter o total de palavras que o professor pediu.
+        int totalPedido = payload.qtdFacil() + payload.qtdMedio() + payload.qtdDificil();
+        int faltam = totalPedido - palavras.size();
+        if (faltam > 0) {
+            List<Long> jaEscolhidas = palavras.isEmpty() ? List.of(-1L) : palavras.stream().map(Palavra::getId).toList();
+            palavras.addAll(palavraRepository.findRandomAtivasExcluindo(jaEscolhidas, faltam));
+        }
+        // Adiciona as palavras extras escolhidas pelo professor na tela de criação da sala,
+        // sem duplicar alguma que já tenha sido sorteada
         if (payload.palavrasExtrasIds() != null) {
             for (Long id : payload.palavrasExtrasIds()) {
-                palavraRepository.findById(id).ifPresent(palavras::add);
+                if (palavras.stream().noneMatch(p -> p.getId().equals(id))) {
+                    palavraRepository.findById(id).ifPresent(palavras::add);
+                }
             }
         }
         Collections.shuffle(palavras);

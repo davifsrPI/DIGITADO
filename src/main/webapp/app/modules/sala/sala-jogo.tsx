@@ -1,6 +1,6 @@
 import './sala-jogo-styles.scss';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
@@ -30,6 +30,12 @@ export const SalaJogo: React.FC = () => {
   } | null;
   const isProfessor = locationState?.isProfessor === true;
   const gameConfig = locationState?.gameConfig;
+
+  // Remove o card branco padrão do layout (jh-card) — a página tem fundo escuro próprio
+  useEffect(() => {
+    document.body.classList.add('sala-jogo-page');
+    return () => document.body.classList.remove('sala-jogo-page');
+  }, []);
 
   // Nome de exibição: usa o primeiro nome do usuário autenticado, ou o login como fallback
   const login = account?.login ?? 'anonimo';
