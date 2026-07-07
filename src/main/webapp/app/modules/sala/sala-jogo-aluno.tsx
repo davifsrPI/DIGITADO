@@ -4,6 +4,7 @@ import { MENSAGEM_ERRO, validarResposta } from './utils/validarResposta';
 import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
+import { VinhetaPodio } from './vinheta-podio';
 
 interface Props {
   estado: EstadoJogo | null;
@@ -26,6 +27,8 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
   // Pontuação/posição "congeladas" no início da rodada — só atualizam quando o tempo acaba,
   // para o aluno não descobrir o resultado dos colegas pelo placar enquanto digita
   const [scoreCongelado, setScoreCongelado] = useState<{ pontos: number; posicao: number }>({ pontos: 0, posicao: -1 });
+  // Vinheta de suspense com o pódio, exibida uma única vez quando a partida encerra
+  const [vinhetaFimConcluida, setVinhetaFimConcluida] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const palavraAtualId = useRef<number | null>(null);
   const rankingTriggeredRef = useRef(false);
@@ -126,6 +129,10 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
   }
 
   if (estado.tipo === 'ENCERRADA') {
+    // Antes do placar final, roda a vinheta de suspense revelando o pódio
+    if (!vinhetaFimConcluida) {
+      return <VinhetaPodio placar={estado.placar} meuLogin={meuLogin} onFim={() => setVinhetaFimConcluida(true)} />;
+    }
     return (
       <div className="sj-ended">
         <h2>Atividade encerrada!</h2>

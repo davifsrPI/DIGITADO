@@ -3,6 +3,7 @@ import { EstadoJogo } from './hooks/useSalaWebSocket';
 import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
+import { VinhetaPodio } from './vinheta-podio';
 
 // Configuração do jogo escolhida pelo professor: quantidade de palavras e
 // TEMPO por dificuldade (fácil/médio/difícil)
@@ -76,6 +77,8 @@ export const SalaJogoProfessor: React.FC<Props> = ({
 
   const [showRanking, setShowRanking] = useState(false);
   const [rankingTimer, setRankingTimer] = useState(0);
+  // Vinheta de suspense com o pódio, exibida uma única vez quando a partida encerra
+  const [vinhetaFimConcluida, setVinhetaFimConcluida] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const rankingTriggeredRef = useRef(false);
@@ -262,6 +265,10 @@ export const SalaJogoProfessor: React.FC<Props> = ({
 
   /* ── ENCERRADA ───────────────────────────────────────────── */
   if (estado.tipo === 'ENCERRADA') {
+    // Antes do placar final, roda a vinheta de suspense revelando o pódio
+    if (!vinhetaFimConcluida) {
+      return <VinhetaPodio placar={estado.placar} onFim={() => setVinhetaFimConcluida(true)} />;
+    }
     return (
       <div className="sj-ended">
         <h2 className="sj-ended-title">Atividade encerrada!</h2>
