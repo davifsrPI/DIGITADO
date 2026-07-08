@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.digitado.IntegrationTest;
 import br.com.digitado.domain.Palavra;
-import br.com.digitado.domain.enumeration.Dificuldade;
 import br.com.digitado.repository.PalavraRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -178,6 +177,9 @@ class PalavraResourceIT {
         // Initialize the database
         insertedPalavra = palavraRepository.saveAndFlush(palavra);
 
+        // Dificuldade calculada provisória (id % 3) — depende do id gerado
+        String dificuldadeEsperada = insertedPalavra.getDificuldade().toString();
+
         // Get all the palavraList
         restPalavraMockMvc
             .perform(get(ENTITY_API_URL + "?sort=id,desc"))
@@ -185,8 +187,7 @@ class PalavraResourceIT {
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(jsonPath("$.[*].id").value(hasItem(palavra.getId().intValue())))
             .andExpect(jsonPath("$.[*].texto").value(hasItem(DEFAULT_TEXTO)))
-            // dificuldade agora é calculada: palavra sem tentativas nasce MEDIO
-            .andExpect(jsonPath("$.[*].dificuldade").value(hasItem(Dificuldade.MEDIO.toString())))
+            .andExpect(jsonPath("$.[*].dificuldade").value(hasItem(dificuldadeEsperada)))
             .andExpect(jsonPath("$.[*].categoria").value(hasItem(DEFAULT_CATEGORIA)))
             .andExpect(jsonPath("$.[*].idioma").value(hasItem(DEFAULT_IDIOMA)))
             .andExpect(jsonPath("$.[*].possuiAcento").value(hasItem(DEFAULT_POSSUI_ACENTO)))
@@ -199,6 +200,10 @@ class PalavraResourceIT {
         // Initialize the database
         insertedPalavra = palavraRepository.saveAndFlush(palavra);
 
+        // Palavra sem tentativas: a dificuldade calculada é provisória e depende do id
+        // (id % 3 → FACIL/MEDIO/DIFICIL), igual ao getter Palavra.getDificuldade()
+        String dificuldadeEsperada = insertedPalavra.getDificuldade().toString();
+
         // Get the palavra
         restPalavraMockMvc
             .perform(get(ENTITY_API_URL_ID, palavra.getId()))
@@ -206,8 +211,7 @@ class PalavraResourceIT {
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(jsonPath("$.id").value(palavra.getId().intValue()))
             .andExpect(jsonPath("$.texto").value(DEFAULT_TEXTO))
-            // dificuldade agora é calculada: palavra sem tentativas nasce MEDIO
-            .andExpect(jsonPath("$.dificuldade").value(Dificuldade.MEDIO.toString()))
+            .andExpect(jsonPath("$.dificuldade").value(dificuldadeEsperada))
             .andExpect(jsonPath("$.categoria").value(DEFAULT_CATEGORIA))
             .andExpect(jsonPath("$.idioma").value(DEFAULT_IDIOMA))
             .andExpect(jsonPath("$.possuiAcento").value(DEFAULT_POSSUI_ACENTO))

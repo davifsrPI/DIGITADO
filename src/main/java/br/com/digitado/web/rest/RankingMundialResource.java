@@ -56,7 +56,7 @@ public class RankingMundialResource {
         List<RankingEntryVM> entries = new ArrayList<>(top.size());
         for (int i = 0; i < top.size(); i++) {
             Usuario u = top.get(i);
-            boolean souEu = eu.isPresent() && eu.get().getId().equals(u.getId());
+            boolean souEu = eu.isPresent() && eu.orElseThrow().getId().equals(u.getId());
             entries.add(new RankingEntryVM(i + 1, nomeExibicao(u), u.getXp(), souEu));
         }
 

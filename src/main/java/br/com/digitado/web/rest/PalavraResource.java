@@ -53,7 +53,7 @@ public class PalavraResource {
         if (exata.isPresent()) {
             response.put("encontrada", true);
             response.put("exata", true);
-            response.put("palavra", exata.get());
+            response.put("palavra", exata.orElseThrow());
             return ResponseEntity.ok(response);
         }
         List<Palavra> similares = palavraRepository.findTop5ByTextoContainingIgnoreCaseAndAtivaTrue(busca);

@@ -97,12 +97,12 @@ public class UsuarioResource {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
 
-        // Preserva a senha atual do banco (nunca sobrescreve com null vindo do frontend)
-        // e protege tipoUsuario/ativo de edição por não-admins
+        // Senha é IMUTÁVEL via update: sempre preserva a do banco, ignorando o que
+        // vier no corpo. Assim nenhum PUT grava senha em claro, mesmo agora que o
+        // campo aceita escrita (WRITE_ONLY, necessário para a criação).
+        // Também protege tipoUsuario/ativo de edição por não-admins.
         Usuario existing = usuarioRepository.findById(id).orElseThrow();
-        if (usuario.getSenha() == null) {
-            usuario.setSenha(existing.getSenha());
-        }
+        usuario.setSenha(existing.getSenha());
         if (!SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
             usuario.setTipoUsuario(existing.getTipoUsuario());
             usuario.setAtivo(existing.getAtivo());
@@ -146,9 +146,8 @@ public class UsuarioResource {
                 if (usuario.getEmail() != null) {
                     existingUsuario.setEmail(usuario.getEmail());
                 }
-                if (usuario.getSenha() != null) {
-                    existingUsuario.setSenha(usuario.getSenha());
-                }
+                // Senha é imutável via update (não se altera por PATCH) — nunca grava
+                // senha em claro nem permite troca por este endpoint genérico.
                 // tipoUsuario e ativo só podem ser alterados por administrador
                 if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
                     if (usuario.getTipoUsuario() != null) {

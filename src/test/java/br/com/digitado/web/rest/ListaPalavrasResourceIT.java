@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 @IntegrationTest
 @ExtendWith(MockitoExtension.class)
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(authorities = "ROLE_ADMIN")
 class ListaPalavrasResourceIT {
 
     private static final String DEFAULT_NOME_LISTA = "AAAAAAAAAA";

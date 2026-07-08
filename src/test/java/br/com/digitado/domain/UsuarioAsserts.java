@@ -50,7 +50,8 @@ public class UsuarioAsserts {
             .satisfies(a -> assertThat(a.getNome()).as("check nome").isEqualTo(expected.getNome()))
             .satisfies(a -> assertThat(a.getSobrenome()).as("check sobrenome").isEqualTo(expected.getSobrenome()))
             .satisfies(a -> assertThat(a.getEmail()).as("check email").isEqualTo(expected.getEmail()))
-            .satisfies(a -> assertThat(a.getSenha()).as("check senha").isEqualTo(expected.getSenha()))
+            // senha não é comparada: é WRITE_ONLY (não vem nas respostas) e é guardada com bcrypt,
+            // então nunca corresponde ao valor em claro enviado no request
             .satisfies(a -> assertThat(a.getTipoUsuario()).as("check tipoUsuario").isEqualTo(expected.getTipoUsuario()))
             .satisfies(a -> assertThat(a.getAtivo()).as("check ativo").isEqualTo(expected.getAtivo()));
     }

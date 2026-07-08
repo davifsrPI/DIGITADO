@@ -49,7 +49,7 @@ public class XpService {
                 LOG.warn("XP não creditado: login {} não tem Usuario correspondente", login);
                 return 0;
             }
-            usuarioRepository.incrementarXp(usuario.get().getId(), XP_ACERTO_PALAVRA_DIA);
+            usuarioRepository.incrementarXp(usuario.orElseThrow().getId(), XP_ACERTO_PALAVRA_DIA);
             LOG.info("XP: +{} para {} (acerto na palavra do dia)", XP_ACERTO_PALAVRA_DIA, login);
             return XP_ACERTO_PALAVRA_DIA;
         } catch (Exception e) {

@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(authorities = "ROLE_ADMIN")
 class RespostaResourceIT {
 
     private static final String DEFAULT_RESPOSTA_DIGITADA = "AAAAAAAAAA";
@@ -210,12 +210,9 @@ class RespostaResourceIT {
         Resposta updatedResposta = respostaRepository.findById(resposta.getId()).orElseThrow();
         // Disconnect from session so that the updates on updatedResposta are not directly saved in db
         em.detach(updatedResposta);
-        updatedResposta
-            .respostaDigitada(UPDATED_RESPOSTA_DIGITADA)
-            .correta(UPDATED_CORRETA)
-            .tempoResposta(UPDATED_TEMPO_RESPOSTA)
-            .pontuacao(UPDATED_PONTUACAO)
-            .dataResposta(UPDATED_DATA_RESPOSTA);
+        // correta, pontuacao, aluno e dataResposta são calculados pelo servidor e
+        // preservados no update — o teste só altera os campos realmente editáveis
+        updatedResposta.respostaDigitada(UPDATED_RESPOSTA_DIGITADA).tempoResposta(UPDATED_TEMPO_RESPOSTA);
 
         restRespostaMockMvc
             .perform(
@@ -293,7 +290,13 @@ class RespostaResourceIT {
         Resposta partialUpdatedResposta = new Resposta();
         partialUpdatedResposta.setId(resposta.getId());
 
-        partialUpdatedResposta.correta(UPDATED_CORRETA).tempoResposta(UPDATED_TEMPO_RESPOSTA).dataResposta(UPDATED_DATA_RESPOSTA);
+        // só tempoResposta é editável; os campos calculados pelo servidor (correta,
+        // pontuacao, dataResposta) são preservados, então o esperado mantém os originais
+        partialUpdatedResposta
+            .correta(DEFAULT_CORRETA)
+            .tempoResposta(UPDATED_TEMPO_RESPOSTA)
+            .pontuacao(DEFAULT_PONTUACAO)
+            .dataResposta(DEFAULT_DATA_RESPOSTA);
 
         restRespostaMockMvc
             .perform(
@@ -321,12 +324,14 @@ class RespostaResourceIT {
         Resposta partialUpdatedResposta = new Resposta();
         partialUpdatedResposta.setId(resposta.getId());
 
+        // respostaDigitada e tempoResposta são editáveis; correta, pontuacao e
+        // dataResposta são preservados pelo servidor, então mantêm o valor original
         partialUpdatedResposta
             .respostaDigitada(UPDATED_RESPOSTA_DIGITADA)
-            .correta(UPDATED_CORRETA)
+            .correta(DEFAULT_CORRETA)
             .tempoResposta(UPDATED_TEMPO_RESPOSTA)
-            .pontuacao(UPDATED_PONTUACAO)
-            .dataResposta(UPDATED_DATA_RESPOSTA);
+            .pontuacao(DEFAULT_PONTUACAO)
+            .dataResposta(DEFAULT_DATA_RESPOSTA);
 
         restRespostaMockMvc
             .perform(

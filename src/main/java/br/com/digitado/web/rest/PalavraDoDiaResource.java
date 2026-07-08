@@ -60,7 +60,7 @@ public class PalavraDoDiaResource {
         if (palavraOpt.isEmpty()) {
             return new PalavraDoDiaVM(false, palavraDoDiaService.hoje(), 0, null, null, null, false, null);
         }
-        Palavra palavra = palavraOpt.get();
+        Palavra palavra = palavraOpt.orElseThrow();
 
         Optional<String> login = loginAutenticado();
         boolean jaTentou;
@@ -69,10 +69,10 @@ public class PalavraDoDiaResource {
         if (login.isPresent()) {
             // Logado: a fonte da verdade é o banco (cookie anônimo é ignorado —
             // entrar na conta dá direito à chance da conta)
-            Optional<PalavraDoDiaTentativa> tentativa = palavraDoDiaService.tentativaDoUsuario(login.get());
+            Optional<PalavraDoDiaTentativa> tentativa = palavraDoDiaService.tentativaDoUsuario(login.orElseThrow());
             jaTentou = tentativa.isPresent();
             if (jaTentou) {
-                boolean acertou = tentativa.get().getAcertou();
+                boolean acertou = tentativa.orElseThrow().getAcertou();
                 // Acerto de logado rendeu XP hoje — reexibe o valor ao recarregar a página
                 resultado = montarResultado(palavra, acertou, acertou ? XpService.XP_ACERTO_PALAVRA_DIA : 0);
             }
@@ -81,7 +81,7 @@ public class PalavraDoDiaResource {
             Optional<Boolean> acertoCookie = lerCookieDeHoje(cookie);
             jaTentou = acertoCookie.isPresent();
             if (jaTentou) {
-                resultado = montarResultado(palavra, acertoCookie.get(), 0);
+                resultado = montarResultado(palavra, acertoCookie.orElseThrow(), 0);
             }
         }
 
@@ -120,7 +120,7 @@ public class PalavraDoDiaResource {
 
         // Bloqueio de segunda tentativa — sempre validado no servidor
         if (login.isPresent()) {
-            if (palavraDoDiaService.tentativaDoUsuario(login.get()).isPresent()) {
+            if (palavraDoDiaService.tentativaDoUsuario(login.orElseThrow()).isPresent()) {
                 throw new BadRequestAlertException("Você já usou sua chance de hoje", "palavraDoDia", "jatentou");
             }
         } else if (lerCookieDeHoje(cookie).isPresent()) {

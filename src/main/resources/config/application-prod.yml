@@ -92,6 +92,18 @@ server:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json,image/svg+xml
     min-response-size: 1024
+  # ATRÁS DO PROXY REVERSO (Caddy/nginx na mesma máquina — ver deploy/Caddyfile):
+  # o Tomcat passa a ler X-Forwarded-For/Proto enviados pelo proxy. Com isso,
+  # getRemoteAddr() devolve o IP REAL do aluno (o rate limit depende disso) e
+  # request.isSecure() reflete o HTTPS externo.
+  # SEGURO por padrão: o Tomcat só aceita esses cabeçalhos quando a conexão vem
+  # de um IP interno (127.0.0.1, redes privadas) — quem acessar o :8080 direto
+  # da internet não consegue forjá-los. Mantenha o confiar-x-forwarded-for do
+  # rate limit em false: com o remoteip valve ele deixa de ser necessário.
+  tomcat:
+    remoteip:
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
 
 # ===================================================================
 # JHipster specific properties

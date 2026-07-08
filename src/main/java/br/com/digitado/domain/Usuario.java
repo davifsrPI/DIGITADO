@@ -1,8 +1,8 @@
 package br.com.digitado.domain;
 
 import br.com.digitado.domain.enumeration.TipoUsuario;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
@@ -50,7 +50,11 @@ public class Usuario implements Serializable {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @JsonIgnore
+    // WRITE_ONLY: a senha pode ser ENVIADA (ex.: criação de usuário, onde é
+    // guardada com bcrypt) mas NUNCA é serializada nas respostas da API —
+    // nenhum GET expõe o hash. @JsonIgnore bloquearia também a escrita, o que
+    // tornaria a criação impossível (o campo é obrigatório no banco).
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "senha", nullable = false)
     private String senha;
 

@@ -38,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @IntegrationTest
 @ExtendWith(MockitoExtension.class)
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(authorities = "ROLE_ADMIN")
 class UsuarioResourceIT {
 
     private static final String DEFAULT_NOME = "AAAAAAAAAA";
@@ -133,10 +133,14 @@ class UsuarioResourceIT {
     @Transactional
     void createUsuario() throws Exception {
         long databaseSizeBeforeCreate = getRepositoryCount();
+        // A senha é WRITE_ONLY: não sai na serialização do objeto, então é adicionada
+        // manualmente ao corpo (o cliente real também envia a senha em texto no JSON)
+        com.fasterxml.jackson.databind.node.ObjectNode body = (com.fasterxml.jackson.databind.node.ObjectNode) om.valueToTree(usuario);
+        body.put("senha", DEFAULT_SENHA);
         // Create the Usuario
         var returnedUsuario = om.readValue(
             restUsuarioMockMvc
-                .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(usuario)))
+                .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(body)))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
@@ -250,7 +254,7 @@ class UsuarioResourceIT {
             .andExpect(jsonPath("$.[*].nome").value(hasItem(DEFAULT_NOME)))
             .andExpect(jsonPath("$.[*].sobrenome").value(hasItem(DEFAULT_SOBRENOME)))
             .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
-            .andExpect(jsonPath("$.[*].senha").value(hasItem(DEFAULT_SENHA)))
+            // senha nunca é serializada nas respostas (WRITE_ONLY) — não aparece no JSON
             .andExpect(jsonPath("$.[*].tipoUsuario").value(hasItem(DEFAULT_TIPO_USUARIO.toString())))
             .andExpect(jsonPath("$.[*].ativo").value(hasItem(DEFAULT_ATIVO)));
     }
@@ -287,7 +291,7 @@ class UsuarioResourceIT {
             .andExpect(jsonPath("$.nome").value(DEFAULT_NOME))
             .andExpect(jsonPath("$.sobrenome").value(DEFAULT_SOBRENOME))
             .andExpect(jsonPath("$.email").value(DEFAULT_EMAIL))
-            .andExpect(jsonPath("$.senha").value(DEFAULT_SENHA))
+            // senha nunca é serializada nas respostas (WRITE_ONLY) — não aparece no JSON
             .andExpect(jsonPath("$.tipoUsuario").value(DEFAULT_TIPO_USUARIO.toString()))
             .andExpect(jsonPath("$.ativo").value(DEFAULT_ATIVO));
     }
