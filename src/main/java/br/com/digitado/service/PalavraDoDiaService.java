@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PalavraDoDiaService {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(PalavraDoDiaService.class);
+
     // Fuso oficial do jogo — o "dia" vira à meia-noite de Brasília
     public static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
 
@@ -35,17 +37,20 @@ public class PalavraDoDiaService {
     private final PalavraDoDiaTentativaRepository tentativaRepository;
     private final PalavraEstatisticaService estatisticaService;
     private final XpService xpService;
+    private final ConquistaEngineService conquistaEngine;
 
     public PalavraDoDiaService(
         PalavraRepository palavraRepository,
         PalavraDoDiaTentativaRepository tentativaRepository,
         PalavraEstatisticaService estatisticaService,
-        XpService xpService
+        XpService xpService,
+        ConquistaEngineService conquistaEngine
     ) {
         this.palavraRepository = palavraRepository;
         this.tentativaRepository = tentativaRepository;
         this.estatisticaService = estatisticaService;
         this.xpService = xpService;
+        this.conquistaEngine = conquistaEngine;
     }
 
     public LocalDate hoje() {
@@ -102,6 +107,13 @@ public class PalavraDoDiaService {
         // Acerto de usuário logado vale XP no Ranking Mundial (anônimo não tem conta para creditar)
         if (acertou && login != null) {
             xpService.premiarAcertoPalavraDoDia(login);
+            // O XP novo pode desbloquear conquistas de XP acumulado/posição no ranking.
+            // Transação própria + try/catch: falha aqui não derruba a tentativa.
+            try {
+                conquistaEngine.verificarXpERanking(login);
+            } catch (Exception e) {
+                LOG.error("Falha ao verificar conquistas de XP de {}: {}", login, e.getMessage(), e);
+            }
         }
         return acertou;
     }

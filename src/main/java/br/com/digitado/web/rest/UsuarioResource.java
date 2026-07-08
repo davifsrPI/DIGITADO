@@ -210,6 +210,38 @@ public class UsuarioResource {
             .build();
     }
 
+    // Corpo da troca de senha: a atual (prova de posse) e a nova
+    public record AlterarSenhaVM(String senhaAtual, String novaSenha) {}
+
+    /**
+     * Troca a senha do PRÓPRIO Usuario — único caminho para alterar a senha
+     * (os updates PUT/PATCH a preservam sempre). A conta alvo é resolvida
+     * exclusivamente pelo token JWT (sem id na URL — imune a IDOR) e a senha
+     * atual é conferida via bcrypt antes de aceitar a nova.
+     */
+    @PostMapping("/alterar-senha")
+    public ResponseEntity<Void> alterarSenha(@RequestBody AlterarSenhaVM vm) {
+        if (vm == null || vm.novaSenha() == null || vm.novaSenha().length() < 4 || vm.novaSenha().length() > 100) {
+            throw new BadRequestAlertException("Nova senha inválida (de 4 a 100 caracteres)", ENTITY_NAME, "senhainvalida");
+        }
+        Usuario meu = SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .orElseThrow(() -> new BadRequestAlertException("Conta sem perfil de usuário", ENTITY_NAME, "semusuario"));
+
+        // Conta que já tem senha exige a atual correta; conta legada sem senha
+        // registrada pode definir a primeira diretamente
+        boolean temSenha = meu.getSenha() != null && !meu.getSenha().isBlank();
+        if (temSenha && (vm.senhaAtual() == null || !passwordEncoder.matches(vm.senhaAtual(), meu.getSenha()))) {
+            throw new BadRequestAlertException("Senha atual incorreta", ENTITY_NAME, "senhaatualincorreta");
+        }
+
+        meu.setSenha(passwordEncoder.encode(vm.novaSenha()));
+        usuarioRepository.save(meu);
+        LOG.info("Senha do usuario {} alterada pelo próprio dono", meu.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     // Verifica se o usuário logado é o dono do perfil ou administrador do sistema.
     // A identificação é feita comparando o e-mail do User autenticado com o e-mail do Usuario.
     private boolean isOwnerOrAdmin(Long usuarioId) {

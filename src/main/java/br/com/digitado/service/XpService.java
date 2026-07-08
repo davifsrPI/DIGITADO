@@ -49,12 +49,24 @@ public class XpService {
                 LOG.warn("XP não creditado: login {} não tem Usuario correspondente", login);
                 return 0;
             }
-            usuarioRepository.incrementarXp(usuario.orElseThrow().getId(), XP_ACERTO_PALAVRA_DIA);
-            LOG.info("XP: +{} para {} (acerto na palavra do dia)", XP_ACERTO_PALAVRA_DIA, login);
+            creditar(usuario.orElseThrow().getId(), XP_ACERTO_PALAVRA_DIA, "acerto na palavra do dia");
             return XP_ACERTO_PALAVRA_DIA;
         } catch (Exception e) {
             LOG.error("Falha ao creditar XP da palavra do dia para {}: {}", login, e.getMessage(), e);
             return 0;
         }
+    }
+
+    /**
+     * Crédito genérico de XP (update atômico) — usado pela palavra do dia e pelo
+     * motor de conquistas ao desbloquear uma conquista.
+     */
+    @Transactional
+    public void creditar(Long usuarioId, long xp, String motivo) {
+        if (usuarioId == null || xp <= 0) {
+            return;
+        }
+        usuarioRepository.incrementarXp(usuarioId, xp);
+        LOG.info("XP: +{} para usuario {} ({})", xp, usuarioId, motivo);
     }
 }

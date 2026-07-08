@@ -31,6 +31,11 @@ public interface UsuarioRepository extends UsuarioRepositoryWithBagRelationships
     // Posição do usuário no ranking = quantos têm XP maior + 1
     long countByXpGreaterThan(Long xp);
 
+    // Leitura direta do XP no banco — a entidade mapeia xp como insertable/updatable
+    // = false, então após incrementarXp o valor em memória fica defasado
+    @Query(value = "select xp from usuario where id = :usuarioId", nativeQuery = true)
+    Long lerXp(@Param("usuarioId") long usuarioId);
+
     default Optional<Usuario> findOneWithEagerRelationships(Long id) {
         return this.fetchBagRelationships(this.findById(id));
     }

@@ -3,6 +3,7 @@ package br.com.digitado.web.websocket;
 import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.security.AuthoritiesConstants;
+import br.com.digitado.service.ConquistaEngineService;
 import br.com.digitado.service.JogoSalaService;
 import br.com.digitado.web.websocket.dto.*;
 import java.security.Principal;
@@ -29,17 +30,20 @@ public class JogoSalaController {
     private final SalaRepository salaRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messaging;
+    private final ConquistaEngineService conquistaEngine;
 
     public JogoSalaController(
         JogoSalaService jogoService,
         SalaRepository salaRepository,
         UserRepository userRepository,
-        SimpMessagingTemplate messaging
+        SimpMessagingTemplate messaging,
+        ConquistaEngineService conquistaEngine
     ) {
         this.jogoService = jogoService;
         this.salaRepository = salaRepository;
         this.userRepository = userRepository;
         this.messaging = messaging;
+        this.conquistaEngine = conquistaEngine;
     }
 
     // Registra um aluno (ou professor) na sala quando ele se conecta.
@@ -50,6 +54,12 @@ public class JogoSalaController {
         String login = principal.getName();
         String nomeSala = getNomeSala(codigo);
         jogoService.registrarAluno(codigo, login, entrada.nome());
+        // Conquista "Bem-vindo à Turma" (primeira sala) — nunca derruba a conexão
+        try {
+            conquistaEngine.aoEntrarNaSala(login);
+        } catch (Exception e) {
+            LOG.error("Falha ao processar conquista de entrada de {}: {}", login, e.getMessage(), e);
+        }
         EstadoJogoDTO estado = jogoService.getEstado(codigo, nomeSala);
         broadcast(codigo, estado);
     }
@@ -88,7 +98,7 @@ public class JogoSalaController {
             return;
         }
         String nomeSala = getNomeSala(codigo);
-        EstadoJogoDTO estado = jogoService.proximaPalavra(codigo, nomeSala);
+        EstadoJogoDTO estado = jogoService.proximaPalavra(codigo, nomeSala, principal.getName());
         if (estado != null) broadcast(codigo, estado);
     }
 
@@ -112,7 +122,7 @@ public class JogoSalaController {
             return;
         }
         String nomeSala = getNomeSala(codigo);
-        EstadoJogoDTO estado = jogoService.encerrar(codigo, nomeSala);
+        EstadoJogoDTO estado = jogoService.encerrar(codigo, nomeSala, principal.getName());
         if (estado != null) broadcast(codigo, estado);
     }
 

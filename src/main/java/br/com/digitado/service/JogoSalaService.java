@@ -9,6 +9,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 // Serviço que gerencia o estado em memória de todos os jogos em andamento.
@@ -17,19 +19,31 @@ import org.springframework.stereotype.Service;
 @Service
 public class JogoSalaService {
 
+    private static final Logger LOG = LoggerFactory.getLogger(JogoSalaService.class);
+
     // Pontuação base por ordem de acerto (1º, 2º, 3º, 4º+) e bônus de velocidade
     private static final int[] PONTOS_BASE = { 20, 15, 12, 8 };
     private static final int[] BONUS_MAX = { 10, 7, 5, 3 };
 
+    // Tolerância além do tempo da rodada para aceitar resposta (latência de rede) —
+    // depois disso o servidor rejeita, mesmo que um cliente adulterado envie
+    private static final long FOLGA_RESPOSTA_MS = 2000;
+
     private final PalavraRepository palavraRepository;
     private final PalavraEstatisticaService palavraEstatisticaService;
+    private final ConquistaEngineService conquistaEngine;
 
     // Mapa em memória: código da sala → estado do jogo
     private final Map<String, EstadoJogo> jogos = new ConcurrentHashMap<>();
 
-    public JogoSalaService(PalavraRepository palavraRepository, PalavraEstatisticaService palavraEstatisticaService) {
+    public JogoSalaService(
+        PalavraRepository palavraRepository,
+        PalavraEstatisticaService palavraEstatisticaService,
+        ConquistaEngineService conquistaEngine
+    ) {
         this.palavraRepository = palavraRepository;
         this.palavraEstatisticaService = palavraEstatisticaService;
+        this.conquistaEngine = conquistaEngine;
     }
 
     // Registra um participante na sala (cria o estado da sala se ainda não existir)
@@ -47,16 +61,27 @@ public class JogoSalaService {
     // adiciona quaisquer palavras extras selecionadas manualmente e embaralha tudo
     public EstadoJogoDTO iniciar(String codigoSala, String nomeSala, IniciarPayload payload) {
         EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
+        // Palavras da PARTIDA ANTERIOR desta sala ficam fora do sorteio — evita que
+        // duas partidas seguidas repitam as mesmas palavras
+        List<Long> recentes = jogo.getIdsPalavras();
+        List<Long> excluir = recentes.isEmpty() ? List.of(-1L) : recentes;
         List<Palavra> palavras = new ArrayList<>();
-        palavras.addAll(palavraRepository.findRandomByDificuldade(Dificuldade.FACIL.name(), payload.qtdFacil()));
-        palavras.addAll(palavraRepository.findRandomByDificuldade(Dificuldade.MEDIO.name(), payload.qtdMedio()));
-        palavras.addAll(palavraRepository.findRandomByDificuldade(Dificuldade.DIFICIL.name(), payload.qtdDificil()));
+        palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.FACIL.name(), payload.qtdFacil(), excluir));
+        palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.MEDIO.name(), payload.qtdMedio(), excluir));
+        palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.DIFICIL.name(), payload.qtdDificil(), excluir));
         // A dificuldade é uma MÉTRICA (taxa de acerto), então alguma faixa pode não ter
         // palavras suficientes (ex: banco novo, onde quase tudo ainda é MEDIO).
         // Completa a diferença sorteando entre as demais palavras ativas, para a
         // partida sempre ter o total de palavras que o professor pediu.
         int totalPedido = payload.qtdFacil() + payload.qtdMedio() + payload.qtdDificil();
         int faltam = totalPedido - palavras.size();
+        if (faltam > 0) {
+            List<Long> indisponiveis = new ArrayList<>(recentes);
+            palavras.forEach(p -> indisponiveis.add(p.getId()));
+            palavras.addAll(palavraRepository.findRandomAtivasExcluindo(indisponiveis.isEmpty() ? List.of(-1L) : indisponiveis, faltam));
+        }
+        // Acervo pequeno: se ainda faltar, aceita repetir palavras da partida anterior
+        faltam = totalPedido - palavras.size();
         if (faltam > 0) {
             List<Long> jaEscolhidas = palavras.isEmpty() ? List.of(-1L) : palavras.stream().map(Palavra::getId).toList();
             palavras.addAll(palavraRepository.findRandomAtivasExcluindo(jaEscolhidas, faltam));
@@ -75,11 +100,16 @@ public class JogoSalaService {
         return buildEstado(codigoSala, nomeSala, jogo, "INICIADA");
     }
 
-    // Avança para a próxima palavra; se não houver mais, encerra o jogo
-    public EstadoJogoDTO proximaPalavra(String codigoSala, String nomeSala) {
+    // Avança para a próxima palavra; se não houver mais, encerra o jogo.
+    // loginProfessor: quem comanda a sala — excluído da contagem de silenciosos.
+    public EstadoJogoDTO proximaPalavra(String codigoSala, String nomeSala, String loginProfessor) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null) return null;
+        contabilizarSilenciosos(jogo, loginProfessor);
         boolean temProxima = jogo.avancar();
+        if (!temProxima) {
+            premiarFimDePartida(jogo);
+        }
         String tipo = temProxima ? "NOVA_PALAVRA" : "ENCERRADA";
         return buildEstado(codigoSala, nomeSala, jogo, tipo);
     }
@@ -93,11 +123,65 @@ public class JogoSalaService {
     }
 
     // Encerra o jogo antecipadamente
-    public EstadoJogoDTO encerrar(String codigoSala, String nomeSala) {
+    public EstadoJogoDTO encerrar(String codigoSala, String nomeSala, String loginProfessor) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null) return null;
+        contabilizarSilenciosos(jogo, loginProfessor);
         jogo.encerrar();
+        premiarFimDePartida(jogo);
         return buildEstado(codigoSala, nomeSala, jogo, "ENCERRADA");
+    }
+
+    // Quem estava conectado e NÃO respondeu a palavra da rodada conta como
+    // tentativa errada nas estatísticas — mas só quando o tempo realmente esgotou
+    // (protege contra avanço duplo/precoce contaminar os números). O professor
+    // que comanda a sala fica de fora: ele não é obrigado a jogar.
+    private void contabilizarSilenciosos(EstadoJogo jogo, String loginProfessor) {
+        Palavra atual = jogo.getPalavraAtual();
+        if (atual == null || !"NOVA_PALAVRA".equals(jogo.getTipo())) {
+            return;
+        }
+        long elapsed = Instant.now().toEpochMilli() - jogo.getTimestampInicio();
+        if (elapsed < jogo.getTempoLimite() * 1000L) {
+            return;
+        }
+        for (String login : jogo.getAlunosConectados().keySet()) {
+            if (!login.equals(loginProfessor) && !jogo.jaRespondeu(login)) {
+                palavraEstatisticaService.registrarTentativa(atual.getId(), false);
+            }
+        }
+    }
+
+    // Ao terminar a partida (fim natural ou encerramento antecipado), dispara os
+    // eventos de conquista para cada participante (quem respondeu ao menos uma vez):
+    // partida jogada, vitória, pódio e partida perfeita. Nunca derruba o jogo.
+    private void premiarFimDePartida(EstadoJogo jogo) {
+        if (jogo.isFimPremiado()) {
+            return; // encerramento duplo não premia duas vezes
+        }
+        jogo.marcarFimPremiado();
+        int totalPalavras = jogo.getTotalPalavras();
+        // Participantes ordenados por pontos (define vitória e pódio)
+        List<String> ordenados = jogo
+            .getParticipantes()
+            .stream()
+            .sorted(
+                Comparator.comparingInt((String login) -> {
+                    EstadoJogo.AlunoInfo info = jogo.getPlacar().get(login);
+                    return info != null ? info.pontos() : 0;
+                }).reversed()
+            )
+            .toList();
+        for (int i = 0; i < ordenados.size(); i++) {
+            String login = ordenados.get(i);
+            int[] estat = jogo.getEstatisticaPartida(login);
+            boolean perfeita = totalPalavras > 0 && estat[0] == totalPalavras && estat[1] == totalPalavras;
+            try {
+                conquistaEngine.aoConcluirPartida(login, i == 0, i < 3, perfeita);
+            } catch (Exception e) {
+                LOG.error("Falha ao premiar fim de partida para {}: {}", login, e.getMessage(), e);
+            }
+        }
     }
 
     // Retorna o estado atual da sala (usado logo após o entrar para sincronizar o cliente)
@@ -116,6 +200,12 @@ public class JogoSalaService {
         if (jogo == null || jogo.getPalavraAtual() == null) return null;
         // Cada aluno só pode responder uma vez por palavra
         if (jogo.jaRespondeu(login)) return null;
+        // O relógio é validado NO SERVIDOR: rodada precisa estar ativa e dentro do
+        // tempo (com folga para latência) — um cliente adulterado não responde
+        // depois que o tempo esgota nem durante pausa/encerramento
+        if (!"NOVA_PALAVRA".equals(jogo.getTipo())) return null;
+        long decorrido = Instant.now().toEpochMilli() - jogo.getTimestampInicio();
+        if (decorrido > jogo.getTempoLimite() * 1000L + FOLGA_RESPOSTA_MS) return null;
 
         String textoCorreto = jogo.getPalavraAtual().getTexto();
         String dLower = respostaDigitada.trim().toLowerCase();
@@ -148,6 +238,14 @@ public class JogoSalaService {
             pontos = base + bonus;
         }
         jogo.adicionarPontos(login, nomeAluno, pontos);
+
+        // Motor de conquistas: acerto, rapidez, acentos/cedilha e sequência.
+        // Transação própria e try/catch — conquista nunca derruba a partida.
+        try {
+            conquistaEngine.aoResponderNaPartida(login, jogo.getPalavraAtual(), correta, decorrido, jogo.getSequenciaAcertos(login));
+        } catch (Exception e) {
+            LOG.error("Falha ao processar conquistas da resposta de {}: {}", login, e.getMessage(), e);
+        }
 
         FeedbackAluno feedback = new FeedbackAluno(correta, pontos, ordem, tipoErro, textoCorreto);
         EstadoJogoDTO estado = buildEstado(codigoSala, nomeSala, jogo, jogo.getTipo());
@@ -257,6 +355,11 @@ public class JogoSalaService {
         // Conjunto dos logins que já responderam na rodada atual (evita resposta dupla)
         private final Set<String> respondeuNaRodada = ConcurrentHashMap.newKeySet();
         private int ordemRespostas = 0;
+        // Rastreamento da PARTIDA para conquistas: sequência de acertos por jogador,
+        // estatística acumulada (respostas/acertos) e flag de fim já premiado
+        private final Map<String, Integer> sequenciaAcertos = new ConcurrentHashMap<>();
+        private final Map<String, int[]> estatisticasPartida = new ConcurrentHashMap<>();
+        private volatile boolean fimPremiado = false;
 
         public record AlunoInfo(String nome, int pontos, String statusAtual) {}
 
@@ -271,6 +374,9 @@ public class JogoSalaService {
             this.timestampInicio = Instant.now().toEpochMilli();
             respondeuNaRodada.clear();
             ordemRespostas = 0;
+            sequenciaAcertos.clear();
+            estatisticasPartida.clear();
+            fimPremiado = false;
             // Reseta o status de todos para "AGUARDANDO" ao começar
             placar.replaceAll((k, v) -> new AlunoInfo(v.nome(), v.pontos(), "AGUARDANDO"));
         }
@@ -310,6 +416,13 @@ public class JogoSalaService {
             String status = correta ? "ACERTOU" : "ERROU";
             AlunoInfo atual = placar.getOrDefault(login, new AlunoInfo(login, 0, "AGUARDANDO"));
             placar.put(login, new AlunoInfo(atual.nome(), atual.pontos(), status));
+            // Rastreamento para conquistas: sequência de acertos e totais da partida
+            sequenciaAcertos.merge(login, correta ? 1 : 0, (seq, x) -> correta ? seq + 1 : 0);
+            int[] estat = estatisticasPartida.computeIfAbsent(login, k -> new int[2]);
+            synchronized (estat) {
+                estat[0]++;
+                if (correta) estat[1]++;
+            }
             return ordem;
         }
 
@@ -330,6 +443,41 @@ public class JogoSalaService {
 
         Palavra getPalavraAtual() {
             return (indiceAtual >= 0 && indiceAtual < palavras.size()) ? palavras.get(indiceAtual) : null;
+        }
+
+        // Ids das palavras carregadas nesta sala (da partida em curso ou da última
+        // encerrada) — usados para não repetir palavras na partida seguinte
+        List<Long> getIdsPalavras() {
+            return palavras.stream().map(Palavra::getId).filter(Objects::nonNull).toList();
+        }
+
+        // Sequência atual de acertos consecutivos do jogador nesta partida
+        int getSequenciaAcertos(String login) {
+            return sequenciaAcertos.getOrDefault(login, 0);
+        }
+
+        // {respostas, acertos} do jogador nesta partida
+        int[] getEstatisticaPartida(String login) {
+            int[] estat = estatisticasPartida.get(login);
+            if (estat == null) {
+                return new int[] { 0, 0 };
+            }
+            synchronized (estat) {
+                return new int[] { estat[0], estat[1] };
+            }
+        }
+
+        // Quem respondeu ao menos uma vez na partida (define quem "participou")
+        Set<String> getParticipantes() {
+            return Set.copyOf(estatisticasPartida.keySet());
+        }
+
+        boolean isFimPremiado() {
+            return fimPremiado;
+        }
+
+        void marcarFimPremiado() {
+            fimPremiado = true;
         }
 
         int getIndiceAtual() {
