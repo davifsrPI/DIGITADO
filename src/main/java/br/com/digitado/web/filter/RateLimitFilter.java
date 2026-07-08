@@ -63,15 +63,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
         throws ServletException, IOException {
-        boolean autenticacao = request.getRequestURI().startsWith("/api/authenticate");
+        boolean sensivel = isEndpointSensivel(request.getRequestURI());
 
-        int limite = autenticacao
+        int limite = sensivel
             ? applicationProperties.getRateLimit().getAutenticacaoPorMinuto()
             : applicationProperties.getRateLimit().getRequisicoesPorMinuto();
 
-        // Autenticação conta sempre por IP (quem tenta senha ainda não tem login);
-        // o resto conta pela conta logada, ou pelo IP se anônimo
-        String identidade = autenticacao ? "ip:" + ipDoCliente(request) : identidadeDoChamador(request);
+        // Endpoints sensíveis contam sempre por IP (quem tenta senha/registro
+        // ainda não tem login); o resto conta pela conta logada, ou pelo IP se anônimo
+        String identidade = sensivel ? "ip:" + ipDoCliente(request) : identidadeDoChamador(request);
 
         long minutoAtual = System.currentTimeMillis() / 60000;
         Janela janela = janelas.compute(identidade, (k, atual) ->
@@ -106,6 +106,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    // Endpoints não autenticados que são alvo típico de força bruta/flood:
+    // login (senha), registro em massa de contas e disparo de e-mails de reset
+    private boolean isEndpointSensivel(String uri) {
+        return uri.startsWith("/api/authenticate") || uri.startsWith("/api/register") || uri.startsWith("/api/account/reset-password");
+    }
+
     // Usuário logado conta pelo login (o limite segue a conta); anônimo, pelo IP
     private String identidadeDoChamador(HttpServletRequest request) {
         return SecurityUtils.getCurrentUserLogin()
@@ -114,11 +120,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
             .orElse("ip:" + ipDoCliente(request));
     }
 
-    // Atrás de proxy/load balancer vale o primeiro IP do X-Forwarded-For
+    /**
+     * IP do cliente. O X-Forwarded-For SÓ é considerado quando a propriedade
+     * application.rate-limit.confiar-x-forwarded-for está ligada — ou seja,
+     * quando existe um proxy reverso confiável na frente que SOBRESCREVE o
+     * cabeçalho. Sem proxy, o cliente pode enviar qualquer valor nesse header
+     * e ganhar uma identidade nova a cada requisição, anulando o rate limit.
+     */
     private String ipDoCliente(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+        if (applicationProperties.getRateLimit().isConfiarXForwardedFor()) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
         }
         return request.getRemoteAddr();
     }

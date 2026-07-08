@@ -30,7 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+// Curadoria de palavras é restrita a ADMIN — os ITs de CRUD rodam como admin
+@WithMockUser(authorities = "ROLE_ADMIN")
 class PalavraResourceIT {
 
     private static final String DEFAULT_TEXTO = "AAAAAAAAAA";

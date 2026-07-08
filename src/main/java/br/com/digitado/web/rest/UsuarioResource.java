@@ -40,10 +40,16 @@ public class UsuarioResource {
 
     private final UsuarioRepository usuarioRepository;
     private final UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
-    public UsuarioResource(UsuarioRepository usuarioRepository, UserRepository userRepository) {
+    public UsuarioResource(
+        UsuarioRepository usuarioRepository,
+        UserRepository userRepository,
+        org.springframework.security.crypto.password.PasswordEncoder passwordEncoder
+    ) {
         this.usuarioRepository = usuarioRepository;
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // Cria um novo usuário — restrito a administradores.
@@ -59,6 +65,10 @@ public class UsuarioResource {
         if (usuario.getSenha() == null || usuario.getSenha().isBlank()) {
             throw new BadRequestAlertException("Senha é obrigatória", ENTITY_NAME, "senhanull");
         }
+        // Nunca persistir a senha em texto puro — armazena só o hash (bcrypt).
+        // Este campo é legado (a autenticação usa o User do JHipster), mas mesmo
+        // assim não deve guardar segredo em claro no banco.
+        usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
         usuario = usuarioRepository.save(usuario);
         return ResponseEntity.created(new URI("/api/usuarios/" + usuario.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, usuario.getId().toString()))

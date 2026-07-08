@@ -51,6 +51,11 @@ public class AtividadeResource {
         if (atividade.getId() != null) {
             throw new BadRequestAlertException("A new atividade cannot already have an ID", ENTITY_NAME, "idexists");
         }
+        // Só o dono da sala (ou admin) pode criar atividade nela — evita criar
+        // atividade na sala de outro professor
+        if (!podeCriarNaSala(atividade)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
         atividade = atividadeRepository.save(atividade);
         return ResponseEntity.created(new URI("/api/atividades/" + atividade.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, atividade.getId().toString()))
@@ -131,15 +136,38 @@ public class AtividadeResource {
         );
     }
 
+    // Admin vê todas; professor vê apenas as atividades das próprias salas
     @GetMapping("")
     public List<Atividade> getAllAtividades() {
         LOG.debug("REST request to get all Atividades");
-        return atividadeRepository.findAll();
+        if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
+            return atividadeRepository.findAll();
+        }
+        return usuarioAtual()
+            .map(u ->
+                atividadeRepository
+                    .findAll()
+                    .stream()
+                    .filter(
+                        a ->
+                            a.getSala() != null &&
+                            a.getSala().getProfessor() != null &&
+                            a.getSala().getProfessor().getId().equals(u.getId())
+                    )
+                    .toList()
+            )
+            .orElse(List.of());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Atividade> getAtividade(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Atividade : {}", id);
+        if (!atividadeRepository.existsById(id)) {
+            return ResponseUtil.wrapOrNotFound(Optional.empty());
+        }
+        if (!isSalaOwnerOrAdmin(id)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
         Optional<Atividade> atividade = atividadeRepository.findById(id);
         return ResponseUtil.wrapOrNotFound(atividade);
     }
@@ -157,6 +185,25 @@ public class AtividadeResource {
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
+    }
+
+    // Usuario do domínio correspondente ao login autenticado (login -> User -> Usuario pelo e-mail)
+    private Optional<br.com.digitado.domain.Usuario> usuarioAtual() {
+        return SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()));
+    }
+
+    // Pode criar a atividade se for admin ou dono da sala indicada no payload
+    private boolean podeCriarNaSala(Atividade atividade) {
+        if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
+            return true;
+        }
+        if (atividade.getSala() == null || atividade.getSala().getId() == null) {
+            return false;
+        }
+        Long salaId = atividade.getSala().getId();
+        return usuarioAtual().map(u -> u.getSalas().stream().anyMatch(s -> s.getId().equals(salaId))).orElse(false);
     }
 
     private boolean isSalaOwnerOrAdmin(Long atividadeId) {

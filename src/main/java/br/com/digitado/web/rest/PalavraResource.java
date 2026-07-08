@@ -2,6 +2,7 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.repository.PalavraRepository;
+import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
@@ -68,6 +70,10 @@ public class PalavraResource {
      * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new palavra, or with status {@code 400 (Bad Request)} if the palavra has already an ID.
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
+    // Curadoria do banco de palavras é restrita a administradores: as estatísticas
+    // (que definem a dificuldade e alimentam o jogo) são compartilhadas por todos,
+    // então nenhum aluno/professor pode criar, alterar ou apagar palavras do acervo.
+    @Secured(AuthoritiesConstants.ADMIN)
     @PostMapping("")
     public ResponseEntity<Palavra> createPalavra(@Valid @RequestBody Palavra palavra) throws URISyntaxException {
         LOG.debug("REST request to save Palavra : {}", palavra);
@@ -90,6 +96,7 @@ public class PalavraResource {
      * or with status {@code 500 (Internal Server Error)} if the palavra couldn't be updated.
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
+    @Secured(AuthoritiesConstants.ADMIN)
     @PutMapping("/{id}")
     public ResponseEntity<Palavra> updatePalavra(
         @PathVariable(value = "id", required = false) final Long id,
@@ -124,6 +131,7 @@ public class PalavraResource {
      * or with status {@code 500 (Internal Server Error)} if the palavra couldn't be updated.
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
+    @Secured(AuthoritiesConstants.ADMIN)
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Palavra> partialUpdatePalavra(
         @PathVariable(value = "id", required = false) final Long id,
@@ -201,6 +209,7 @@ public class PalavraResource {
      * @param id the id of the palavra to delete.
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
+    @Secured(AuthoritiesConstants.ADMIN)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePalavra(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Palavra : {}", id);

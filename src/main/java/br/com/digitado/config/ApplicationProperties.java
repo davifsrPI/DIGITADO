@@ -55,6 +55,12 @@ public class ApplicationProperties {
         // Limite mais rígido para autenticação (barra força bruta de senha)
         private int autenticacaoPorMinuto = 10;
 
+        // SEGURANÇA: só ligue quando o app estiver atrás de um proxy reverso
+        // CONFIÁVEL que sobrescreve o X-Forwarded-For (nginx/Caddy/Cloudflare).
+        // Exposto direto à internet, o cliente pode forjar esse cabeçalho e
+        // ganhar uma identidade nova a cada requisição, burlando o limite.
+        private boolean confiarXForwardedFor = false;
+
         public boolean isEnabled() {
             return enabled;
         }
@@ -77,6 +83,14 @@ public class ApplicationProperties {
 
         public void setAutenticacaoPorMinuto(int autenticacaoPorMinuto) {
             this.autenticacaoPorMinuto = autenticacaoPorMinuto;
+        }
+
+        public boolean isConfiarXForwardedFor() {
+            return confiarXForwardedFor;
+        }
+
+        public void setConfiarXForwardedFor(boolean confiarXForwardedFor) {
+            this.confiarXForwardedFor = confiarXForwardedFor;
         }
     }
     // jhipster-needle-application-properties-property-class

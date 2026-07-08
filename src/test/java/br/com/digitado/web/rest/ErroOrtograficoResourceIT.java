@@ -30,7 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+// Controller restrito a ADMIN — os ITs de CRUD rodam como admin
+@WithMockUser(authorities = "ROLE_ADMIN")
 class ErroOrtograficoResourceIT {
 
     private static final TipoErro DEFAULT_TIPO_ERRO = TipoErro.ACENTUACAO;

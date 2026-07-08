@@ -149,6 +149,9 @@ public class RankingResource {
      *
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of rankings in body.
      */
+    // Entidade Ranking (legada, por sala) exposta só a admin — o ranking visível
+    // aos jogadores é o /api/ranking-mundial, que já filtra os dados públicos
+    @Secured(AuthoritiesConstants.ADMIN)
     @GetMapping("")
     public List<Ranking> getAllRankings() {
         LOG.debug("REST request to get all Rankings");
@@ -161,6 +164,7 @@ public class RankingResource {
      * @param id the id of the ranking to retrieve.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the ranking, or with status {@code 404 (Not Found)}.
      */
+    @Secured(AuthoritiesConstants.ADMIN)
     @GetMapping("/{id}")
     public ResponseEntity<Ranking> getRanking(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Ranking : {}", id);

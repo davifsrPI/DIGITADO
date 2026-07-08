@@ -33,7 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+// Atividade é escopada por dono da sala; admin ignora as checagens, então os
+// ITs de CRUD rodam como admin para validar a mecânica do endpoint
+@WithMockUser(authorities = "ROLE_ADMIN")
 class AtividadeResourceIT {
 
     private static final String DEFAULT_TITULO = "AAAAAAAAAA";

@@ -2,6 +2,7 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.ErroOrtografico;
 import br.com.digitado.repository.ErroOrtograficoRepository;
+import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
@@ -19,10 +21,16 @@ import tech.jhipster.web.util.ResponseUtil;
 
 /**
  * REST controller for managing {@link br.com.digitado.domain.ErroOrtografico}.
+ *
+ * Restrito a administradores: são dados pedagógicos (erros de digitação) de
+ * TODOS os alunos. Este CRUD genérico não filtra por dono, então liberá-lo a
+ * usuários comuns permitiria ler/alterar/apagar erros de qualquer pessoa (IDOR
+ * + vazamento de dados pessoais/LGPD). O jogo não usa este endpoint.
  */
 @RestController
 @RequestMapping("/api/erro-ortograficos")
 @Transactional
+@Secured(AuthoritiesConstants.ADMIN)
 public class ErroOrtograficoResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(ErroOrtograficoResource.class);

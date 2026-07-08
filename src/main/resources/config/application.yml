@@ -235,3 +235,7 @@ application:
     enabled: true
     requisicoes-por-minuto: 100
     autenticacao-por-minuto: 10
+    # SÓ ligue atrás de proxy reverso confiável que sobrescreve o X-Forwarded-For
+    # (nginx/Caddy/Cloudflare). Direto na internet, o cliente forja o cabeçalho
+    # e escapa do limite. Veja o comentário em RateLimitFilter.ipDoCliente.
+    confiar-x-forwarded-for: false
