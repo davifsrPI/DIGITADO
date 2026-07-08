@@ -22,6 +22,8 @@ interface Resultado {
   palavraCorreta: string;
   totalTentativas: number;
   totalAcertos: number;
+  // XP creditado pelo acerto (0 para erro ou visitante anônimo)
+  xpGanho: number;
 }
 
 // Card "Palavra do Dia" da tela inicial. Toda a lógica mora no backend:
@@ -101,6 +103,7 @@ export const PalavraDoDia = () => {
           <div className={`pdd-resultado${resultado.acertou ? ' pdd-resultado--acerto' : ' pdd-resultado--erro'}`}>
             <div className="pdd-resultado-icone">{resultado.acertou ? '🎉' : '😅'}</div>
             <div className="pdd-resultado-titulo">{resultado.acertou ? 'Você acertou!' : 'Não foi dessa vez...'}</div>
+            {resultado.acertou && resultado.xpGanho > 0 && <div className="pdd-xp-badge">⭐ +{resultado.xpGanho} XP</div>}
             <div className="pdd-resultado-palavra">
               A palavra era <strong>{resultado.palavraCorreta}</strong>
             </div>

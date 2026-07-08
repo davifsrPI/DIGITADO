@@ -1,0 +1,296 @@
+// Remove o card branco padrão do layout — a página tem fundo escuro próprio
+body.ranking-page .jh-card {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+body.ranking-page .view-container {
+  padding: 0 !important;
+}
+
+.rk-wrapper {
+  position: relative;
+  min-height: 100vh;
+  background: #0f172a;
+  font-family: 'Poppins', sans-serif;
+  color: white;
+  display: flex;
+  justify-content: center;
+}
+
+.rk-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.rk-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: 0.35;
+}
+
+.rk-shape.one {
+  width: 480px;
+  height: 480px;
+  background: #facc15;
+  top: -160px;
+  right: -120px;
+}
+
+.rk-shape.two {
+  width: 420px;
+  height: 420px;
+  background: #2563eb;
+  bottom: -140px;
+  left: -120px;
+}
+
+.rk-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 720px;
+  padding: 28px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+.rk-back {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  padding: 8px 14px;
+  text-decoration: none;
+  transition: 0.2s;
+
+  &:hover {
+    color: white;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.rk-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.rk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(250, 204, 21, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  color: #facc15;
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rk-title {
+  font-size: 34px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.rk-sub {
+  font-size: 15px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.rk-vazio {
+  color: #94a3b8;
+  font-size: 15px;
+  text-align: center;
+}
+
+/* ── Pódio do top 3 (ordem visual 2º-1º-3º) ── */
+
+.rk-podio {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.rk-podio-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: min(160px, 28vw);
+}
+
+.rk-podio-medalha {
+  font-size: 30px;
+}
+
+.rk-podio-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.rk-podio-nome {
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rk-podio-xp {
+  font-size: 13px;
+  font-weight: 800;
+  color: #facc15;
+}
+
+.rk-podio-pilar {
+  width: 100%;
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.5), rgba(99, 102, 241, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10px;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 6px;
+}
+
+/* Alturas do pódio: campeão no centro, mais alto */
+.rk-podio-1 .rk-podio-pilar {
+  height: 120px;
+  background: linear-gradient(180deg, rgba(250, 204, 21, 0.5), rgba(250, 204, 21, 0.1));
+  border-color: rgba(250, 204, 21, 0.45);
+  box-shadow: 0 0 28px rgba(250, 204, 21, 0.25);
+}
+
+.rk-podio-2 .rk-podio-pilar {
+  height: 90px;
+}
+
+.rk-podio-3 .rk-podio-pilar {
+  height: 66px;
+}
+
+/* ── Lista das demais posições ── */
+
+.rk-lista {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.rk-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.rk-row-pos {
+  width: 36px;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.rk-row-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rk-row-nome {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rk-row-xp {
+  font-size: 14px;
+  font-weight: 800;
+  color: #facc15;
+  flex-shrink: 0;
+}
+
+/* Destaque da linha/coluna do próprio usuário */
+.rk-eu {
+  outline: 2px solid rgba(99, 102, 241, 0.55);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.rk-row.rk-eu {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+/* Resumo do usuário fora do top */
+.rk-meu-resumo {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 14px;
+  padding: 14px 24px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+
+  strong {
+    color: #a5b4fc;
+  }
+}
+
+@media (max-width: 640px) {
+  .rk-title {
+    font-size: 26px;
+  }
+
+  .rk-podio {
+    gap: 8px;
+  }
+}

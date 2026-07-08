@@ -16,6 +16,7 @@ import CriarSala from 'app/modules/sala/criar-sala';
 import SalaJogo from 'app/modules/sala/sala-jogo';
 import MinhasSalas from 'app/modules/sala/minhas-salas';
 import Conquistas from 'app/modules/conquistas/conquistas';
+import Ranking from 'app/modules/ranking/ranking';
 import PoliticaPrivacidade from 'app/modules/privacidade/politica-privacidade';
 import EntitiesRoutes from 'app/entities/routes';
 import PrivateRoute from 'app/shared/auth/private-route';
@@ -58,6 +59,14 @@ const AppRoutes = () => {
           element={
             <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <Conquistas />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="ranking"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+              <Ranking />
             </PrivateRoute>
           }
         />

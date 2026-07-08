@@ -33,6 +33,19 @@ public class Usuario implements Serializable {
     @Column(name = "sobrenome")
     private String sobrenome;
 
+    /**
+     * XP acumulado do usuário (palavra do dia, conquistas...) — alimenta o Ranking Mundial.
+     * insertable/updatable = false: o JPA nunca escreve nesta coluna — o incremento é
+     * feito exclusivamente por SQL atômico (UsuarioRepository.incrementarXp), então o
+     * CRUD de usuários não zera nem adultera o valor.
+     */
+    @Column(name = "xp", insertable = false, updatable = false)
+    private Long xp;
+
+    public Long getXp() {
+        return xp != null ? xp : 0L;
+    }
+
     @NotNull
     @Column(name = "email", nullable = false, unique = true)
     private String email;

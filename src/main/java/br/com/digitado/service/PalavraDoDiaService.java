@@ -34,15 +34,18 @@ public class PalavraDoDiaService {
     private final PalavraRepository palavraRepository;
     private final PalavraDoDiaTentativaRepository tentativaRepository;
     private final PalavraEstatisticaService estatisticaService;
+    private final XpService xpService;
 
     public PalavraDoDiaService(
         PalavraRepository palavraRepository,
         PalavraDoDiaTentativaRepository tentativaRepository,
-        PalavraEstatisticaService estatisticaService
+        PalavraEstatisticaService estatisticaService,
+        XpService xpService
     ) {
         this.palavraRepository = palavraRepository;
         this.tentativaRepository = tentativaRepository;
         this.estatisticaService = estatisticaService;
+        this.xpService = xpService;
     }
 
     public LocalDate hoje() {
@@ -96,6 +99,10 @@ public class PalavraDoDiaService {
 
         tentativaRepository.save(new PalavraDoDiaTentativa().data(hoje()).login(login).acertou(acertou).palavraId(palavra.getId()));
         estatisticaService.registrarTentativa(palavra.getId(), acertou);
+        // Acerto de usuário logado vale XP no Ranking Mundial (anônimo não tem conta para creditar)
+        if (acertou && login != null) {
+            xpService.premiarAcertoPalavraDoDia(login);
+        }
         return acertou;
     }
 

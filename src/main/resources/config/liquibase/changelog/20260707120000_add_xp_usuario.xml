@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        XP acumulado do usuário — alimenta o Ranking Mundial.
+
+        Fica numa coluna persistente (e não calculado das tentativas) porque os
+        logins de palavra_do_dia_tentativa são anonimizados após o prazo de
+        retenção (LGPD) — o XP precisa sobreviver à anonimização.
+        Só o backend escreve, via SQL atômico (UsuarioRepository.incrementarXp).
+    -->
+    <changeSet id="20260707120000-1" author="digitado">
+        <addColumn tableName="usuario">
+            <column name="xp" type="bigint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

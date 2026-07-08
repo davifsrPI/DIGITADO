@@ -4,6 +4,7 @@ import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.PalavraDoDiaTentativa;
 import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.service.PalavraDoDiaService;
+import br.com.digitado.service.XpService;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import br.com.digitado.web.rest.vm.PalavraDoDiaVM;
 import br.com.digitado.web.rest.vm.ResultadoPalavraDoDiaVM;
@@ -71,14 +72,16 @@ public class PalavraDoDiaResource {
             Optional<PalavraDoDiaTentativa> tentativa = palavraDoDiaService.tentativaDoUsuario(login.get());
             jaTentou = tentativa.isPresent();
             if (jaTentou) {
-                resultado = montarResultado(palavra, tentativa.get().getAcertou());
+                boolean acertou = tentativa.get().getAcertou();
+                // Acerto de logado rendeu XP hoje — reexibe o valor ao recarregar a página
+                resultado = montarResultado(palavra, acertou, acertou ? XpService.XP_ACERTO_PALAVRA_DIA : 0);
             }
         } else {
-            // Anônimo: vale o cookie httpOnly emitido na tentativa
+            // Anônimo: vale o cookie httpOnly emitido na tentativa (anônimo não ganha XP)
             Optional<Boolean> acertoCookie = lerCookieDeHoje(cookie);
             jaTentou = acertoCookie.isPresent();
             if (jaTentou) {
-                resultado = montarResultado(palavra, acertoCookie.get());
+                resultado = montarResultado(palavra, acertoCookie.get(), 0);
             }
         }
 
@@ -131,7 +134,9 @@ public class PalavraDoDiaResource {
         // também não faz mal — mas quem manda é o registro no banco
         response.addHeader(HttpHeaders.SET_COOKIE, cookieDeTentativa(acertou).toString());
 
-        return montarResultado(palavra, acertou);
+        // O XP foi creditado dentro de tentar(); aqui só informamos o valor para a UI
+        long xpGanho = acertou && login.isPresent() ? XpService.XP_ACERTO_PALAVRA_DIA : 0;
+        return montarResultado(palavra, acertou, xpGanho);
     }
 
     // Login autenticado de verdade (descarta o principal "anonymousUser" do Spring)
@@ -170,8 +175,8 @@ public class PalavraDoDiaResource {
             .build();
     }
 
-    private ResultadoPalavraDoDiaVM montarResultado(Palavra palavra, boolean acertou) {
+    private ResultadoPalavraDoDiaVM montarResultado(Palavra palavra, boolean acertou, long xpGanho) {
         long[] stats = palavraDoDiaService.estatisticasDaPalavra(palavra.getId());
-        return new ResultadoPalavraDoDiaVM(acertou, palavra.getTexto(), stats[0], stats[1]);
+        return new ResultadoPalavraDoDiaVM(acertou, palavra.getTexto(), stats[0], stats[1], xpGanho);
     }
 }
