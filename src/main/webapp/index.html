@@ -21,21 +21,21 @@
       </p>
     <![endif]-->
     <div id="root">
+      <!-- Tela de carregamento inicial no molde do DIGITADO (o pacman padrão do
+           JHipster foi substituído) — some assim que o React monta -->
       <div class="app-loading">
-        <div class="lds-pacman">
-          <div>
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
-          <div>
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
+        <div class="dg-loading-teclado" aria-hidden="true">
+          <span>D</span>
+          <span>I</span>
+          <span>G</span>
+          <span>I</span>
+          <span>T</span>
+          <span>A</span>
+          <span>D</span>
+          <span>O</span>
         </div>
-      </div>
-      <div class="app-loading">
+        <p class="dg-loading-texto">Carregando...</p>
+        <div class="dg-loading-barra"><div></div></div>
         <div id="jhipster-error" style="display: none">
           <!-- This content is for troubleshooting purpose and will be removed when app renders -->
           <h1>An error has occurred :-(</h1>

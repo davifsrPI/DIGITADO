@@ -1,152 +1,185 @@
-@keyframes lds-pacman-1 {
-  0% {
-    -webkit-transform: rotate(0deg);
-    transform: rotate(0deg);
-  }
-  50% {
-    -webkit-transform: rotate(-45deg);
-    transform: rotate(-45deg);
-  }
-  100% {
-    -webkit-transform: rotate(0deg);
-    transform: rotate(0deg);
-  }
-}
-@-webkit-keyframes lds-pacman-1 {
-  0% {
-    -webkit-transform: rotate(0deg);
-    transform: rotate(0deg);
-  }
-  50% {
-    -webkit-transform: rotate(-45deg);
-    transform: rotate(-45deg);
-  }
-  100% {
-    -webkit-transform: rotate(0deg);
-    transform: rotate(0deg);
-  }
-}
-@keyframes lds-pacman-2 {
-  0% {
-    -webkit-transform: rotate(180deg);
-    transform: rotate(180deg);
-  }
-  50% {
-    -webkit-transform: rotate(225deg);
-    transform: rotate(225deg);
-  }
-  100% {
-    -webkit-transform: rotate(180deg);
-    transform: rotate(180deg);
-  }
-}
-@-webkit-keyframes lds-pacman-2 {
-  0% {
-    -webkit-transform: rotate(180deg);
-    transform: rotate(180deg);
-  }
-  50% {
-    -webkit-transform: rotate(225deg);
-    transform: rotate(225deg);
-  }
-  100% {
-    -webkit-transform: rotate(180deg);
-    transform: rotate(180deg);
-  }
-}
-@keyframes lds-pacman-3 {
-  0% {
-    -webkit-transform: translate(190px, 0);
-    transform: translate(190px, 0);
-    opacity: 0;
-  }
-  20% {
-    opacity: 1;
-  }
-  100% {
-    -webkit-transform: translate(70px, 0);
-    transform: translate(70px, 0);
-    opacity: 1;
-  }
-}
-@-webkit-keyframes lds-pacman-3 {
-  0% {
-    -webkit-transform: translate(190px, 0);
-    transform: translate(190px, 0);
-    opacity: 0;
-  }
-  20% {
-    opacity: 1;
-  }
-  100% {
-    -webkit-transform: translate(70px, 0);
-    transform: translate(70px, 0);
-    opacity: 1;
-  }
-}
+/* ==========================================================================
+Tela de carregamento INICIAL — aparece antes do bundle React montar
+(npm start, refresh, logout). Mesmo molde do componente TelaCarregamento:
+fundo escuro, teclas de "DIGITADO" digitando e barra de progresso.
+Precisa ser CSS puro e autossuficiente: nada do app carregou ainda.
+========================================================================== */
 
 .app-loading {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  position: relative;
+  position: fixed;
+  inset: 0;
+  background: #0f172a;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  top: 10em;
-}
-.app-loading p {
-  display: block;
-  font-size: 1.17em;
-  margin-inline-start: 0;
-  margin-inline-end: 0;
-  font-weight: normal;
+  gap: 22px;
+  font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+  z-index: 9999;
+  overflow: hidden;
 }
 
-.app-loading .lds-pacman {
+/* Shapes borradas de fundo, como nas demais telas do jogo */
+.app-loading::before,
+.app-loading::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.app-loading::before {
+  width: 480px;
+  height: 480px;
+  background: #6366f1;
+  top: -140px;
+  left: -140px;
+}
+
+.app-loading::after {
+  width: 400px;
+  height: 400px;
+  background: #22c55e;
+  bottom: -120px;
+  right: -100px;
+}
+
+/* ─── Teclado: as teclas de DIGITADO acendem em onda ─── */
+.dg-loading-teclado {
+  display: flex;
+  gap: 8px;
   position: relative;
-  margin: auto;
-  width: 200px !important;
-  height: 200px !important;
-  -webkit-transform: translate(-100px, -100px) scale(1) translate(100px, 100px);
-  transform: translate(-100px, -100px) scale(1) translate(100px, 100px);
 }
-.app-loading .lds-pacman > div:nth-child(2) div {
-  position: absolute;
-  top: 40px;
-  left: 40px;
-  width: 120px;
-  height: 60px;
-  border-radius: 120px 120px 0 0;
-  background: #bbcedd;
-  -webkit-animation: lds-pacman-1 1s linear infinite;
-  animation: lds-pacman-1 1s linear infinite;
-  -webkit-transform-origin: 60px 60px;
-  transform-origin: 60px 60px;
+
+.dg-loading-teclado span {
+  width: 42px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom-width: 3px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 18px;
+  font-weight: 700;
+  animation: dg-loading-digitar 1.6s ease-in-out infinite;
 }
-.app-loading .lds-pacman > div:nth-child(2) div:nth-child(2) {
-  -webkit-animation: lds-pacman-2 1s linear infinite;
-  animation: lds-pacman-2 1s linear infinite;
+
+@media (max-width: 480px) {
+  .dg-loading-teclado span {
+    width: 32px;
+    height: 36px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
 }
-.app-loading .lds-pacman > div:nth-child(1) div {
-  position: absolute;
-  top: 97px;
-  left: -8px;
-  width: 24px;
-  height: 10px;
-  background-image: url('/content/images/logo-jhipster.png');
-  background-size: contain;
-  -webkit-animation: lds-pacman-3 1s linear infinite;
-  animation: lds-pacman-3 1.5s linear infinite;
-}
-.app-loading .lds-pacman > div:nth-child(1) div:nth-child(1) {
-  -webkit-animation-delay: -0.67s;
-  animation-delay: -1s;
-}
-.app-loading .lds-pacman > div:nth-child(1) div:nth-child(2) {
-  -webkit-animation-delay: -0.33s;
-  animation-delay: -0.5s;
-}
-.app-loading .lds-pacman > div:nth-child(1) div:nth-child(3) {
-  -webkit-animation-delay: 0s;
+
+.dg-loading-teclado span:nth-child(1) {
   animation-delay: 0s;
+}
+.dg-loading-teclado span:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.dg-loading-teclado span:nth-child(3) {
+  animation-delay: 0.24s;
+}
+.dg-loading-teclado span:nth-child(4) {
+  animation-delay: 0.36s;
+}
+.dg-loading-teclado span:nth-child(5) {
+  animation-delay: 0.48s;
+}
+.dg-loading-teclado span:nth-child(6) {
+  animation-delay: 0.6s;
+}
+.dg-loading-teclado span:nth-child(7) {
+  animation-delay: 0.72s;
+}
+.dg-loading-teclado span:nth-child(8) {
+  animation-delay: 0.84s;
+}
+
+/* A tecla "afunda" e acende como se estivesse sendo pressionada */
+@keyframes dg-loading-digitar {
+  0%,
+  22%,
+  100% {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.75);
+    box-shadow: none;
+  }
+  8% {
+    transform: translateY(3px);
+    background: rgba(34, 197, 94, 0.18);
+    border-color: #22c55e;
+    color: #4ade80;
+    box-shadow: 0 0 18px rgba(34, 197, 94, 0.35);
+  }
+}
+
+.dg-loading-texto {
+  position: relative;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+/* ─── Barra de progresso indeterminada ─── */
+.dg-loading-barra {
+  position: relative;
+  width: 220px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.dg-loading-barra div {
+  width: 40%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #22c55e);
+  animation: dg-loading-deslizar 1.4s ease-in-out infinite;
+}
+
+@keyframes dg-loading-deslizar {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}
+
+/* ─── Diagnóstico do JHipster (só aparece se o app não montar em 4s) ─── */
+#jhipster-error {
+  position: relative;
+  max-width: 720px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding: 0 24px;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+#jhipster-error h1,
+#jhipster-error h2,
+#jhipster-error h3 {
+  color: white;
+}
+
+#jhipster-error a {
+  color: #a5b4fc;
+}
+
+#jhipster-error code {
+  color: #f87171;
 }
