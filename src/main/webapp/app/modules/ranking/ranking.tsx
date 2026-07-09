@@ -15,6 +15,9 @@ interface RankingMundial {
   top: RankingEntry[];
   meuXp: number;
   minhaPosicao?: number;
+  // Total de pessoas no ranking e se ainda há páginas para carregar
+  total: number;
+  temMais: boolean;
 }
 
 const MEDALHAS = ['🥇', '🥈', '🥉'];
@@ -24,6 +27,8 @@ const MEDALHAS = ['🥇', '🥈', '🥉'];
 export const Ranking = () => {
   const [dados, setDados] = useState<RankingMundial | null>(null);
   const [erro, setErro] = useState(false);
+  const [pagina, setPagina] = useState(0);
+  const [carregandoMais, setCarregandoMais] = useState(false);
 
   useEffect(() => {
     document.body.classList.add('ranking-page');
@@ -36,6 +41,21 @@ export const Ranking = () => {
       .then(res => setDados(res.data))
       .catch(() => setErro(true));
   }, []);
+
+  // Busca a próxima página do backend e ANEXA as posições às já exibidas —
+  // assim dá para navegar até o fim e ver todas as pessoas do ranking
+  const carregarMais = () => {
+    if (carregandoMais || !dados?.temMais) return;
+    setCarregandoMais(true);
+    axios
+      .get<RankingMundial>('/api/ranking-mundial', { params: { page: pagina + 1 } })
+      .then(res => {
+        setPagina(p => p + 1);
+        setDados(prev => (prev ? { ...res.data, top: [...prev.top, ...res.data.top] } : res.data));
+      })
+      .catch(() => setErro(true))
+      .finally(() => setCarregandoMais(false));
+  };
 
   const top3 = dados?.top.slice(0, 3) ?? [];
   const demais = dados?.top.slice(3) ?? [];
@@ -104,6 +124,20 @@ export const Ranking = () => {
             )}
 
             {dados.top.length === 0 && <p className="rk-vazio">Ninguém pontuou ainda — acerte a palavra do dia e seja o primeiro! 🚀</p>}
+
+            {/* Ranking completo: mostra quantos aparecem e busca as próximas páginas até o fim */}
+            {dados.top.length > 0 && (
+              <div className="rk-paginacao">
+                <span className="rk-contagem">
+                  Mostrando <strong>{dados.top.length}</strong> de <strong>{dados.total}</strong> participantes
+                </span>
+                {dados.temMais && (
+                  <button className="rk-mais-btn" onClick={carregarMais} disabled={carregandoMais}>
+                    {carregandoMais ? 'Carregando...' : 'Carregar mais ↓'}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Resumo do próprio usuário quando está fora do top exibido */}
             {!estouNoTop && dados.minhaPosicao != null && (

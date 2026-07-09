@@ -9,9 +9,12 @@ import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -37,32 +40,42 @@ public class RankingMundialResource {
         this.userRepository = userRepository;
     }
 
+    // Tamanho de página: quantas posições vêm por requisição (o front pede mais com "Carregar mais")
+    private static final int TAMANHO_PAGINA = 50;
+
     // Uma linha do ranking; "eu" marca a linha do usuário autenticado para destaque na UI
     public record RankingEntryVM(int posicao, String nome, long xp, boolean eu) {}
 
-    // Top 50 + resumo do próprio usuário (posição real mesmo fora do top)
-    public record RankingMundialVM(List<RankingEntryVM> top, long meuXp, Integer minhaPosicao) {}
+    // Página do ranking + resumo do próprio usuário (posição real mesmo fora da página).
+    // total: quantas pessoas existem no ranking; temMais: há mais páginas para carregar.
+    public record RankingMundialVM(List<RankingEntryVM> top, long meuXp, Integer minhaPosicao, long total, boolean temMais) {}
 
+    /**
+     * {@code GET /api/ranking-mundial?page=0} : página do ranking completo.
+     * Todos os usuários aparecem — o front vai pedindo página a página até o fim.
+     */
     @GetMapping("")
-    public RankingMundialVM getRankingMundial() {
-        LOG.debug("REST request to get Ranking Mundial");
+    public RankingMundialVM getRankingMundial(@RequestParam(name = "page", defaultValue = "0") int page) {
+        LOG.debug("REST request to get Ranking Mundial, page {}", page);
 
         // Resolve o Usuario do autenticado (login -> User -> Usuario pelo e-mail)
         Optional<Usuario> eu = SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()));
 
-        List<Usuario> top = usuarioRepository.findTop50ByOrderByXpDescIdAsc();
-        List<RankingEntryVM> entries = new ArrayList<>(top.size());
-        for (int i = 0; i < top.size(); i++) {
-            Usuario u = top.get(i);
+        Page<Usuario> pagina = usuarioRepository.findAllByOrderByXpDescIdAsc(PageRequest.of(Math.max(page, 0), TAMANHO_PAGINA));
+        List<RankingEntryVM> entries = new ArrayList<>(pagina.getNumberOfElements());
+        int posicaoInicial = pagina.getNumber() * TAMANHO_PAGINA;
+        List<Usuario> usuarios = pagina.getContent();
+        for (int i = 0; i < usuarios.size(); i++) {
+            Usuario u = usuarios.get(i);
             boolean souEu = eu.isPresent() && eu.orElseThrow().getId().equals(u.getId());
-            entries.add(new RankingEntryVM(i + 1, nomeExibicao(u), u.getXp(), souEu));
+            entries.add(new RankingEntryVM(posicaoInicial + i + 1, nomeExibicao(u), u.getXp(), souEu));
         }
 
         long meuXp = eu.map(Usuario::getXp).orElse(0L);
         Integer minhaPosicao = eu.map(u -> (int) usuarioRepository.countByXpGreaterThan(u.getXp()) + 1).orElse(null);
-        return new RankingMundialVM(entries, meuXp, minhaPosicao);
+        return new RankingMundialVM(entries, meuXp, minhaPosicao, pagina.getTotalElements(), pagina.hasNext());
     }
 
     // Nome público no ranking: primeiro nome + inicial do sobrenome (privacidade)

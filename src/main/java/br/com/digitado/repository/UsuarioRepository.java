@@ -25,8 +25,8 @@ public interface UsuarioRepository extends UsuarioRepositoryWithBagRelationships
     @Query(value = "update usuario set xp = xp + :delta where id = :usuarioId", nativeQuery = true)
     void incrementarXp(@Param("usuarioId") long usuarioId, @Param("delta") long delta);
 
-    // Top 50 do Ranking Mundial, do maior para o menor XP
-    List<Usuario> findTop50ByOrderByXpDescIdAsc();
+    // Página do Ranking Mundial, do maior para o menor XP (desempate por id, estável)
+    Page<Usuario> findAllByOrderByXpDescIdAsc(Pageable pageable);
 
     // Posição do usuário no ranking = quantos têm XP maior + 1
     long countByXpGreaterThan(Long xp);
