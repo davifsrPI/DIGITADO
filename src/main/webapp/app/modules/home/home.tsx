@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
 import PalavraDoDia from 'app/modules/home/palavra-do-dia';
+import RankingTop5 from 'app/modules/home/ranking-top5';
 
 export const Home = () => {
   const account = useAppSelector(state => state.authentication.account);
@@ -62,10 +63,6 @@ export const Home = () => {
               </Link>
             </>
           )}
-          {/* Ranking mundial é público — dá para ver sem fazer login */}
-          <Link to="/ranking">
-            <button className="btn-ghost">🌍 Ver ranking mundial</button>
-          </Link>
         </div>
       </section>
 
@@ -107,6 +104,9 @@ export const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* RANKING MUNDIAL — top 5 público, com link para o ranking completo */}
+      <RankingTop5 />
 
       {/* CTA */}
       <section className="cta-section">
