@@ -1,0 +1,155 @@
+/* ─── Molde de tela de carregamento do DIGITADO ───
+   Mesmo estilo das demais telas: fundo #0f172a, shapes borradas coloridas,
+   cartões de vidro fosco e fonte Poppins. */
+
+.tc-wrapper {
+  position: fixed;
+  inset: 0;
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  font-family: 'Poppins', sans-serif;
+  overflow: hidden;
+
+  /* Versão embutida: ocupa o espaço do contêiner (card, seção de lista),
+     sem fundo próprio nem sobreposição da página */
+  &--embutido {
+    position: relative;
+    inset: auto;
+    background: transparent;
+    z-index: auto;
+    padding: 32px 0;
+  }
+}
+
+.tc-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tc-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: 0.25;
+}
+
+.tc-shape.one {
+  width: 480px;
+  height: 480px;
+  background: #6366f1;
+  top: -140px;
+  left: -140px;
+}
+
+.tc-shape.two {
+  width: 400px;
+  height: 400px;
+  background: #22c55e;
+  bottom: -120px;
+  right: -100px;
+}
+
+.tc-shape.three {
+  width: 260px;
+  height: 260px;
+  background: #facc15;
+  top: 55%;
+  left: 58%;
+  transform: translate(-50%, -50%);
+  opacity: 0.15;
+}
+
+.tc-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+/* ─── Teclado animado: as teclas de "DIGITADO" acendem em onda ─── */
+.tc-teclado {
+  display: flex;
+  gap: 8px;
+}
+
+.tc-tecla {
+  width: 42px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom-width: 3px;
+  border-radius: 10px;
+  backdrop-filter: blur(24px);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 18px;
+  font-weight: 700;
+  animation: tc-digitar 1.6s ease-in-out infinite;
+
+  @media (max-width: 480px) {
+    width: 32px;
+    height: 36px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+}
+
+/* A tecla "afunda" e acende como se estivesse sendo pressionada */
+@keyframes tc-digitar {
+  0%,
+  22%,
+  100% {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.75);
+    box-shadow: none;
+  }
+  8% {
+    transform: translateY(3px);
+    background: rgba(34, 197, 94, 0.18);
+    border-color: #22c55e;
+    color: #4ade80;
+    box-shadow: 0 0 18px rgba(34, 197, 94, 0.35);
+  }
+}
+
+.tc-texto {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Barra de progresso indeterminada ─── */
+.tc-barra {
+  width: 220px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.tc-barra-fill {
+  width: 40%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #22c55e);
+  animation: tc-deslizar 1.4s ease-in-out infinite;
+}
+
+@keyframes tc-deslizar {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}

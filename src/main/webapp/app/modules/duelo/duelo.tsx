@@ -3,6 +3,7 @@ import './duelo.scss';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import TelaCarregamento from 'app/shared/layout/loading/tela-carregamento';
 
 // Os códigos de sala têm sempre 6 caracteres (mesma regra de criar-sala)
 const CODE_LEN = 6;
@@ -91,7 +92,7 @@ export const Duelo = () => {
             <p className="duelo-card-sub">Qualquer jogador pode entrar — clique e boa sorte!</p>
 
             {erro && <div className="duelo-erro">{erro}</div>}
-            {carregando && <div className="duelo-vazio">Carregando duelos...</div>}
+            {carregando && <TelaCarregamento embutido mensagem="Buscando duelos abertos..." />}
             {!carregando && !erro && duelos.length === 0 && (
               <div className="duelo-vazio">
                 Nenhum duelo público aberto agora.
