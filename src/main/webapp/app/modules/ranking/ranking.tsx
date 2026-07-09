@@ -74,7 +74,13 @@ export const Ranking = () => {
         </Link>
 
         <div className="rk-header">
-          <div className="rk-badge">🌍 Ranking Mundial</div>
+          {/* Planeta desenhado em CSS girando de forma fluida: os continentes
+              deslizam em loop atrás da máscara circular, com sombra de esfera */}
+          <div className="rk-planeta" aria-hidden="true">
+            <div className="rk-planeta-mapa" />
+            <div className="rk-planeta-luz" />
+          </div>
+          <div className="rk-badge">Ranking Mundial</div>
           <h1 className="rk-title">Os melhores do DIGITADO</h1>
           <p className="rk-sub">Ganhe XP acertando a palavra do dia e desbloqueando conquistas</p>
         </div>
