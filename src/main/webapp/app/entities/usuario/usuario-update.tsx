@@ -4,7 +4,6 @@ import { Button, Col, Row } from 'reactstrap';
 import { Translate, ValidatedField, ValidatedForm, translate } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-import { mapIdList } from 'app/shared/util/entity-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
 import { getEntities as getSalas } from 'app/entities/sala/sala.reducer';
@@ -54,7 +53,8 @@ export const UsuarioUpdate = () => {
     const entity = {
       ...usuarioEntity,
       ...values,
-      salasAlunos: mapIdList(values.salasAlunos),
+      // As salas são identificadas pelo código (PK string), não por id numérico
+      salasAlunos: values.salasAlunos?.filter(codigo => codigo !== '').map(codigo => ({ codigo })),
     };
 
     if (isNew) {
@@ -70,7 +70,7 @@ export const UsuarioUpdate = () => {
       : {
           tipoUsuario: 'PROFESSOR',
           ...usuarioEntity,
-          salasAlunos: usuarioEntity?.salasAlunos?.map(e => e.id.toString()),
+          salasAlunos: usuarioEntity?.salasAlunos?.map(e => e.codigo),
         };
 
   return (
@@ -167,8 +167,8 @@ export const UsuarioUpdate = () => {
                 <option value="" key="0" />
                 {salas
                   ? salas.map(otherEntity => (
-                      <option value={otherEntity.id} key={otherEntity.id}>
-                        {otherEntity.id}
+                      <option value={otherEntity.codigo} key={otherEntity.codigo}>
+                        {otherEntity.codigo}
                       </option>
                     ))
                   : null}

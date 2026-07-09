@@ -6,10 +6,10 @@ import axios from 'axios';
 
 type Filtro = 'todas' | 'abertas' | 'fechadas';
 
+// O código de acesso identifica a sala — é a chave primária no banco
 interface Sala {
-  id: number;
-  nome: string;
   codigo: string;
+  nome: string;
   descricao?: string;
   ativo: boolean;
 }
@@ -44,8 +44,8 @@ export const MinhasSalas = () => {
   // Alterna o status da sala entre aberta/fechada via PATCH e atualiza o estado local
   const toggleAtivo = async (sala: Sala) => {
     try {
-      await axios.patch(`/api/salas/${sala.id}`, { id: sala.id, ativo: !sala.ativo });
-      setSalas(prev => prev.map(s => (s.id === sala.id ? { ...s, ativo: !s.ativo } : s)));
+      await axios.patch(`/api/salas/${sala.codigo}`, { codigo: sala.codigo, ativo: !sala.ativo });
+      setSalas(prev => prev.map(s => (s.codigo === sala.codigo ? { ...s, ativo: !s.ativo } : s)));
     } catch {
       // silent
     }
@@ -92,7 +92,7 @@ export const MinhasSalas = () => {
         ) : (
           <div className="ms-grid">
             {salas.map(sala => (
-              <div key={sala.id} className={`ms-card${sala.ativo ? '' : ' ms-card--closed'}`}>
+              <div key={sala.codigo} className={`ms-card${sala.ativo ? '' : ' ms-card--closed'}`}>
                 <div className="ms-card-top">
                   <span className={`ms-badge${sala.ativo ? ' ms-badge--open' : ' ms-badge--closed'}`}>
                     {sala.ativo ? 'Aberta' : 'Fechada'}

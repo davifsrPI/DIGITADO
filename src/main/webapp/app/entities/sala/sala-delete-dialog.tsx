@@ -34,7 +34,7 @@ export const SalaDeleteDialog = () => {
   }, [updateSuccess]);
 
   const confirmDelete = () => {
-    dispatch(deleteEntity(salaEntity.id));
+    dispatch(deleteEntity(salaEntity.codigo));
   };
 
   return (
@@ -43,7 +43,7 @@ export const SalaDeleteDialog = () => {
         <Translate contentKey="entity.delete.title">Confirm delete operation</Translate>
       </ModalHeader>
       <ModalBody id="digitadoApp.sala.delete.question">
-        <Translate contentKey="digitadoApp.sala.delete.question" interpolate={{ id: salaEntity.id }}>
+        <Translate contentKey="digitadoApp.sala.delete.question" interpolate={{ id: salaEntity.codigo }}>
           Are you sure you want to delete this Sala?
         </Translate>
       </ModalBody>

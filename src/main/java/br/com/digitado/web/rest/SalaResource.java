@@ -26,6 +26,7 @@ import tech.jhipster.web.util.ResponseUtil;
 
 // REST controller para gerenciar salas de aula.
 // Um professor cria e controla a sala; alunos só podem listar as salas que participam.
+// A sala é identificada pelo código de acesso (PK) — não existe id numérico.
 @RestController
 @RequestMapping("/api/salas")
 @Transactional
@@ -53,11 +54,8 @@ public class SalaResource {
     @PostMapping("")
     public ResponseEntity<SalaResponseVM> createSala(@Valid @RequestBody Sala sala) throws URISyntaxException {
         LOG.debug("REST request to save Sala : {}", sala);
-        if (sala.getId() != null) {
-            throw new BadRequestAlertException("A new sala cannot already have an ID", ENTITY_NAME, "idexists");
-        }
-        // Impede criação com código duplicado
-        if (sala.getCodigo() != null && salaRepository.findByCodigo(sala.getCodigo()).isPresent()) {
+        // Impede criação com código duplicado — o código é a chave primária
+        if (salaRepository.existsById(sala.getCodigo())) {
             throw new BadRequestAlertException("Código de sala já em uso", ENTITY_NAME, "codigoexists");
         }
         // Vincula o professor logado à sala — se não houver Usuario correspondente, professor fica null
@@ -69,63 +67,63 @@ public class SalaResource {
         sala.setDataCriacao(java.time.Instant.now());
         sala = salaRepository.save(sala);
         // Retorna apenas os campos públicos da sala (sem o professor, para não vazar dados)
-        SalaResponseVM vm = new SalaResponseVM(sala.getId(), sala.getNome(), sala.getCodigo(), sala.getDescricao(), sala.getAtivo());
-        return ResponseEntity.created(new URI("/api/salas/" + sala.getId()))
-            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, sala.getId().toString()))
+        SalaResponseVM vm = new SalaResponseVM(sala.getCodigo(), sala.getNome(), sala.getDescricao(), sala.getAtivo());
+        return ResponseEntity.created(new URI("/api/salas/" + sala.getCodigo()))
+            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, sala.getCodigo()))
             .body(vm);
     }
 
     // Atualiza os dados de uma sala — apenas o dono ou admin podem fazer isso
-    @PutMapping("/{id}")
-    public ResponseEntity<Sala> updateSala(@PathVariable(value = "id", required = false) final Long id, @Valid @RequestBody Sala sala)
-        throws URISyntaxException {
-        LOG.debug("REST request to update Sala : {}, {}", id, sala);
-        if (sala.getId() == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+    @PutMapping("/{codigo}")
+    public ResponseEntity<Sala> updateSala(
+        @PathVariable(value = "codigo", required = false) final String codigo,
+        @Valid @RequestBody Sala sala
+    ) throws URISyntaxException {
+        LOG.debug("REST request to update Sala : {}, {}", codigo, sala);
+        if (sala.getCodigo() == null) {
+            throw new BadRequestAlertException("Invalid codigo", ENTITY_NAME, "codigonull");
         }
-        if (!Objects.equals(id, sala.getId())) {
-            throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
+        if (!Objects.equals(codigo, sala.getCodigo())) {
+            throw new BadRequestAlertException("Invalid codigo", ENTITY_NAME, "codigoinvalid");
         }
-        if (!salaRepository.existsById(id)) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(id)) {
+        if (!isOwnerOrAdmin(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         sala = salaRepository.save(sala);
         return ResponseEntity.ok()
-            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, sala.getId().toString()))
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, sala.getCodigo()))
             .body(sala);
     }
 
-    // Atualização parcial da sala (PATCH) — apenas campos enviados são alterados
-    @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
+    // Atualização parcial da sala (PATCH) — apenas campos enviados são alterados.
+    // O código não pode ser alterado: é a chave primária da sala.
+    @PatchMapping(value = "/{codigo}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Sala> partialUpdateSala(
-        @PathVariable(value = "id", required = false) final Long id,
+        @PathVariable(value = "codigo", required = false) final String codigo,
         @NotNull @RequestBody Sala sala
     ) throws URISyntaxException {
-        LOG.debug("REST request to partial update Sala partially : {}, {}", id, sala);
-        if (sala.getId() == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+        LOG.debug("REST request to partial update Sala partially : {}, {}", codigo, sala);
+        if (sala.getCodigo() == null) {
+            throw new BadRequestAlertException("Invalid codigo", ENTITY_NAME, "codigonull");
         }
-        if (!Objects.equals(id, sala.getId())) {
-            throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
+        if (!Objects.equals(codigo, sala.getCodigo())) {
+            throw new BadRequestAlertException("Invalid codigo", ENTITY_NAME, "codigoinvalid");
         }
-        if (!salaRepository.existsById(id)) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(id)) {
+        if (!isOwnerOrAdmin(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
 
         Optional<Sala> result = salaRepository
-            .findById(sala.getId())
+            .findById(sala.getCodigo())
             .map(existingSala -> {
                 if (sala.getNome() != null) {
                     existingSala.setNome(sala.getNome());
-                }
-                if (sala.getCodigo() != null) {
-                    existingSala.setCodigo(sala.getCodigo());
                 }
                 if (sala.getDescricao() != null) {
                     existingSala.setDescricao(sala.getDescricao());
@@ -139,7 +137,7 @@ public class SalaResource {
 
         return ResponseUtil.wrapOrNotFound(
             result,
-            HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, sala.getId().toString())
+            HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, sala.getCodigo())
         );
     }
 
@@ -168,32 +166,30 @@ public class SalaResource {
             .orElse(List.of());
     }
 
-    // Busca uma sala pelo ID — sem restrição de acesso (código é público para quem tiver o link)
-    @GetMapping("/{id}")
-    public ResponseEntity<Sala> getSala(@PathVariable("id") Long id) {
-        LOG.debug("REST request to get Sala : {}", id);
-        Optional<Sala> sala = salaRepository.findById(id);
+    // Busca uma sala pelo código — sem restrição de acesso (código é público para quem tiver o link)
+    @GetMapping("/{codigo}")
+    public ResponseEntity<Sala> getSala(@PathVariable("codigo") String codigo) {
+        LOG.debug("REST request to get Sala : {}", codigo);
+        Optional<Sala> sala = salaRepository.findById(codigo);
         return ResponseUtil.wrapOrNotFound(sala);
     }
 
     // Exclui uma sala — apenas o professor dono ou admin podem excluir
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSala(@PathVariable("id") Long id) {
-        LOG.debug("REST request to delete Sala : {}", id);
-        if (!salaRepository.existsById(id)) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+    @DeleteMapping("/{codigo}")
+    public ResponseEntity<Void> deleteSala(@PathVariable("codigo") String codigo) {
+        LOG.debug("REST request to delete Sala : {}", codigo);
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(id)) {
+        if (!isOwnerOrAdmin(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
-        salaRepository.deleteById(id);
-        return ResponseEntity.noContent()
-            .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
-            .build();
+        salaRepository.deleteById(codigo);
+        return ResponseEntity.noContent().headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, codigo)).build();
     }
 
     // Verifica se o usuário logado é dono da sala (como professor) ou administrador do sistema
-    private boolean isOwnerOrAdmin(Long salaId) {
+    private boolean isOwnerOrAdmin(String codigo) {
         if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
             return true;
         }
@@ -202,7 +198,7 @@ public class SalaResource {
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
             .map(usuario ->
                 salaRepository
-                    .findById(salaId)
+                    .findById(codigo)
                     .map(sala -> sala.getProfessor() != null && sala.getProfessor().getId().equals(usuario.getId()))
                     .orElse(false)
             )

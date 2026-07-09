@@ -30,6 +30,7 @@ public class Ranking implements Serializable {
     private Instant ultimaAtualizacao;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sala_codigo")
     @JsonIgnoreProperties(value = { "professor", "alunos" }, allowSetters = true)
     private Sala sala;
 

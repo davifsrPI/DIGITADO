@@ -73,8 +73,8 @@ export const UsuarioDetail = () => {
           <dd>
             {usuarioEntity.salasAlunos
               ? usuarioEntity.salasAlunos.map((val, i) => (
-                  <span key={val.id}>
-                    <a>{val.id}</a>
+                  <span key={val.codigo}>
+                    <a>{val.codigo}</a>
                     {usuarioEntity.salasAlunos && i === usuarioEntity.salasAlunos.length - 1 ? '' : ', '}
                   </span>
                 ))

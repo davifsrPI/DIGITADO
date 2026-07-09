@@ -26,23 +26,17 @@ export const SalaDetail = () => {
         </h2>
         <dl className="jh-entity-details">
           <dt>
-            <span id="id">
-              <Translate contentKey="global.field.id">ID</Translate>
+            <span id="codigo">
+              <Translate contentKey="digitadoApp.sala.codigo">Codigo</Translate>
             </span>
           </dt>
-          <dd>{salaEntity.id}</dd>
+          <dd>{salaEntity.codigo}</dd>
           <dt>
             <span id="nome">
               <Translate contentKey="digitadoApp.sala.nome">Nome</Translate>
             </span>
           </dt>
           <dd>{salaEntity.nome}</dd>
-          <dt>
-            <span id="codigo">
-              <Translate contentKey="digitadoApp.sala.codigo">Codigo</Translate>
-            </span>
-          </dt>
-          <dd>{salaEntity.codigo}</dd>
           <dt>
             <span id="descricao">
               <Translate contentKey="digitadoApp.sala.descricao">Descricao</Translate>
@@ -80,7 +74,7 @@ export const SalaDetail = () => {
           </span>
         </Button>
         &nbsp;
-        <Button tag={Link} to={`/sala/${salaEntity.id}/edit`} replace color="primary">
+        <Button tag={Link} to={`/sala/${salaEntity.codigo}/edit`} replace color="primary">
           <FontAwesomeIcon icon="pencil-alt" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.edit">Edit</Translate>

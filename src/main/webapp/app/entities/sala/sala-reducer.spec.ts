@@ -191,7 +191,7 @@ describe('Entities reducer tests', () => {
     });
 
     it('dispatches FETCH_SALA actions', async () => {
-      const arg = 42666;
+      const arg = 'ABC123';
 
       const result = await getEntity(arg)(dispatch, getState, extra);
 
@@ -201,7 +201,7 @@ describe('Entities reducer tests', () => {
     });
 
     it('dispatches CREATE_SALA actions', async () => {
-      const arg = { id: 17708 };
+      const arg = { codigo: 'ABC123' };
 
       const result = await createEntity(arg)(dispatch, getState, extra);
 
@@ -211,7 +211,7 @@ describe('Entities reducer tests', () => {
     });
 
     it('dispatches UPDATE_SALA actions', async () => {
-      const arg = { id: 17708 };
+      const arg = { codigo: 'ABC123' };
 
       const result = await updateEntity(arg)(dispatch, getState, extra);
 
@@ -221,7 +221,7 @@ describe('Entities reducer tests', () => {
     });
 
     it('dispatches PARTIAL_UPDATE_SALA actions', async () => {
-      const arg = { id: 123 };
+      const arg = { codigo: 'DEF456' };
 
       const result = await partialUpdateEntity(arg)(dispatch, getState, extra);
 
@@ -231,7 +231,7 @@ describe('Entities reducer tests', () => {
     });
 
     it('dispatches DELETE_SALA actions', async () => {
-      const arg = 42666;
+      const arg = 'ABC123';
 
       const result = await deleteEntity(arg)(dispatch, getState, extra);
 

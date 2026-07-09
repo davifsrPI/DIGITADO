@@ -123,7 +123,7 @@ export const Ranking = () => {
                       <TextFormat type="date" value={ranking.ultimaAtualizacao} format={APP_DATE_FORMAT} />
                     ) : null}
                   </td>
-                  <td>{ranking.sala ? <Link to={`/sala/${ranking.sala.id}`}>{ranking.sala.id}</Link> : ''}</td>
+                  <td>{ranking.sala ? <Link to={`/sala/${ranking.sala.codigo}`}>{ranking.sala.codigo}</Link> : ''}</td>
                   <td>{ranking.aluno ? <Link to={`/usuario/${ranking.aluno.id}`}>{ranking.aluno.id}</Link> : ''}</td>
                   <td className="text-end">
                     <div className="btn-group flex-btn-group-container">

@@ -18,7 +18,7 @@ class SalaTest {
         Sala sala2 = new Sala();
         assertThat(sala1).isNotEqualTo(sala2);
 
-        sala2.setId(sala1.getId());
+        sala2.setCodigo(sala1.getCodigo());
         assertThat(sala1).isEqualTo(sala2);
 
         sala2 = getSalaSample2();

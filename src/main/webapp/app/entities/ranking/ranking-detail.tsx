@@ -57,7 +57,7 @@ export const RankingDetail = () => {
           <dt>
             <Translate contentKey="digitadoApp.ranking.sala">Sala</Translate>
           </dt>
-          <dd>{rankingEntity.sala ? rankingEntity.sala.id : ''}</dd>
+          <dd>{rankingEntity.sala ? rankingEntity.sala.codigo : ''}</dd>
           <dt>
             <Translate contentKey="digitadoApp.ranking.aluno">Aluno</Translate>
           </dt>

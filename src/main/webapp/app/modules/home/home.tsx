@@ -44,7 +44,7 @@ export const Home = () => {
         <div className="hero-actions">
           {account?.login ? (
             <>
-              <Link to="/sala">
+              <Link to="/lobby">
                 <button className="btn-primary">Começar agora</button>
               </Link>
               <Link to="/ranking">
@@ -61,24 +61,6 @@ export const Home = () => {
               </Link>
             </>
           )}
-        </div>
-
-        {/* STATS ROW */}
-        <div className="stats-row">
-          <div className="stat">
-            <span className="stat-number">12k+</span>
-            <span className="stat-label">Usuários</span>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat">
-            <span className="stat-number">850k</span>
-            <span className="stat-label">Palavras digitadas</span>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat">
-            <span className="stat-number">98%</span>
-            <span className="stat-label">Satisfação</span>
-          </div>
         </div>
       </section>
 
@@ -117,50 +99,6 @@ export const Home = () => {
               <h3>Evolua e conquiste</h3>
               <p>Suba de nível, desbloqueie medalhas e apareça no ranking global.</p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CONQUISTAS */}
-      <section className="achievements-section">
-        <div className="section-label">Progresso</div>
-        <h2 className="section-title">Conquistas que te motivam</h2>
-
-        <div className="achievements-grid">
-          <div className="achievement unlocked">
-            <div className="ach-icon">🔥</div>
-            <div className="ach-info">
-              <div className="ach-name">Sequência de 7 dias</div>
-              <div className="ach-desc">Jogou 7 dias seguidos</div>
-            </div>
-            <div className="ach-badge">Obtida</div>
-          </div>
-
-          <div className="achievement unlocked">
-            <div className="ach-icon">⚡</div>
-            <div className="ach-info">
-              <div className="ach-name">Digitador Relâmpago</div>
-              <div className="ach-desc">Acertou em menos de 2s</div>
-            </div>
-            <div className="ach-badge">Obtida</div>
-          </div>
-
-          <div className="achievement locked">
-            <div className="ach-icon">👑</div>
-            <div className="ach-info">
-              <div className="ach-name">Rei do Ranking</div>
-              <div className="ach-desc">Chegue ao 1º lugar global</div>
-            </div>
-            <div className="ach-badge locked-badge">Bloqueada</div>
-          </div>
-
-          <div className="achievement locked">
-            <div className="ach-icon">💎</div>
-            <div className="ach-info">
-              <div className="ach-name">Diamante</div>
-              <div className="ach-desc">Alcance o nível 50</div>
-            </div>
-            <div className="ach-badge locked-badge">Bloqueada</div>
           </div>
         </div>
       </section>

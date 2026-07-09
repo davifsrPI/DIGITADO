@@ -136,7 +136,7 @@ export const Usuario = () => {
                     {usuario.salasAlunos
                       ? usuario.salasAlunos.map((val, j) => (
                           <span key={j}>
-                            <Link to={`/sala/${val.id}`}>{val.id}</Link>
+                            <Link to={`/sala/${val.codigo}`}>{val.codigo}</Link>
                             {j === usuario.salasAlunos.length - 1 ? '' : ', '}
                           </span>
                         ))

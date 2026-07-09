@@ -199,11 +199,11 @@ public class AtividadeResource {
         if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
             return true;
         }
-        if (atividade.getSala() == null || atividade.getSala().getId() == null) {
+        if (atividade.getSala() == null || atividade.getSala().getCodigo() == null) {
             return false;
         }
-        Long salaId = atividade.getSala().getId();
-        return usuarioAtual().map(u -> u.getSalas().stream().anyMatch(s -> s.getId().equals(salaId))).orElse(false);
+        String salaCodigo = atividade.getSala().getCodigo();
+        return usuarioAtual().map(u -> u.getSalas().stream().anyMatch(s -> s.getCodigo().equals(salaCodigo))).orElse(false);
     }
 
     private boolean isSalaOwnerOrAdmin(Long atividadeId) {

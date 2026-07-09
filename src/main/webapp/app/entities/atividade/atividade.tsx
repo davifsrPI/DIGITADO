@@ -138,7 +138,7 @@ export const Atividade = () => {
                   <td>
                     <Translate contentKey={`digitadoApp.StatusAtividade.${atividade.status}`} />
                   </td>
-                  <td>{atividade.sala ? <Link to={`/sala/${atividade.sala.id}`}>{atividade.sala.id}</Link> : ''}</td>
+                  <td>{atividade.sala ? <Link to={`/sala/${atividade.sala.codigo}`}>{atividade.sala.codigo}</Link> : ''}</td>
                   <td>{atividade.lista ? <Link to={`/lista-palavras/${atividade.lista.id}`}>{atividade.lista.id}</Link> : ''}</td>
                   <td className="text-end">
                     <div className="btn-group flex-btn-group-container">

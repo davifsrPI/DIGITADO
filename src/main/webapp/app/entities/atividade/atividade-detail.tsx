@@ -73,7 +73,7 @@ export const AtividadeDetail = () => {
           <dt>
             <Translate contentKey="digitadoApp.atividade.sala">Sala</Translate>
           </dt>
-          <dd>{atividadeEntity.sala ? atividadeEntity.sala.id : ''}</dd>
+          <dd>{atividadeEntity.sala ? atividadeEntity.sala.codigo : ''}</dd>
           <dt>
             <Translate contentKey="digitadoApp.atividade.lista">Lista</Translate>
           </dt>

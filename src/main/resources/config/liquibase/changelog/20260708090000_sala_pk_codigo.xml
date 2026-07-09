@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        A sala deixa de ter id numérico: o código de acesso (ex: "8H4XEZ"),
+        que já era único (ux_sala__codigo), passa a ser a chave primária.
+        Todas as tabelas que apontavam para sala.id passam a apontar para sala.codigo.
+    -->
+
+    <!-- 1) Remove as FKs que apontam para sala.id -->
+    <changeSet id="20260708090000-1" author="digitado">
+        <dropForeignKeyConstraint baseTableName="atividade" constraintName="fk_atividade__sala_id"/>
+        <dropForeignKeyConstraint baseTableName="ranking" constraintName="fk_ranking__sala_id"/>
+        <dropForeignKeyConstraint baseTableName="rel_usuario__salas_aluno" constraintName="fk_rel_usuario__salas_aluno__salas_aluno_id"/>
+    </changeSet>
+
+    <!-- 2) Cria as colunas de código nas tabelas dependentes e migra os dados -->
+    <changeSet id="20260708090000-2" author="digitado">
+        <addColumn tableName="atividade">
+            <column name="sala_codigo" type="varchar(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="ranking">
+            <column name="sala_codigo" type="varchar(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="rel_usuario__salas_aluno">
+            <column name="salas_aluno_codigo" type="varchar(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <sql>UPDATE atividade a JOIN sala s ON s.id = a.sala_id SET a.sala_codigo = s.codigo</sql>
+        <sql>UPDATE ranking r JOIN sala s ON s.id = r.sala_id SET r.sala_codigo = s.codigo</sql>
+        <sql>UPDATE rel_usuario__salas_aluno rel JOIN sala s ON s.id = rel.salas_aluno_id SET rel.salas_aluno_codigo = s.codigo</sql>
+
+        <dropColumn tableName="atividade" columnName="sala_id"/>
+        <dropColumn tableName="ranking" columnName="sala_id"/>
+    </changeSet>
+
+    <!-- 3) Refaz a PK composta da tabela de relação aluno x sala usando o código.
+         A FK de usuario_id precisa ser solta antes: o MySQL usa o índice PRIMARY
+         para atendê-la e não permite removê-lo enquanto a FK existir. -->
+    <changeSet id="20260708090000-3" author="digitado">
+        <dropForeignKeyConstraint baseTableName="rel_usuario__salas_aluno" constraintName="fk_rel_usuario__salas_aluno__usuario_id"/>
+        <dropPrimaryKey tableName="rel_usuario__salas_aluno"/>
+        <dropColumn tableName="rel_usuario__salas_aluno" columnName="salas_aluno_id"/>
+        <addNotNullConstraint tableName="rel_usuario__salas_aluno" columnName="salas_aluno_codigo" columnDataType="varchar(255)"/>
+        <addPrimaryKey tableName="rel_usuario__salas_aluno" columnNames="usuario_id, salas_aluno_codigo"/>
+        <addForeignKeyConstraint baseColumnNames="usuario_id"
+                                 baseTableName="rel_usuario__salas_aluno"
+                                 constraintName="fk_rel_usuario__salas_aluno__usuario_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="usuario"/>
+    </changeSet>
+
+    <!-- 4) Troca a PK da sala: remove o id e promove o codigo -->
+    <changeSet id="20260708090000-4" author="digitado">
+        <!-- MySQL exige tirar o AUTO_INCREMENT antes de remover a PK -->
+        <sql>ALTER TABLE sala MODIFY id BIGINT NOT NULL</sql>
+        <sql>ALTER TABLE sala DROP PRIMARY KEY</sql>
+        <dropColumn tableName="sala" columnName="id"/>
+        <addPrimaryKey tableName="sala" columnNames="codigo" constraintName="pk_sala"/>
+    </changeSet>
+
+    <!-- 5) Recria as FKs apontando para sala.codigo -->
+    <changeSet id="20260708090000-5" author="digitado">
+        <addForeignKeyConstraint baseColumnNames="sala_codigo"
+                                 baseTableName="atividade"
+                                 constraintName="fk_atividade__sala_codigo"
+                                 referencedColumnNames="codigo"
+                                 referencedTableName="sala"/>
+
+        <addForeignKeyConstraint baseColumnNames="sala_codigo"
+                                 baseTableName="ranking"
+                                 constraintName="fk_ranking__sala_codigo"
+                                 referencedColumnNames="codigo"
+                                 referencedTableName="sala"/>
+
+        <addForeignKeyConstraint baseColumnNames="salas_aluno_codigo"
+                                 baseTableName="rel_usuario__salas_aluno"
+                                 constraintName="fk_rel_usuario__salas_aluno__salas_aluno_codigo"
+                                 referencedColumnNames="codigo"
+                                 referencedTableName="sala"/>
+    </changeSet>
+</databaseChangeLog>

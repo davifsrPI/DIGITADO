@@ -15,8 +15,8 @@ export const SalaUpdate = () => {
 
   const navigate = useNavigate();
 
-  const { id } = useParams<'id'>();
-  const isNew = id === undefined;
+  const { id: codigo } = useParams<'id'>();
+  const isNew = codigo === undefined;
 
   const usuarios = useAppSelector(state => state.usuario.entities);
   const salaEntity = useAppSelector(state => state.sala.entity);
@@ -32,7 +32,7 @@ export const SalaUpdate = () => {
     if (isNew) {
       dispatch(reset());
     } else {
-      dispatch(getEntity(id));
+      dispatch(getEntity(codigo));
     }
 
     dispatch(getUsuarios({}));
@@ -45,10 +45,6 @@ export const SalaUpdate = () => {
   }, [updateSuccess]);
 
   const saveEntity = values => {
-    if (values.id !== undefined && typeof values.id !== 'number') {
-      values.id = Number(values.id);
-    }
-
     const entity = {
       ...salaEntity,
       ...values,
@@ -87,31 +83,23 @@ export const SalaUpdate = () => {
             <p>Loading...</p>
           ) : (
             <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
-              {!isNew ? (
-                <ValidatedField
-                  name="id"
-                  required
-                  readOnly
-                  id="sala-id"
-                  label={translate('global.field.id')}
-                  validate={{ required: true }}
-                />
-              ) : null}
-              <ValidatedField
-                label={translate('digitadoApp.sala.nome')}
-                id="sala-nome"
-                name="nome"
-                data-cy="nome"
-                type="text"
-                validate={{
-                  required: { value: true, message: translate('entity.validation.required') },
-                }}
-              />
+              {/* O código é a chave primária da sala: obrigatório na criação, imutável na edição */}
               <ValidatedField
                 label={translate('digitadoApp.sala.codigo')}
                 id="sala-codigo"
                 name="codigo"
                 data-cy="codigo"
+                type="text"
+                readOnly={!isNew}
+                validate={{
+                  required: { value: true, message: translate('entity.validation.required') },
+                }}
+              />
+              <ValidatedField
+                label={translate('digitadoApp.sala.nome')}
+                id="sala-nome"
+                name="nome"
+                data-cy="nome"
                 type="text"
                 validate={{
                   required: { value: true, message: translate('entity.validation.required') },

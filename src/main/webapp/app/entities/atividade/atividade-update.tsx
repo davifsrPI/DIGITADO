@@ -64,7 +64,7 @@ export const AtividadeUpdate = () => {
     const entity = {
       ...atividadeEntity,
       ...values,
-      sala: salas.find(it => it.id.toString() === values.sala?.toString()),
+      sala: salas.find(it => it.codigo === values.sala?.toString()),
       lista: listaPalavras.find(it => it.id.toString() === values.lista?.toString()),
     };
 
@@ -87,7 +87,7 @@ export const AtividadeUpdate = () => {
           ...atividadeEntity,
           dataInicio: convertDateTimeFromServer(atividadeEntity.dataInicio),
           dataFim: convertDateTimeFromServer(atividadeEntity.dataFim),
-          sala: atividadeEntity?.sala?.id,
+          sala: atividadeEntity?.sala?.codigo,
           lista: atividadeEntity?.lista?.id,
         };
 
@@ -173,8 +173,8 @@ export const AtividadeUpdate = () => {
                 <option value="" key="0" />
                 {salas
                   ? salas.map(otherEntity => (
-                      <option value={otherEntity.id} key={otherEntity.id}>
-                        {otherEntity.id}
+                      <option value={otherEntity.codigo} key={otherEntity.codigo}>
+                        {otherEntity.codigo}
                       </option>
                     ))
                   : null}

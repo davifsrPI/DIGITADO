@@ -82,7 +82,7 @@ public class Usuario implements Serializable {
     @JoinTable(
         name = "rel_usuario__salas_aluno",
         joinColumns = @JoinColumn(name = "usuario_id"),
-        inverseJoinColumns = @JoinColumn(name = "salas_aluno_id")
+        inverseJoinColumns = @JoinColumn(name = "salas_aluno_codigo")
     )
     @JsonIgnoreProperties(value = { "professor", "alunos" }, allowSetters = true)
     private Set<Sala> salasAlunos = new HashSet<>();

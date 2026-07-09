@@ -12,8 +12,7 @@ import br.com.digitado.domain.Sala;
 import br.com.digitado.repository.SalaRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Integration tests for the {@link SalaResource} REST controller.
+ * A sala é identificada pelo código de acesso (chave primária) — não há id numérico.
  */
 @IntegrationTest
 @AutoConfigureMockMvc
@@ -38,7 +38,6 @@ class SalaResourceIT {
     private static final String UPDATED_NOME = "BBBBBBBBBB";
 
     private static final String DEFAULT_CODIGO = "AAAAAAAAAA";
-    private static final String UPDATED_CODIGO = "BBBBBBBBBB";
 
     private static final String DEFAULT_DESCRICAO = "AAAAAAAAAA";
     private static final String UPDATED_DESCRICAO = "BBBBBBBBBB";
@@ -47,10 +46,7 @@ class SalaResourceIT {
     private static final Boolean UPDATED_ATIVO = true;
 
     private static final String ENTITY_API_URL = "/api/salas";
-    private static final String ENTITY_API_URL_ID = ENTITY_API_URL + "/{id}";
-
-    private static Random random = new Random();
-    private static AtomicLong longCount = new AtomicLong(random.nextInt() + (2 * Integer.MAX_VALUE));
+    private static final String ENTITY_API_URL_CODIGO = ENTITY_API_URL + "/{codigo}";
 
     @Autowired
     private ObjectMapper om;
@@ -68,6 +64,11 @@ class SalaResourceIT {
 
     private Sala insertedSala;
 
+    // Gera um código aleatório para não colidir com salas existentes
+    private static String randomCodigo() {
+        return UUID.randomUUID().toString();
+    }
+
     /**
      * Create an entity for this test.
      *
@@ -75,7 +76,7 @@ class SalaResourceIT {
      * if they test an entity which requires the current entity.
      */
     public static Sala createEntity() {
-        return new Sala().nome(DEFAULT_NOME).codigo(DEFAULT_CODIGO).descricao(DEFAULT_DESCRICAO).ativo(DEFAULT_ATIVO);
+        return new Sala().codigo(DEFAULT_CODIGO).nome(DEFAULT_NOME).descricao(DEFAULT_DESCRICAO).ativo(DEFAULT_ATIVO);
     }
 
     /**
@@ -85,7 +86,7 @@ class SalaResourceIT {
      * if they test an entity which requires the current entity.
      */
     public static Sala createUpdatedEntity() {
-        return new Sala().nome(UPDATED_NOME).codigo(UPDATED_CODIGO).descricao(UPDATED_DESCRICAO).ativo(UPDATED_ATIVO);
+        return new Sala().codigo(randomCodigo()).nome(UPDATED_NOME).descricao(UPDATED_DESCRICAO).ativo(UPDATED_ATIVO);
     }
 
     @BeforeEach
@@ -125,15 +126,15 @@ class SalaResourceIT {
 
     @Test
     @Transactional
-    void createSalaWithExistingId() throws Exception {
-        // Create the Sala with an existing ID
-        sala.setId(1L);
+    void createSalaWithExistingCodigo() throws Exception {
+        // Initialize the database with a sala using the same codigo
+        insertedSala = salaRepository.saveAndFlush(sala);
 
         long databaseSizeBeforeCreate = getRepositoryCount();
 
-        // An entity with an existing ID cannot be created, so this API call must fail
+        // A sala with an existing codigo cannot be created, so this API call must fail
         restSalaMockMvc
-            .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
+            .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(createEntity())))
             .andExpect(status().isBadRequest());
 
         // Validate the Sala in the database
@@ -180,12 +181,11 @@ class SalaResourceIT {
 
         // Get all the salaList
         restSalaMockMvc
-            .perform(get(ENTITY_API_URL + "?sort=id,desc"))
+            .perform(get(ENTITY_API_URL + "?sort=codigo,desc"))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(jsonPath("$.[*].id").value(hasItem(sala.getId().intValue())))
-            .andExpect(jsonPath("$.[*].nome").value(hasItem(DEFAULT_NOME)))
             .andExpect(jsonPath("$.[*].codigo").value(hasItem(DEFAULT_CODIGO)))
+            .andExpect(jsonPath("$.[*].nome").value(hasItem(DEFAULT_NOME)))
             .andExpect(jsonPath("$.[*].descricao").value(hasItem(DEFAULT_DESCRICAO)))
             .andExpect(jsonPath("$.[*].ativo").value(hasItem(DEFAULT_ATIVO)));
     }
@@ -198,12 +198,11 @@ class SalaResourceIT {
 
         // Get the sala
         restSalaMockMvc
-            .perform(get(ENTITY_API_URL_ID, sala.getId()))
+            .perform(get(ENTITY_API_URL_CODIGO, sala.getCodigo()))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(jsonPath("$.id").value(sala.getId().intValue()))
-            .andExpect(jsonPath("$.nome").value(DEFAULT_NOME))
             .andExpect(jsonPath("$.codigo").value(DEFAULT_CODIGO))
+            .andExpect(jsonPath("$.nome").value(DEFAULT_NOME))
             .andExpect(jsonPath("$.descricao").value(DEFAULT_DESCRICAO))
             .andExpect(jsonPath("$.ativo").value(DEFAULT_ATIVO));
     }
@@ -212,7 +211,7 @@ class SalaResourceIT {
     @Transactional
     void getNonExistingSala() throws Exception {
         // Get the sala
-        restSalaMockMvc.perform(get(ENTITY_API_URL_ID, Long.MAX_VALUE)).andExpect(status().isNotFound());
+        restSalaMockMvc.perform(get(ENTITY_API_URL_CODIGO, randomCodigo())).andExpect(status().isNotFound());
     }
 
     @Test
@@ -223,15 +222,15 @@ class SalaResourceIT {
 
         long databaseSizeBeforeUpdate = getRepositoryCount();
 
-        // Update the sala
-        Sala updatedSala = salaRepository.findById(sala.getId()).orElseThrow();
+        // Update the sala — o codigo (PK) permanece o mesmo
+        Sala updatedSala = salaRepository.findById(sala.getCodigo()).orElseThrow();
         // Disconnect from session so that the updates on updatedSala are not directly saved in db
         em.detach(updatedSala);
-        updatedSala.nome(UPDATED_NOME).codigo(UPDATED_CODIGO).descricao(UPDATED_DESCRICAO).ativo(UPDATED_ATIVO);
+        updatedSala.nome(UPDATED_NOME).descricao(UPDATED_DESCRICAO).ativo(UPDATED_ATIVO);
 
         restSalaMockMvc
             .perform(
-                put(ENTITY_API_URL_ID, updatedSala.getId())
+                put(ENTITY_API_URL_CODIGO, updatedSala.getCodigo())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(om.writeValueAsBytes(updatedSala))
             )
@@ -246,29 +245,12 @@ class SalaResourceIT {
     @Transactional
     void putNonExistingSala() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        sala.setId(longCount.incrementAndGet());
+        sala.setCodigo(randomCodigo());
 
-        // If the entity doesn't have an ID, it will throw BadRequestAlertException
-        restSalaMockMvc
-            .perform(put(ENTITY_API_URL_ID, sala.getId()).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
-            .andExpect(status().isBadRequest());
-
-        // Validate the Sala in the database
-        assertSameRepositoryCount(databaseSizeBeforeUpdate);
-    }
-
-    @Test
-    @Transactional
-    void putWithIdMismatchSala() throws Exception {
-        long databaseSizeBeforeUpdate = getRepositoryCount();
-        sala.setId(longCount.incrementAndGet());
-
-        // If url ID doesn't match entity ID, it will throw BadRequestAlertException
+        // If the sala doesn't exist in the database, it will throw BadRequestAlertException
         restSalaMockMvc
             .perform(
-                put(ENTITY_API_URL_ID, longCount.incrementAndGet())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(om.writeValueAsBytes(sala))
+                put(ENTITY_API_URL_CODIGO, sala.getCodigo()).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala))
             )
             .andExpect(status().isBadRequest());
 
@@ -278,11 +260,26 @@ class SalaResourceIT {
 
     @Test
     @Transactional
-    void putWithMissingIdPathParamSala() throws Exception {
+    void putWithCodigoMismatchSala() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        sala.setId(longCount.incrementAndGet());
+        sala.setCodigo(randomCodigo());
 
-        // If url ID doesn't match entity ID, it will throw BadRequestAlertException
+        // If url codigo doesn't match entity codigo, it will throw BadRequestAlertException
+        restSalaMockMvc
+            .perform(put(ENTITY_API_URL_CODIGO, randomCodigo()).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
+            .andExpect(status().isBadRequest());
+
+        // Validate the Sala in the database
+        assertSameRepositoryCount(databaseSizeBeforeUpdate);
+    }
+
+    @Test
+    @Transactional
+    void putWithMissingCodigoPathParamSala() throws Exception {
+        long databaseSizeBeforeUpdate = getRepositoryCount();
+        sala.setCodigo(randomCodigo());
+
+        // If url codigo is missing, it will throw MethodNotAllowed
         restSalaMockMvc
             .perform(put(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
             .andExpect(status().isMethodNotAllowed());
@@ -301,13 +298,13 @@ class SalaResourceIT {
 
         // Update the sala using partial update
         Sala partialUpdatedSala = new Sala();
-        partialUpdatedSala.setId(sala.getId());
+        partialUpdatedSala.setCodigo(sala.getCodigo());
 
         partialUpdatedSala.ativo(UPDATED_ATIVO);
 
         restSalaMockMvc
             .perform(
-                patch(ENTITY_API_URL_ID, partialUpdatedSala.getId())
+                patch(ENTITY_API_URL_CODIGO, partialUpdatedSala.getCodigo())
                     .contentType("application/merge-patch+json")
                     .content(om.writeValueAsBytes(partialUpdatedSala))
             )
@@ -327,15 +324,15 @@ class SalaResourceIT {
 
         long databaseSizeBeforeUpdate = getRepositoryCount();
 
-        // Update the sala using partial update
+        // Update the sala using partial update — o codigo (PK) não muda
         Sala partialUpdatedSala = new Sala();
-        partialUpdatedSala.setId(sala.getId());
+        partialUpdatedSala.setCodigo(sala.getCodigo());
 
-        partialUpdatedSala.nome(UPDATED_NOME).codigo(UPDATED_CODIGO).descricao(UPDATED_DESCRICAO).ativo(UPDATED_ATIVO);
+        partialUpdatedSala.nome(UPDATED_NOME).descricao(UPDATED_DESCRICAO).ativo(UPDATED_ATIVO);
 
         restSalaMockMvc
             .perform(
-                patch(ENTITY_API_URL_ID, partialUpdatedSala.getId())
+                patch(ENTITY_API_URL_CODIGO, partialUpdatedSala.getCodigo())
                     .contentType("application/merge-patch+json")
                     .content(om.writeValueAsBytes(partialUpdatedSala))
             )
@@ -351,27 +348,12 @@ class SalaResourceIT {
     @Transactional
     void patchNonExistingSala() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        sala.setId(longCount.incrementAndGet());
+        sala.setCodigo(randomCodigo());
 
-        // If the entity doesn't have an ID, it will throw BadRequestAlertException
-        restSalaMockMvc
-            .perform(patch(ENTITY_API_URL_ID, sala.getId()).contentType("application/merge-patch+json").content(om.writeValueAsBytes(sala)))
-            .andExpect(status().isBadRequest());
-
-        // Validate the Sala in the database
-        assertSameRepositoryCount(databaseSizeBeforeUpdate);
-    }
-
-    @Test
-    @Transactional
-    void patchWithIdMismatchSala() throws Exception {
-        long databaseSizeBeforeUpdate = getRepositoryCount();
-        sala.setId(longCount.incrementAndGet());
-
-        // If url ID doesn't match entity ID, it will throw BadRequestAlertException
+        // If the sala doesn't exist in the database, it will throw BadRequestAlertException
         restSalaMockMvc
             .perform(
-                patch(ENTITY_API_URL_ID, longCount.incrementAndGet())
+                patch(ENTITY_API_URL_CODIGO, sala.getCodigo())
                     .contentType("application/merge-patch+json")
                     .content(om.writeValueAsBytes(sala))
             )
@@ -383,11 +365,28 @@ class SalaResourceIT {
 
     @Test
     @Transactional
-    void patchWithMissingIdPathParamSala() throws Exception {
+    void patchWithCodigoMismatchSala() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        sala.setId(longCount.incrementAndGet());
+        sala.setCodigo(randomCodigo());
 
-        // If url ID doesn't match entity ID, it will throw BadRequestAlertException
+        // If url codigo doesn't match entity codigo, it will throw BadRequestAlertException
+        restSalaMockMvc
+            .perform(
+                patch(ENTITY_API_URL_CODIGO, randomCodigo()).contentType("application/merge-patch+json").content(om.writeValueAsBytes(sala))
+            )
+            .andExpect(status().isBadRequest());
+
+        // Validate the Sala in the database
+        assertSameRepositoryCount(databaseSizeBeforeUpdate);
+    }
+
+    @Test
+    @Transactional
+    void patchWithMissingCodigoPathParamSala() throws Exception {
+        long databaseSizeBeforeUpdate = getRepositoryCount();
+        sala.setCodigo(randomCodigo());
+
+        // If url codigo is missing, it will throw MethodNotAllowed
         restSalaMockMvc
             .perform(patch(ENTITY_API_URL).contentType("application/merge-patch+json").content(om.writeValueAsBytes(sala)))
             .andExpect(status().isMethodNotAllowed());
@@ -406,7 +405,7 @@ class SalaResourceIT {
 
         // Delete the sala
         restSalaMockMvc
-            .perform(delete(ENTITY_API_URL_ID, sala.getId()).accept(MediaType.APPLICATION_JSON))
+            .perform(delete(ENTITY_API_URL_CODIGO, sala.getCodigo()).accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isNoContent());
 
         // Validate the database contains one less item
@@ -430,7 +429,7 @@ class SalaResourceIT {
     }
 
     protected Sala getPersistedSala(Sala sala) {
-        return salaRepository.findById(sala.getId()).orElseThrow();
+        return salaRepository.findById(sala.getCodigo()).orElseThrow();
     }
 
     protected void assertPersistedSalaToMatchAllProperties(Sala expectedSala) {

@@ -62,7 +62,7 @@ export const RankingUpdate = () => {
     const entity = {
       ...rankingEntity,
       ...values,
-      sala: salas.find(it => it.id.toString() === values.sala?.toString()),
+      sala: salas.find(it => it.codigo === values.sala?.toString()),
       aluno: usuarios.find(it => it.id.toString() === values.aluno?.toString()),
     };
 
@@ -81,7 +81,7 @@ export const RankingUpdate = () => {
       : {
           ...rankingEntity,
           ultimaAtualizacao: convertDateTimeFromServer(rankingEntity.ultimaAtualizacao),
-          sala: rankingEntity?.sala?.id,
+          sala: rankingEntity?.sala?.codigo,
           aluno: rankingEntity?.aluno?.id,
         };
 
@@ -136,8 +136,8 @@ export const RankingUpdate = () => {
                 <option value="" key="0" />
                 {salas
                   ? salas.map(otherEntity => (
-                      <option value={otherEntity.id} key={otherEntity.id}>
-                        {otherEntity.id}
+                      <option value={otherEntity.codigo} key={otherEntity.codigo}>
+                        {otherEntity.codigo}
                       </option>
                     ))
                   : null}
