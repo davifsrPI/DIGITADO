@@ -8,6 +8,7 @@ import br.com.digitado.repository.ConquistaRepository;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioConquistaRepository;
 import br.com.digitado.repository.UsuarioRepository;
+import br.com.digitado.security.AuthoritiesConstants;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -80,7 +81,11 @@ public class ConquistaEngineService {
         Map.entry("Colecionador de XP", 1000),
         Map.entry("Milionário de XP", 5000),
         Map.entry("Madrugador", 1),
-        Map.entry("Coruja do Teclado", 1)
+        Map.entry("Coruja do Teclado", 1),
+        Map.entry("Primeiro Duelo", 1),
+        Map.entry("Duelista", 5),
+        Map.entry("Lenda dos Duelos", 25),
+        Map.entry("Vença de um Desenvolvedor", 1)
     );
 
     private static final List<String> POR_PALAVRA_CORRETA = List.of(
@@ -94,6 +99,7 @@ public class ConquistaEngineService {
     private static final List<String> POR_PARTIDA = List.of("Primeiras Teclas", "Maratonista do Teclado", "Viciado em Digitar");
     private static final List<String> POR_VITORIA = List.of("Primeira Vitória", "Campeão em Série", "Invencível");
     private static final List<String> POR_PARTIDA_PERFEITA = List.of("Sem Pressa e Sem Erro", "Perfeccionista", "Lenda da Ortografia");
+    private static final List<String> POR_VITORIA_DUELO = List.of("Duelista", "Lenda dos Duelos");
 
     private final ConquistaRepository conquistaRepository;
     private final UsuarioConquistaRepository usuarioConquistaRepository;
@@ -172,6 +178,41 @@ public class ConquistaEngineService {
         if (hora >= 22) marco(usuario, "Coruja do Teclado");
 
         verificarXpERankingInterno(usuario);
+    }
+
+    /**
+     * Fim de um duelo 1v1, para cada um dos dois jogadores. Além das conquistas de
+     * volume/vitória do modo, valida "Vença de um Desenvolvedor": desbloqueia quando o
+     * jogador VENCE um duelo cujo oponente é o usuário administrador (o desenvolvedor).
+     */
+    @Transactional
+    public void aoConcluirDuelo(String login, boolean venceu, String oponenteLogin) {
+        Optional<Usuario> usuarioOpt = resolverUsuario(login);
+        if (usuarioOpt.isEmpty()) {
+            return;
+        }
+        Usuario usuario = usuarioOpt.orElseThrow();
+
+        incrementar(usuario, "Primeiro Duelo", 1);
+        if (venceu) {
+            POR_VITORIA_DUELO.forEach(nome -> incrementar(usuario, nome, 1));
+            if (oponenteEhAdmin(oponenteLogin)) {
+                marco(usuario, "Vença de um Desenvolvedor");
+            }
+        }
+
+        verificarXpERankingInterno(usuario);
+    }
+
+    // O oponente é o usuário administrador do sistema? (checado pela authority, não pelo login)
+    private boolean oponenteEhAdmin(String oponenteLogin) {
+        if (oponenteLogin == null) {
+            return false;
+        }
+        return userRepository
+            .findOneWithAuthoritiesByLogin(oponenteLogin)
+            .map(user -> user.getAuthorities().stream().anyMatch(a -> AuthoritiesConstants.ADMIN.equals(a.getName())))
+            .orElse(false);
     }
 
     /** Primeira entrada em uma sala (chamado a cada conexão; idempotente após concluir). */

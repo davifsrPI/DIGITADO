@@ -107,6 +107,12 @@ export const Lobby = () => {
           <span className="create-room-link-arrow">→</span>
         </Link>
 
+        <Link to="/duelo" className="create-room-link">
+          <span className="create-room-link-icon">⚔️</span>
+          Duelo 1v1 — desafie alguém
+          <span className="create-room-link-arrow">→</span>
+        </Link>
+
         <div className="lobby-footer-links">
           <Link to="/ranking">🏆 Ver ranking</Link>
           <Link to="/conquistas">🏅 Minhas conquistas</Link>

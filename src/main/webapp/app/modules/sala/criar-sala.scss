@@ -592,3 +592,47 @@ body.criar-sala-page .view-container {
     cursor: not-allowed;
   }
 }
+
+/* ─── Toggle de visibilidade do duelo 1v1 (pública × privada) ─── */
+.cs-visibility {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cs-vis-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: rgba(255, 255, 255, 0.75);
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  &--active {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: #22c55e;
+    color: white;
+  }
+}
+
+.cs-vis-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.35;
+}

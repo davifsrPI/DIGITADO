@@ -1,6 +1,7 @@
 package br.com.digitado.repository;
 
 import br.com.digitado.domain.Sala;
+import br.com.digitado.domain.enumeration.TipoSala;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.*;
@@ -24,4 +25,8 @@ public interface SalaRepository extends JpaRepository<Sala, String> {
 
     // Lista todas as salas filtrando pelo campo ativo (true = ativas, false = inativas)
     List<Sala> findByAtivo(boolean ativo);
+
+    // Duelos 1v1 públicos e ativos — aparecem na lista global para qualquer jogador entrar.
+    // Ordenados dos mais recentes para os mais antigos.
+    List<Sala> findByTipoAndPrivadaFalseAndAtivoTrueOrderByDataCriacaoDesc(TipoSala tipo);
 }

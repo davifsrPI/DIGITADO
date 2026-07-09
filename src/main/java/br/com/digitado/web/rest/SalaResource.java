@@ -1,11 +1,13 @@
 package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.Sala;
+import br.com.digitado.domain.enumeration.TipoSala;
 import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.security.SecurityUtils;
+import br.com.digitado.service.JogoSalaService;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import br.com.digitado.web.rest.vm.SalaResponseVM;
 import jakarta.validation.Valid;
@@ -42,11 +44,18 @@ public class SalaResource {
     private final SalaRepository salaRepository;
     private final UserRepository userRepository;
     private final UsuarioRepository usuarioRepository;
+    private final JogoSalaService jogoSalaService;
 
-    public SalaResource(SalaRepository salaRepository, UserRepository userRepository, UsuarioRepository usuarioRepository) {
+    public SalaResource(
+        SalaRepository salaRepository,
+        UserRepository userRepository,
+        UsuarioRepository usuarioRepository,
+        JogoSalaService jogoSalaService
+    ) {
         this.salaRepository = salaRepository;
         this.userRepository = userRepository;
         this.usuarioRepository = usuarioRepository;
+        this.jogoSalaService = jogoSalaService;
     }
 
     // Cria uma nova sala. Automaticamente associa o usuário logado como professor da sala,
@@ -65,9 +74,19 @@ public class SalaResource {
             .ifPresent(sala::setProfessor);
         // Data de criação é definida pelo servidor — o cliente não consegue forjar
         sala.setDataCriacao(java.time.Instant.now());
+        // Normaliza tipo/visibilidade: sem tipo vira TURMA; a escolha pública/privada
+        // só existe para duelos 1v1 — salas de turma são sempre acessadas pelo código
+        if (sala.getTipo() == null) {
+            sala.setTipo(TipoSala.TURMA);
+        }
+        if (sala.getTipo() != TipoSala.UM_V_UM) {
+            sala.setPrivada(true);
+        } else if (sala.getPrivada() == null) {
+            sala.setPrivada(true);
+        }
         sala = salaRepository.save(sala);
         // Retorna apenas os campos públicos da sala (sem o professor, para não vazar dados)
-        SalaResponseVM vm = new SalaResponseVM(sala.getCodigo(), sala.getNome(), sala.getDescricao(), sala.getAtivo());
+        SalaResponseVM vm = toVM(sala);
         return ResponseEntity.created(new URI("/api/salas/" + sala.getCodigo()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, sala.getCodigo()))
             .body(vm);
@@ -164,6 +183,33 @@ public class SalaResource {
                 return salas;
             })
             .orElse(List.of());
+    }
+
+    // Lista global de duelos 1v1 PÚBLICOS abertos — qualquer usuário autenticado pode ver
+    // e entrar. Duelos privados nunca aparecem aqui: só entra quem tiver o código.
+    // Duelos que já estão com 2 jogadores conectados ficam de fora (sala cheia).
+    @GetMapping("/1v1/publicas")
+    public List<SalaResponseVM> getDuelosPublicos() {
+        LOG.debug("REST request to get duelos 1v1 publicos");
+        return salaRepository
+            .findByTipoAndPrivadaFalseAndAtivoTrueOrderByDataCriacaoDesc(TipoSala.UM_V_UM)
+            .stream()
+            .map(this::toVM)
+            .filter(vm -> vm.jogadores() < 2)
+            .toList();
+    }
+
+    // Converte a entidade para o VM público, anexando quantos jogadores estão conectados agora
+    private SalaResponseVM toVM(Sala sala) {
+        return new SalaResponseVM(
+            sala.getCodigo(),
+            sala.getNome(),
+            sala.getDescricao(),
+            sala.getAtivo(),
+            sala.getTipo() != null ? sala.getTipo().name() : TipoSala.TURMA.name(),
+            sala.getPrivada(),
+            jogoSalaService.conectadosNaSala(sala.getCodigo())
+        );
     }
 
     // Busca uma sala pelo código — sem restrição de acesso (código é público para quem tiver o link)

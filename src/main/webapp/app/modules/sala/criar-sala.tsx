@@ -1,7 +1,7 @@
 import './criar-sala.scss';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 
 // Gera um código de 6 caracteres aleatórios para a sala, excluindo letras/números confusos (O, I, 1, 0)
@@ -41,11 +41,17 @@ const DIFF_LABELS: Record<Dificuldade, string> = { FACIL: 'Fácil', MEDIO: 'Méd
 
 export const CriarSala = () => {
   const navigate = useNavigate();
+  // A mesma tela configura salas de turma e duelos 1v1 — o modo vem da URL (?modo=1v1)
+  const [searchParams] = useSearchParams();
+  const is1v1 = searchParams.get('modo') === '1v1';
 
   // ─── Estado do formulário ──────────────────────────────────────────────────
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [codigo, setCodigo] = useState(generateCode());
+  // Visibilidade — escolha exclusiva do 1v1: pública entra na lista global de duelos;
+  // privada só entra quem tiver o código
+  const [privada, setPrivada] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Tempo de rodada POR DIFICULDADE (padrão: fáceis mais rápidas, difíceis mais lentas)
@@ -120,7 +126,15 @@ export const CriarSala = () => {
     let codigoTentativa = codigo;
     while (tentativas < 5) {
       try {
-        const res = await axios.post('/api/salas', { nome, codigo: codigoTentativa, descricao: descricao || null, ativo: true });
+        const res = await axios.post('/api/salas', {
+          nome,
+          codigo: codigoTentativa,
+          descricao: descricao || null,
+          ativo: true,
+          tipo: is1v1 ? 'UM_V_UM' : 'TURMA',
+          // O backend força privada=true para salas de turma; só o 1v1 escolhe
+          privada: is1v1 ? privada : true,
+        });
         navigate(`/sala/${res.data.codigo}`, {
           state: {
             isProfessor: true,
@@ -162,8 +176,8 @@ export const CriarSala = () => {
       </div>
 
       <div className="cs-center cs-center--wide">
-        <button className="cs-back" onClick={() => navigate('/lobby')}>
-          ← Voltar ao lobby
+        <button className="cs-back" onClick={() => navigate(is1v1 ? '/duelo' : '/lobby')}>
+          {is1v1 ? '← Voltar aos duelos' : '← Voltar ao lobby'}
         </button>
 
         <div className="cs-grid">
@@ -172,17 +186,43 @@ export const CriarSala = () => {
             {/* PASSO 1 */}
             <div className="cs-card">
               <span className="cs-step-label">Passo 1</span>
-              <h2 className="cs-step-title">Informações da sala</h2>
+              <h2 className="cs-step-title">{is1v1 ? 'Informações do duelo 1v1' : 'Informações da sala'}</h2>
 
               {error && <div className="cs-error">{error}</div>}
 
               <form id="sala-form" onSubmit={handleSubmit} className="cs-form">
+                {/* Visibilidade — APENAS no duelo 1v1: pública aparece na lista global;
+                    privada exige o código de acesso */}
+                {is1v1 && (
+                  <div className="cs-field">
+                    <label>Visibilidade do duelo</label>
+                    <div className="cs-visibility">
+                      <button
+                        type="button"
+                        className={`cs-vis-btn${!privada ? ' cs-vis-btn--active' : ''}`}
+                        onClick={() => setPrivada(false)}
+                      >
+                        🌎 Pública
+                        <span className="cs-vis-hint">Qualquer jogador pode entrar pela lista de duelos</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`cs-vis-btn${privada ? ' cs-vis-btn--active' : ''}`}
+                        onClick={() => setPrivada(true)}
+                      >
+                        🔒 Privada
+                        <span className="cs-vis-hint">Só entra quem tiver o código da sala</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="cs-field">
-                  <label htmlFor="cs-nome">Nome da sala</label>
+                  <label htmlFor="cs-nome">{is1v1 ? 'Nome do duelo' : 'Nome da sala'}</label>
                   <input
                     id="cs-nome"
                     type="text"
-                    placeholder="Ex: Turma 3A — Aula de Ortografia"
+                    placeholder={is1v1 ? 'Ex: Duelo relâmpago ⚡' : 'Ex: Turma 3A — Aula de Ortografia'}
                     value={nome}
                     onChange={e => setNome(e.target.value)}
                     required
@@ -348,13 +388,25 @@ export const CriarSala = () => {
                   🔄 Gerar novo
                 </button>
               </div>
-              <span className="cs-code-hint">Compartilhe este código com seus alunos para que possam entrar na sala.</span>
+              <span className="cs-code-hint">
+                {is1v1
+                  ? privada
+                    ? 'Duelo privado: envie este código para o seu oponente entrar.'
+                    : 'Duelo público: ele aparece na lista global, mas o código também funciona.'
+                  : 'Compartilhe este código com seus alunos para que possam entrar na sala.'}
+              </span>
             </div>
 
             {/* RESUMO */}
             <div className="cs-card">
               <h2 className="cs-step-title">Resumo</h2>
               <div className="cs-summary">
+                {is1v1 && (
+                  <div className="cs-summary-row">
+                    <span>Modo</span>
+                    <strong>Duelo 1v1 — {privada ? 'Privado 🔒' : 'Público 🌎'}</strong>
+                  </div>
+                )}
                 <div className="cs-summary-row">
                   <span>Tempo por rodada</span>
                   <strong>
@@ -384,7 +436,13 @@ export const CriarSala = () => {
             </div>
 
             <button type="submit" form="sala-form" className="cs-submit-btn" disabled={submitting || !nome.trim()}>
-              {submitting ? 'Criando sala...' : '▶ Criar sala e iniciar partida'}
+              {submitting
+                ? is1v1
+                  ? 'Criando duelo...'
+                  : 'Criando sala...'
+                : is1v1
+                  ? '⚔ Criar duelo 1v1'
+                  : '▶ Criar sala e iniciar partida'}
             </button>
           </div>
         </div>

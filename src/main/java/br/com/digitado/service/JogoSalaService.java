@@ -51,6 +51,27 @@ public class JogoSalaService {
         jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo()).registrarAluno(login, nome);
     }
 
+    // Registra um participante num duelo 1v1, respeitando o limite de 2 jogadores.
+    // Retorna false se a sala já está cheia (e o login não é um dos dois que já estão nela —
+    // reconexão de quem já participa é sempre aceita).
+    public boolean registrarNoDuelo(String codigoSala, String login, String nome) {
+        EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
+        synchronized (jogo) {
+            jogo.marcarModo1v1();
+            if (jogo.totalConectados() >= 2 && !jogo.getAlunosConectados().containsKey(login)) {
+                return false;
+            }
+            jogo.registrarAluno(login, nome);
+            return true;
+        }
+    }
+
+    // Quantos jogadores estão conectados na sala agora (0 se a sala nem tem estado em memória)
+    public int conectadosNaSala(String codigoSala) {
+        EstadoJogo jogo = jogos.get(codigoSala);
+        return jogo != null ? jogo.totalConectados() : 0;
+    }
+
     // Remove um participante da lista de conectados (usado quando desconecta)
     public void removerAluno(String codigoSala, String login) {
         EstadoJogo jogo = jogos.get(codigoSala);
@@ -180,6 +201,19 @@ public class JogoSalaService {
                 conquistaEngine.aoConcluirPartida(login, i == 0, i < 3, perfeita);
             } catch (Exception e) {
                 LOG.error("Falha ao premiar fim de partida para {}: {}", login, e.getMessage(), e);
+            }
+        }
+        // Conquistas exclusivas do modo Duelo 1v1 — só valem com os dois oponentes
+        // tendo participado ("Primeiro Duelo", "Duelista", "Vença de um Desenvolvedor"...)
+        if (jogo.isModo1v1() && ordenados.size() == 2) {
+            for (int i = 0; i < 2; i++) {
+                String login = ordenados.get(i);
+                String oponente = ordenados.get(1 - i);
+                try {
+                    conquistaEngine.aoConcluirDuelo(login, i == 0, oponente);
+                } catch (Exception e) {
+                    LOG.error("Falha ao premiar duelo 1v1 para {}: {}", login, e.getMessage(), e);
+                }
             }
         }
     }
@@ -360,6 +394,8 @@ public class JogoSalaService {
         private final Map<String, Integer> sequenciaAcertos = new ConcurrentHashMap<>();
         private final Map<String, int[]> estatisticasPartida = new ConcurrentHashMap<>();
         private volatile boolean fimPremiado = false;
+        // Sala de duelo 1v1: no máximo 2 jogadores e conquistas próprias no fim
+        private volatile boolean modo1v1 = false;
 
         public record AlunoInfo(String nome, int pontos, String statusAtual) {}
 
@@ -470,6 +506,14 @@ public class JogoSalaService {
         // Quem respondeu ao menos uma vez na partida (define quem "participou")
         Set<String> getParticipantes() {
             return Set.copyOf(estatisticasPartida.keySet());
+        }
+
+        boolean isModo1v1() {
+            return modo1v1;
+        }
+
+        void marcarModo1v1() {
+            modo1v1 = true;
         }
 
         boolean isFimPremiado() {

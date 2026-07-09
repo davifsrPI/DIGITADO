@@ -12,6 +12,7 @@ import PasswordResetFinish from 'app/modules/account/password-reset/finish/passw
 import Logout from 'app/modules/login/logout';
 import Home from 'app/modules/home/home';
 import Lobby from 'app/modules/lobby/lobby';
+import Duelo from 'app/modules/duelo/duelo';
 import CriarSala from 'app/modules/sala/criar-sala';
 import SalaJogo from 'app/modules/sala/sala-jogo';
 import MinhasSalas from 'app/modules/sala/minhas-salas';
@@ -43,6 +44,14 @@ const AppRoutes = () => {
           element={
             <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <Lobby />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="duelo"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+              <Duelo />
             </PrivateRoute>
           }
         />

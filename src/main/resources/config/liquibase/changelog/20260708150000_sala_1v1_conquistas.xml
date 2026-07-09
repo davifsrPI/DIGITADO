@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Modo Duelo 1v1: a sala ganha um tipo (TURMA ou UM_V_UM) e a flag de
+        visibilidade (privada). Salas existentes viram TURMA privada — nada muda
+        para elas. A visibilidade pública só é usada por salas UM_V_UM.
+    -->
+    <changeSet id="20260708150000-1" author="digitado">
+        <addColumn tableName="sala">
+            <column name="tipo" type="varchar(20)" defaultValue="TURMA">
+                <constraints nullable="false"/>
+            </column>
+            <column name="privada" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!--
+        Conquistas do modo Duelo 1v1 (ids 36-39), incluindo "Vença de um Desenvolvedor":
+        vencer um duelo contra o usuário administrador vale 1000 XP.
+    -->
+    <changeSet id="20260708150000-2" author="digitado">
+        <loadData
+                  file="config/liquibase/data/conquista_seed_1v1.csv"
+                  separator=";"
+                  tableName="conquista"
+                  usePreparedStatements="true">
+            <column name="id" type="numeric"/>
+            <column name="nome" type="string"/>
+            <column name="descricao" type="string"/>
+            <column name="xp_recompensa" type="numeric"/>
+        </loadData>
+    </changeSet>
+</databaseChangeLog>

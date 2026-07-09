@@ -1,5 +1,6 @@
 package br.com.digitado.web.websocket;
 
+import br.com.digitado.domain.enumeration.TipoSala;
 import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.security.AuthoritiesConstants;
@@ -47,13 +48,28 @@ public class JogoSalaController {
     }
 
     // Registra um aluno (ou professor) na sala quando ele se conecta.
+    // Em duelos 1v1 o servidor limita a 2 jogadores: o 3º recebe erro e não entra.
     // Depois de registrar, faz broadcast do estado atual para todos na sala.
     @MessageMapping("/sala/{codigo}/entrar")
     public void entrar(@DestinationVariable String codigo, @Payload EntradaAluno entrada, Principal principal) {
         if (principal == null) return;
         String login = principal.getName();
         String nomeSala = getNomeSala(codigo);
-        jogoService.registrarAluno(codigo, login, entrada.nome());
+        boolean duelo = salaRepository.findByCodigo(codigo).map(s -> s.getTipo() == TipoSala.UM_V_UM).orElse(false);
+        if (duelo) {
+            boolean entrou = jogoService.registrarNoDuelo(codigo, login, entrada.nome());
+            if (!entrou) {
+                LOG.warn("Duelo {} cheio — entrada negada para {}", codigo, login);
+                messaging.convertAndSendToUser(
+                    login,
+                    "/queue/sala/" + codigo + "/erro",
+                    Map.of("tipo", "SALA_CHEIA", "mensagem", "Este duelo já está com 2 jogadores")
+                );
+                return;
+            }
+        } else {
+            jogoService.registrarAluno(codigo, login, entrada.nome());
+        }
         // Conquista "Bem-vindo à Turma" (primeira sala) — nunca derruba a conexão
         try {
             conquistaEngine.aoEntrarNaSala(login);

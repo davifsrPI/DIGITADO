@@ -1,5 +1,6 @@
 package br.com.digitado.domain;
 
+import br.com.digitado.domain.enumeration.TipoSala;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -42,6 +43,19 @@ public class Sala implements Serializable {
      */
     @Column(name = "data_criacao", updatable = false)
     private Instant dataCriacao = Instant.now();
+
+    // TURMA (sala de aula) ou UM_V_UM (duelo 1 contra 1, máximo 2 jogadores)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo", length = 20)
+    private TipoSala tipo = TipoSala.TURMA;
+
+    /**
+     * Visibilidade — só faz sentido para salas UM_V_UM: privada exige o código
+     * para entrar; pública aparece na lista global de duelos abertos.
+     * Salas TURMA são sempre "privadas" (acesso apenas pelo código).
+     */
+    @Column(name = "privada")
+    private Boolean privada = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(value = { "salas", "listasPalavras", "palavrasCriadas", "salasAlunos" }, allowSetters = true)
@@ -118,6 +132,32 @@ public class Sala implements Serializable {
         this.ativo = ativo;
     }
 
+    public TipoSala getTipo() {
+        return this.tipo;
+    }
+
+    public void setTipo(TipoSala tipo) {
+        this.tipo = tipo;
+    }
+
+    public Sala tipo(TipoSala tipo) {
+        this.setTipo(tipo);
+        return this;
+    }
+
+    public Boolean getPrivada() {
+        return this.privada;
+    }
+
+    public void setPrivada(Boolean privada) {
+        this.privada = privada;
+    }
+
+    public Sala privada(Boolean privada) {
+        this.setPrivada(privada);
+        return this;
+    }
+
     public Usuario getProfessor() {
         return this.professor;
     }
@@ -189,6 +229,8 @@ public class Sala implements Serializable {
             ", nome='" + getNome() + "'" +
             ", descricao='" + getDescricao() + "'" +
             ", ativo='" + getAtivo() + "'" +
+            ", tipo='" + getTipo() + "'" +
+            ", privada='" + getPrivada() + "'" +
             "}";
     }
 }
