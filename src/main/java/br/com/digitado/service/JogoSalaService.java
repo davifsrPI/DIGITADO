@@ -78,6 +78,31 @@ public class JogoSalaService {
         if (jogo != null) jogo.removerAluno(login);
     }
 
+    // Resultado do processamento de uma desconexão:
+    // salasComSaida: salas de onde o jogador foi removido (quem ficou precisa ver o estado novo);
+    // salasEncerradasVazias: salas cuja partida JÁ TERMINOU e ficaram sem ninguém —
+    // o chamador deve fechá-las no banco (ativo = false).
+    public record ResultadoDesconexao(List<String> salasComSaida, List<String> salasEncerradasVazias) {}
+
+    // Processa a desconexão de um usuário: remove-o de todas as salas em que estava
+    // conectado e identifica as salas encerradas que ficaram vazias. O estado em memória
+    // dessas salas é descartado — a partida acabou e não há mais ninguém nela.
+    public ResultadoDesconexao aoDesconectar(String login) {
+        List<String> salasComSaida = new ArrayList<>();
+        List<String> salasEncerradasVazias = new ArrayList<>();
+        jogos.forEach((codigo, jogo) -> {
+            if (jogo.getAlunosConectados().containsKey(login)) {
+                jogo.removerAluno(login);
+                salasComSaida.add(codigo);
+            }
+            if ("ENCERRADA".equals(jogo.getTipo()) && jogo.totalConectados() == 0) {
+                salasEncerradasVazias.add(codigo);
+            }
+        });
+        salasEncerradasVazias.forEach(jogos::remove);
+        return new ResultadoDesconexao(salasComSaida, salasEncerradasVazias);
+    }
+
     // Inicia o jogo: sorteia as palavras conforme a configuração escolhida pelo professor,
     // adiciona quaisquer palavras extras selecionadas manualmente e embaralha tudo
     public EstadoJogoDTO iniciar(String codigoSala, String nomeSala, IniciarPayload payload) {
