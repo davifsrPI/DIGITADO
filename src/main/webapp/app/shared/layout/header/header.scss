@@ -49,6 +49,14 @@ Navbar
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   padding: 0.5em 1.4em;
 
+  /* A pílula central é absoluta (fora do fluxo), então ela não "estica" mais a
+     navbar — sem uma altura mínima, a barra encolhe para a altura da logo, a
+     pílula transborda e sobra uma fresta clara entre a navbar e o conteúdo
+     (o app-container reserva 60px de paddingTop). */
+  @media (min-width: 768px) {
+    min-height: 60px;
+  }
+
   .navbar-toggler {
     border-color: rgba(255, 255, 255, 0.2);
     color: rgba(255, 255, 255, 0.8);
@@ -62,6 +70,21 @@ Navbar
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 999px;
     padding: 4px 6px;
+  }
+
+  /* Centralização REAL na tela: o mx-auto centralizava a pílula no espaço que
+     sobra depois da logo, deixando-a deslocada para a direita. Com posição
+     absoluta ancorada na navbar (que ocupa a largura toda), o centro da pílula
+     coincide com o centro da tela em qualquer resolução desktop. */
+  @media (min-width: 768px) {
+    #header-tabs {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      /* Em telas médias a pílula pode encostar na logo — ela fica por cima e clicável */
+      z-index: 2;
+    }
   }
 
   a.nav-link,
@@ -318,44 +341,91 @@ Nome do usuário + chama da palavra do dia
   white-space: nowrap;
 }
 
-/* Chama animada de quem acertou a palavra do dia: duas camadas de fogo
-   tremulando fora de fase, com brilho pulsante */
+/* Chama de quem acertou a palavra do dia — SEM fundo/camada borrada:
+   uma única chama "ardendo" (squash & stretch ancorado na base, como fogo real)
+   e duas faíscas que sobem e somem. Só transform/opacity: leve e suave. */
 .pdd-fogo {
   position: relative;
-  display: inline-block;
-  width: 18px;
-  height: 18px;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
+  background: none;
 }
 
 .pdd-fogo-chama {
+  font-size: 16px;
+  line-height: 1;
+  transform-origin: 50% 100%;
+  animation: pdd-arder 1.15s ease-in-out infinite;
+  filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.45));
+  will-change: transform;
+}
+
+/* Faíscas: pontinhos que nascem na base da chama, sobem e apagam */
+.pdd-fogo::before,
+.pdd-fogo::after {
+  content: '';
   position: absolute;
-  inset: 0;
-  font-size: 15px;
-  line-height: 18px;
-  transform-origin: 50% 90%;
-  animation: pdd-tremular 0.7s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.9));
+  bottom: 5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fbbf24;
+  opacity: 0;
+  pointer-events: none;
+  animation: pdd-faisca 1.7s ease-out infinite;
 }
 
-.pdd-fogo-chama--tras {
-  opacity: 0.6;
-  animation: pdd-tremular 0.5s ease-in-out infinite reverse;
-  filter: blur(1px) drop-shadow(0 0 8px rgba(239, 68, 68, 0.8));
+.pdd-fogo::before {
+  left: 4px;
 }
 
-@keyframes pdd-tremular {
+.pdd-fogo::after {
+  left: 13px;
+  width: 2px;
+  height: 2px;
+  background: #f87171;
+  animation-duration: 2.1s;
+  animation-delay: 0.9s;
+}
+
+/* Fogo de verdade não "pula": a base fica presa e o corpo estica, encolhe e
+   pende para os lados em tempos irregulares (keyframes fora de simetria) */
+@keyframes pdd-arder {
   0%,
   100% {
-    transform: scale(1) rotate(-4deg);
-    filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.7)) brightness(1);
+    transform: scale(1, 1) rotate(-1.5deg);
   }
-  35% {
-    transform: scale(1.15, 1.25) rotate(3deg);
-    filter: drop-shadow(0 0 9px rgba(251, 146, 60, 1)) brightness(1.25);
+  22% {
+    transform: scale(1.06, 0.93) rotate(2deg);
   }
-  70% {
-    transform: scale(0.95, 1.05) rotate(-2deg);
-    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.85)) brightness(1.1);
+  43% {
+    transform: scale(0.93, 1.12) rotate(-2.5deg);
+    filter: drop-shadow(0 0 5px rgba(251, 146, 60, 0.7)) brightness(1.12);
+  }
+  64% {
+    transform: scale(1.04, 0.99) rotate(1.5deg);
+  }
+  86% {
+    transform: scale(0.97, 1.06) rotate(-0.5deg);
+    filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.55)) brightness(1.06);
+  }
+}
+
+@keyframes pdd-faisca {
+  0%,
+  55% {
+    opacity: 0;
+    transform: translateY(0) scale(1);
+  }
+  62% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-13px) scale(0.4);
   }
 }

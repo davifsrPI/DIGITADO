@@ -1,3 +1,32 @@
 .footer {
   height: 50px;
 }
+
+/* ==========================================================================
+Rodapé nas páginas temáticas (fundo escuro #0f172a)
+Antes só lobby e home estilizavam o footer — nas demais páginas ele aparecia
+com o visual claro padrão do Bootstrap, destoando do tema. O estilo mora aqui,
+num lugar só: toda página nova com fundo escuro entra nesta lista.
+========================================================================== */
+body.home-page,
+body.lobby-page,
+body.duelo-page,
+body.ranking-page,
+body.conquistas-page,
+body.criar-sala-page,
+body.minhas-salas-page,
+body.sala-jogo-page,
+body.login-page,
+body.register-page,
+body.pp-page {
+  footer {
+    background: transparent !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+
+    a,
+    .cc-footer-btn {
+      color: rgba(255, 255, 255, 0.5) !important;
+    }
+  }
+}

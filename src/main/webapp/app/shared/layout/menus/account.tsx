@@ -45,7 +45,6 @@ const rotuloDoMenu = (isAuthenticated: boolean, displayName?: string, acertouPal
       {displayName}
       {acertouPalavraDoDia && (
         <span className="pdd-fogo" title="Acertou a palavra do dia! 🔥">
-          <span className="pdd-fogo-chama pdd-fogo-chama--tras">🔥</span>
           <span className="pdd-fogo-chama">🔥</span>
         </span>
       )}
