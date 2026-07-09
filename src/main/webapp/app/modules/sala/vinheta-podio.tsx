@@ -30,7 +30,8 @@ const CORES_CONFETE = ['#fbbf24', '#6366f1', '#4ade80', '#f87171', '#38bdf8'];
 /**
  * Vinheta de suspense do fim da partida: "FIM DE JOGO!" com impacto, suspense,
  * e o pódio revelando 3º → 2º → rufar de tambores → 1º com chuva de confete.
- * Ao terminar chama onFim para o pai exibir o placar final completo.
+ * Após a revelação do campeão os vencedores comemoram saltando em arco e um
+ * botão "Continuar" avança para o placar final completo (via onFim).
  */
 export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
   const top3 = placar.slice(0, 3);
@@ -55,8 +56,9 @@ export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
       const id = setTimeout(() => onFimRef.current(), 1400);
       return () => clearTimeout(id);
     }
-    // Linha do tempo da vinheta — pula a revelação de posições que não existem
-    const passos: Array<{ t: number; fase?: number; fim?: boolean }> = [];
+    // Linha do tempo da vinheta — pula a revelação de posições que não existem.
+    // Depois do campeão a vinheta fica em festa até o clique em "Continuar".
+    const passos: Array<{ t: number; fase: number }> = [];
     let t = 1100;
     passos.push({ t, fase: FASE_SUSPENSE });
     t += 1000;
@@ -71,9 +73,7 @@ export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
     passos.push({ t, fase: FASE_RUFAR });
     t += 1400;
     passos.push({ t, fase: FASE_PRIMEIRO });
-    t += 2400;
-    passos.push({ t, fim: true });
-    const ids = passos.map(p => setTimeout(() => (p.fim ? onFimRef.current() : setFase(p.fase)), p.t));
+    const ids = passos.map(p => setTimeout(() => setFase(p.fase), p.t));
     return () => ids.forEach(clearTimeout);
   }, []);
 
@@ -98,9 +98,11 @@ export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
               const p = top3[pos];
               if (!p) return null;
               const revelado = fase >= revelaFase;
+              // Com o pódio completo os vencedores comemoram saltando em arco
+              const saltando = revelado && fase >= FASE_PRIMEIRO;
               return (
                 <div key={pos} className={`vp-col ${classe}${revelado ? ' vp-revelado' : ''}`}>
-                  <div className="vp-jogador">
+                  <div className={`vp-jogador${saltando ? ' vp-jogador--saltando' : ''}`} style={{ animationDelay: `${pos * 0.2}s` }}>
                     {revelado ? (
                       <>
                         <span className="vp-medalha">{medalha}</span>
@@ -123,6 +125,12 @@ export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
             })}
           </div>
         </div>
+      )}
+
+      {fase >= FASE_PRIMEIRO && (
+        <button type="button" className="vp-continuar" onClick={() => onFimRef.current()}>
+          Continuar →
+        </button>
       )}
 
       {fase >= FASE_PRIMEIRO && (
