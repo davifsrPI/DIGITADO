@@ -596,6 +596,29 @@ body.home-page {
   text-transform: uppercase;
 }
 
+/* Dica da palavra do dia — vinda da coluna dica da tabela palavra */
+.pdd-dica {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(250, 204, 21, 0.08);
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: #fde68a;
+  font-size: 14px;
+  text-align: center;
+
+  strong {
+    color: #facc15;
+  }
+}
+
+.pdd-dica-icone {
+  font-size: 16px;
+}
+
 .pdd-form {
   width: 100%;
   display: flex;

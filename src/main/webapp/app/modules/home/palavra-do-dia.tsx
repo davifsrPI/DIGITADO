@@ -13,6 +13,8 @@ interface PalavraDoDia {
   letrasEmbaralhadas?: string;
   dificuldade?: string;
   categoria?: string;
+  // Dica cadastrada no banco (coluna dica da tabela palavra) — pista para o jogador
+  dica?: string;
   jaTentou: boolean;
   resultado?: Resultado;
 }
@@ -98,6 +100,16 @@ export const PalavraDoDia = () => {
             </span>
           ))}
         </div>
+
+        {/* Dica vinda do banco de dados — só aparece se a palavra tiver uma cadastrada */}
+        {desafio.dica && (
+          <div className="pdd-dica">
+            <span className="pdd-dica-icone">💡</span>
+            <span>
+              <strong>Dica:</strong> {desafio.dica}
+            </span>
+          </div>
+        )}
 
         {resultado ? (
           <div className={`pdd-resultado${resultado.acertou ? ' pdd-resultado--acerto' : ' pdd-resultado--erro'}`}>

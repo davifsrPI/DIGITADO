@@ -35,6 +35,10 @@ public class Palavra implements Serializable {
     @Column(name = "idioma")
     private String idioma;
 
+    // Dica exibida ao jogador na Palavra do Dia (ex: "fruta amarela") — opcional
+    @Column(name = "dica")
+    private String dica;
+
     @Column(name = "possui_acento")
     private Boolean possuiAcento;
 
@@ -179,6 +183,19 @@ public class Palavra implements Serializable {
 
     public void setIdioma(String idioma) {
         this.idioma = idioma;
+    }
+
+    public String getDica() {
+        return this.dica;
+    }
+
+    public Palavra dica(String dica) {
+        this.setDica(dica);
+        return this;
+    }
+
+    public void setDica(String dica) {
+        this.dica = dica;
     }
 
     public Boolean getPossuiAcento() {

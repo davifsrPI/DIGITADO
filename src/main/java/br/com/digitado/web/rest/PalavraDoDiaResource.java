@@ -58,7 +58,7 @@ public class PalavraDoDiaResource {
     public PalavraDoDiaVM getPalavraDoDia(@CookieValue(name = COOKIE_TENTATIVA, required = false) String cookie) {
         Optional<Palavra> palavraOpt = palavraDoDiaService.palavraDeHoje();
         if (palavraOpt.isEmpty()) {
-            return new PalavraDoDiaVM(false, palavraDoDiaService.hoje(), 0, null, null, null, false, null);
+            return new PalavraDoDiaVM(false, palavraDoDiaService.hoje(), 0, null, null, null, null, false, null);
         }
         Palavra palavra = palavraOpt.orElseThrow();
 
@@ -92,6 +92,8 @@ public class PalavraDoDiaResource {
             palavraDoDiaService.embaralhar(palavra.getTexto()),
             palavra.getDificuldade() != null ? palavra.getDificuldade().name() : null,
             palavra.getCategoria(),
+            // Dica cadastrada no banco (coluna dica da tabela palavra) — pista para o jogador
+            palavra.getDica(),
             jaTentou,
             resultado
         );
