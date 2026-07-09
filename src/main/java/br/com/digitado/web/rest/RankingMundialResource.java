@@ -21,12 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
  * Ranking Mundial: classificação de todos os usuários pelo XP acumulado
  * (usuario.xp — hoje alimentado pelos acertos na Palavra do Dia).
  *
- * A identidade de "minha posição" vem exclusivamente do token JWT, como nas
- * conquistas. Só o nome de exibição vai para o frontend (primeiro nome +
- * inicial do sobrenome) — nunca e-mail ou login de outros usuários.
+ * Endpoint PÚBLICO (/api/public/** é permitAll): visitantes sem conta podem
+ * ver o ranking na tela inicial. Para quem está logado, a identidade de
+ * "minha posição" vem exclusivamente do token JWT, como nas conquistas;
+ * anônimo recebe meuXp 0 e minhaPosicao null. Só o nome de exibição vai para
+ * o frontend (primeiro nome + inicial do sobrenome) — nunca e-mail ou login.
  */
 @RestController
-@RequestMapping("/api/ranking-mundial")
+@RequestMapping("/api/public/ranking-mundial")
 @Transactional(readOnly = true)
 public class RankingMundialResource {
 

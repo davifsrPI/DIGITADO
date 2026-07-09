@@ -71,14 +71,9 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
-        <Route
-          path="ranking"
-          element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
-              <Ranking />
-            </PrivateRoute>
-          }
-        />
+        {/* Pública de propósito: visitante sem conta pode ver o ranking mundial
+            (o backend expõe só nomes de exibição, nunca e-mail ou login) */}
+        <Route path="ranking" element={<Ranking />} />
         <Route
           path="sala/new"
           element={

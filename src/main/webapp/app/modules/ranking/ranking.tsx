@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
+import { useAppSelector } from 'app/config/store';
+
 interface RankingEntry {
   posicao: number;
   nome: string;
@@ -25,6 +27,10 @@ const MEDALHAS = ['🥇', '🥈', '🥉'];
 // Ranking Mundial: classificação de todos os usuários pelo XP acumulado
 // (hoje alimentado pelos acertos na Palavra do Dia — 300 XP cada)
 export const Ranking = () => {
+  // A página é PÚBLICA (visitante sem conta pode ver o ranking) — o login só
+  // muda o destino do botão de voltar e o destaque da própria posição
+  const account = useAppSelector(state => state.authentication.account);
+  const logado = Boolean(account?.login);
   const [dados, setDados] = useState<RankingMundial | null>(null);
   const [erro, setErro] = useState(false);
   const [pagina, setPagina] = useState(0);
@@ -37,7 +43,7 @@ export const Ranking = () => {
 
   useEffect(() => {
     axios
-      .get<RankingMundial>('/api/ranking-mundial')
+      .get<RankingMundial>('/api/public/ranking-mundial')
       .then(res => setDados(res.data))
       .catch(() => setErro(true));
   }, []);
@@ -48,7 +54,7 @@ export const Ranking = () => {
     if (carregandoMais || !dados?.temMais) return;
     setCarregandoMais(true);
     axios
-      .get<RankingMundial>('/api/ranking-mundial', { params: { page: pagina + 1 } })
+      .get<RankingMundial>('/api/public/ranking-mundial', { params: { page: pagina + 1 } })
       .then(res => {
         setPagina(p => p + 1);
         setDados(prev => (prev ? { ...res.data, top: [...prev.top, ...res.data.top] } : res.data));
@@ -69,8 +75,9 @@ export const Ranking = () => {
       </div>
 
       <div className="rk-content">
-        <Link to="/lobby" className="rk-back">
-          ← Voltar ao lobby
+        {/* Visitante sem conta volta para a tela inicial; logado volta ao lobby */}
+        <Link to={logado ? '/lobby' : '/'} className="rk-back">
+          {logado ? '← Voltar ao lobby' : '← Voltar ao início'}
         </Link>
 
         <div className="rk-header">

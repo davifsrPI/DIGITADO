@@ -43,12 +43,13 @@ export const Home = () => {
 
         <div className="hero-actions">
           {account?.login ? (
+            // Logado: os dois botões levam direto para a criação de sala
             <>
-              <Link to="/lobby">
+              <Link to="/sala/new">
                 <button className="btn-primary">Começar agora</button>
               </Link>
-              <Link to="/ranking">
-                <button className="btn-ghost">Ver como funciona</button>
+              <Link to="/sala/new">
+                <button className="btn-ghost">Entrar</button>
               </Link>
             </>
           ) : (
@@ -57,10 +58,14 @@ export const Home = () => {
                 <button className="btn-primary">Começar agora</button>
               </Link>
               <Link to="/login">
-                <button className="btn-ghost">Ver como funciona</button>
+                <button className="btn-ghost">Entrar</button>
               </Link>
             </>
           )}
+          {/* Ranking mundial é público — dá para ver sem fazer login */}
+          <Link to="/ranking">
+            <button className="btn-ghost">🌍 Ver ranking mundial</button>
+          </Link>
         </div>
       </section>
 
