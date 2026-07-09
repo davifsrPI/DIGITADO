@@ -125,16 +125,21 @@ export const UsuarioUpdate = () => {
                   required: { value: true, message: translate('entity.validation.required') },
                 }}
               />
-              <ValidatedField
-                label={translate('digitadoApp.usuario.senha')}
-                id="usuario-senha"
-                name="senha"
-                data-cy="senha"
-                type="text"
-                validate={{
-                  required: { value: true, message: translate('entity.validation.required') },
-                }}
-              />
+              {/* Senha só na CRIAÇÃO. Na edição o campo não existe: o backend preserva
+                  a senha atual do banco (ela é imutável via PUT/PATCH) — o admin pode
+                  ativar/editar uma conta sem tocar na senha do usuário. */}
+              {isNew && (
+                <ValidatedField
+                  label={translate('digitadoApp.usuario.senha')}
+                  id="usuario-senha"
+                  name="senha"
+                  data-cy="senha"
+                  type="text"
+                  validate={{
+                    required: { value: true, message: translate('entity.validation.required') },
+                  }}
+                />
+              )}
               <ValidatedField
                 label={translate('digitadoApp.usuario.tipoUsuario')}
                 id="usuario-tipoUsuario"

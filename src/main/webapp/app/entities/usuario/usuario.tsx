@@ -8,7 +8,7 @@ import { ASC, DESC } from 'app/shared/util/pagination.constants';
 import { overrideSortStateWithQueryParams } from 'app/shared/util/entity-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-import { getEntities } from './usuario.reducer';
+import { getEntities, partialUpdateEntity } from './usuario.reducer';
 
 export const Usuario = () => {
   const dispatch = useAppDispatch();
@@ -51,6 +51,13 @@ export const Usuario = () => {
 
   const handleSyncList = () => {
     sortEntities();
+  };
+
+  // Aceitar/desativar conta com UM clique: PATCH só com {id, ativo} — a senha e o
+  // restante do cadastro ficam intactos (o backend preserva a senha em updates)
+  const toggleAtivo = usuario => async () => {
+    await dispatch(partialUpdateEntity({ id: usuario.id, ativo: !usuario.ativo }));
+    getAllEntities();
   };
 
   const getSortIconByFieldName = (fieldName: string) => {
@@ -98,10 +105,7 @@ export const Usuario = () => {
                   <Translate contentKey="digitadoApp.usuario.email">Email</Translate>{' '}
                   <FontAwesomeIcon icon={getSortIconByFieldName('email')} />
                 </th>
-                <th className="hand" onClick={sort('senha')}>
-                  <Translate contentKey="digitadoApp.usuario.senha">Senha</Translate>{' '}
-                  <FontAwesomeIcon icon={getSortIconByFieldName('senha')} />
-                </th>
+                {/* A coluna Senha saiu: a API nunca retorna o hash (WRITE_ONLY), então ela ficava sempre vazia */}
                 <th className="hand" onClick={sort('tipoUsuario')}>
                   <Translate contentKey="digitadoApp.usuario.tipoUsuario">Tipo Usuario</Translate>{' '}
                   <FontAwesomeIcon icon={getSortIconByFieldName('tipoUsuario')} />
@@ -127,11 +131,21 @@ export const Usuario = () => {
                   <td>{usuario.nome}</td>
                   <td>{usuario.sobrenome}</td>
                   <td>{usuario.email}</td>
-                  <td>{usuario.senha}</td>
                   <td>
                     <Translate contentKey={`digitadoApp.TipoUsuario.${usuario.tipoUsuario}`} />
                   </td>
-                  <td>{usuario.ativo ? 'true' : 'false'}</td>
+                  <td>
+                    {/* Clique alterna ativo/inativo — é assim que o admin aceita contas novas */}
+                    {usuario.ativo ? (
+                      <Button color="success" size="sm" onClick={toggleAtivo(usuario)} title="Clique para desativar">
+                        Ativo
+                      </Button>
+                    ) : (
+                      <Button color="danger" size="sm" onClick={toggleAtivo(usuario)} title="Clique para ativar">
+                        Inativo
+                      </Button>
+                    )}
+                  </td>
                   <td>
                     {usuario.salasAlunos
                       ? usuario.salasAlunos.map((val, j) => (
