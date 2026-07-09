@@ -2,7 +2,29 @@ package br.com.digitado.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class SalaAsserts {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    // A descricao é uma coluna JSON: o MySQL normaliza a formatação ao gravar
+    // (espaços depois de ":" e ","), então a comparação precisa ser semântica.
+    // Valores que não sejam JSON continuam comparados como texto puro.
+    private static Object descricaoComparavel(String descricao) {
+        if (descricao == null) {
+            return null;
+        }
+        String t = descricao.trim();
+        if (t.startsWith("{") || t.startsWith("[")) {
+            try {
+                return MAPPER.readTree(t);
+            } catch (com.fasterxml.jackson.core.JacksonException e) {
+                return descricao;
+            }
+        }
+        return descricao;
+    }
 
     /**
      * Asserts that the entity has all properties (fields/relationships) set.
@@ -50,7 +72,11 @@ public class SalaAsserts {
             .as("Verify Sala relevant properties")
             .satisfies(a -> assertThat(a.getNome()).as("check nome").isEqualTo(expected.getNome()))
             .satisfies(a -> assertThat(a.getCodigo()).as("check codigo").isEqualTo(expected.getCodigo()))
-            .satisfies(a -> assertThat(a.getDescricao()).as("check descricao").isEqualTo(expected.getDescricao()))
+            .satisfies(a ->
+                assertThat(descricaoComparavel(a.getDescricao()))
+                    .as("check descricao")
+                    .isEqualTo(descricaoComparavel(expected.getDescricao()))
+            )
             .satisfies(a -> assertThat(a.getAtivo()).as("check ativo").isEqualTo(expected.getAtivo()));
     }
 

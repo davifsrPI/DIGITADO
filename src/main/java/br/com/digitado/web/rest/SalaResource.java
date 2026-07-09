@@ -10,6 +10,9 @@ import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.service.JogoSalaService;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import br.com.digitado.web.rest.vm.SalaResponseVM;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
@@ -45,17 +48,57 @@ public class SalaResource {
     private final UserRepository userRepository;
     private final UsuarioRepository usuarioRepository;
     private final JogoSalaService jogoSalaService;
+    private final ObjectMapper objectMapper;
 
     public SalaResource(
         SalaRepository salaRepository,
         UserRepository userRepository,
         UsuarioRepository usuarioRepository,
-        JogoSalaService jogoSalaService
+        JogoSalaService jogoSalaService,
+        ObjectMapper objectMapper
     ) {
         this.salaRepository = salaRepository;
         this.userRepository = userRepository;
         this.usuarioRepository = usuarioRepository;
         this.jogoSalaService = jogoSalaService;
+        this.objectMapper = objectMapper;
+    }
+
+    // ─── Descrição em JSON ───────────────────────────────────────────────────
+    // A coluna descricao guarda {"descricao": "<texto>", "modo": "1v1"|"normal"}.
+    // O JSON é montado SEMPRE aqui no backend: o cliente manda só o texto e o modo
+    // vem do tipo da sala — um cliente adulterado não consegue gravar outro modo.
+
+    // Extrai o texto puro da descrição, aceitando texto simples ou o JSON já embrulhado
+    // (caso o cliente devolva no PUT o objeto que recebeu do GET)
+    private String extrairTextoDescricao(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        String t = valor.trim();
+        if (t.startsWith("{")) {
+            try {
+                JsonNode node = objectMapper.readTree(t);
+                JsonNode texto = node.get("descricao");
+                return texto == null || texto.isNull() ? null : texto.asText();
+            } catch (com.fasterxml.jackson.core.JacksonException e) {
+                return valor; // não era JSON válido — trata como texto puro
+            }
+        }
+        return valor;
+    }
+
+    // Monta o JSON final da coluna a partir do texto e do tipo da sala
+    private String montarDescricaoJson(String descricaoOriginal, TipoSala tipo) {
+        ObjectNode node = objectMapper.createObjectNode();
+        String texto = extrairTextoDescricao(descricaoOriginal);
+        if (texto == null) {
+            node.putNull("descricao");
+        } else {
+            node.put("descricao", texto);
+        }
+        node.put("modo", tipo == TipoSala.UM_V_UM ? "1v1" : "normal");
+        return node.toString();
     }
 
     // Cria uma nova sala. Automaticamente associa o usuário logado como professor da sala,
@@ -84,6 +127,8 @@ public class SalaResource {
         } else if (sala.getPrivada() == null) {
             sala.setPrivada(true);
         }
+        // A descrição vai para o banco como JSON {"descricao": texto, "modo": ...}
+        sala.setDescricao(montarDescricaoJson(sala.getDescricao(), sala.getTipo()));
         sala = salaRepository.save(sala);
         // Retorna apenas os campos públicos da sala (sem o professor, para não vazar dados)
         SalaResponseVM vm = toVM(sala);
@@ -111,6 +156,8 @@ public class SalaResource {
         if (!isOwnerOrAdmin(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
+        // Reembrulha a descrição em JSON com o modo do tipo enviado (default TURMA)
+        sala.setDescricao(montarDescricaoJson(sala.getDescricao(), sala.getTipo()));
         sala = salaRepository.save(sala);
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, sala.getCodigo()))
@@ -145,7 +192,8 @@ public class SalaResource {
                     existingSala.setNome(sala.getNome());
                 }
                 if (sala.getDescricao() != null) {
-                    existingSala.setDescricao(sala.getDescricao());
+                    // O modo dentro do JSON segue o tipo REAL da sala no banco (PATCH não muda tipo)
+                    existingSala.setDescricao(montarDescricaoJson(sala.getDescricao(), existingSala.getTipo()));
                 }
                 if (sala.getAtivo() != null) {
                     existingSala.setAtivo(sala.getAtivo());
@@ -204,7 +252,8 @@ public class SalaResource {
         return new SalaResponseVM(
             sala.getCodigo(),
             sala.getNome(),
-            sala.getDescricao(),
+            // getDescricaoJson: garante JSON válido mesmo para valor legado em texto puro
+            sala.getDescricaoJson(),
             sala.getAtivo(),
             sala.getTipo() != null ? sala.getTipo().name() : TipoSala.TURMA.name(),
             sala.getPrivada(),

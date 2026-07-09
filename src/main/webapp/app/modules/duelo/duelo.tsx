@@ -8,11 +8,17 @@ import TelaCarregamento from 'app/shared/layout/loading/tela-carregamento';
 // Os códigos de sala têm sempre 6 caracteres (mesma regra de criar-sala)
 const CODE_LEN = 6;
 
+// A descrição agora é um objeto JSON vindo do backend: o texto livre + o modo da sala
+interface DescricaoSala {
+  descricao?: string | null;
+  modo?: '1v1' | 'normal';
+}
+
 // Duelo público retornado pelo backend — apenas campos públicos, sem dados do criador
 interface DueloPublico {
   codigo: string;
   nome: string;
-  descricao?: string;
+  descricao?: DescricaoSala | null;
   jogadores: number;
 }
 
@@ -107,7 +113,7 @@ export const Duelo = () => {
                   <div className="duelo-item-info">
                     <strong>{d.nome}</strong>
                     <span className="duelo-item-meta">
-                      {d.jogadores}/2 jogadores{d.descricao ? ` · ${d.descricao}` : ''}
+                      {d.jogadores}/2 jogadores{d.descricao?.descricao ? ` · ${d.descricao.descricao}` : ''}
                     </span>
                   </div>
                   <button className="duelo-join-btn" onClick={() => navigate(`/sala/${d.codigo}`)}>

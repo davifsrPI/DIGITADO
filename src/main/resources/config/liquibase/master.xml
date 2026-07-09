@@ -41,5 +41,7 @@
     <include file="config/liquibase/changelog/20260707120000_add_xp_usuario.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20260708090000_sala_pk_codigo.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20260708150000_sala_1v1_conquistas.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260709120000_sala_descricao_json.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260709150000_palavra_dica.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
 </databaseChangeLog>

@@ -1,7 +1,12 @@
 package br.com.digitado.domain;
 
 import br.com.digitado.domain.enumeration.TipoSala;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
@@ -29,8 +34,14 @@ public class Sala implements Serializable {
     @Column(name = "nome", nullable = false)
     private String nome;
 
-    @Lob
-    @Column(name = "descricao")
+    /**
+     * Coluna JSON (não mais longtext): guarda um objeto com a descrição em texto e o
+     * modo da sala — ex: {"descricao": "Aula de ortografia", "modo": "normal"} ou
+     * {"descricao": "Duelo relâmpago", "modo": "1v1"}. O JSON é montado SEMPRE pelo
+     * backend (SalaResource) a partir do texto enviado pelo cliente — o modo não é forjável.
+     * No Java o campo é a String JSON crua; na API REST entra e sai como objeto JSON.
+     */
+    @Column(name = "descricao", columnDefinition = "json")
     private String descricao;
 
     @Column(name = "ativo")
@@ -106,6 +117,8 @@ public class Sala implements Serializable {
         this.codigo = codigo;
     }
 
+    // Acesso do código Java: a String JSON crua, como está no banco
+    @JsonIgnore
     public String getDescricao() {
         return this.descricao;
     }
@@ -115,8 +128,39 @@ public class Sala implements Serializable {
         return this;
     }
 
+    @JsonIgnore
     public void setDescricao(String descricao) {
         this.descricao = descricao;
+    }
+
+    /**
+     * Serialização REST: emite a descrição como objeto JSON de verdade (não uma string
+     * escapada). Valor legado que ainda seja texto puro vira uma string JSON válida,
+     * para nunca quebrar a resposta.
+     */
+    @JsonProperty("descricao")
+    @JsonRawValue
+    public String getDescricaoJson() {
+        if (descricao == null) {
+            return null;
+        }
+        String t = descricao.trim();
+        return (t.startsWith("{") || t.startsWith("[")) ? descricao : TextNode.valueOf(descricao).toString();
+    }
+
+    /**
+     * Desserialização REST: aceita tanto texto puro (o que o front envia hoje) quanto o
+     * objeto JSON completo (quando um cliente devolve o que recebeu do GET).
+     */
+    @JsonProperty("descricao")
+    public void setDescricaoJson(JsonNode node) {
+        if (node == null || node.isNull()) {
+            this.descricao = null;
+        } else if (node.isTextual()) {
+            this.descricao = node.asText();
+        } else {
+            this.descricao = node.toString();
+        }
     }
 
     public Boolean getAtivo() {

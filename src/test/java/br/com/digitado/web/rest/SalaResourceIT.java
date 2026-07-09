@@ -39,8 +39,11 @@ class SalaResourceIT {
 
     private static final String DEFAULT_CODIGO = "AAAAAAAAAA";
 
-    private static final String DEFAULT_DESCRICAO = "AAAAAAAAAA";
-    private static final String UPDATED_DESCRICAO = "BBBBBBBBBB";
+    // A descricao é uma coluna JSON: {"descricao": texto, "modo": "1v1"|"normal"}.
+    // Os valores salvos direto pelo repositório precisam ser JSON válido.
+    private static final String DEFAULT_DESCRICAO_TEXTO = "AAAAAAAAAA";
+    private static final String DEFAULT_DESCRICAO = "{\"descricao\":\"AAAAAAAAAA\",\"modo\":\"normal\"}";
+    private static final String UPDATED_DESCRICAO = "{\"descricao\":\"BBBBBBBBBB\",\"modo\":\"normal\"}";
 
     private static final Boolean DEFAULT_ATIVO = false;
     private static final Boolean UPDATED_ATIVO = true;
@@ -186,7 +189,8 @@ class SalaResourceIT {
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(jsonPath("$.[*].codigo").value(hasItem(DEFAULT_CODIGO)))
             .andExpect(jsonPath("$.[*].nome").value(hasItem(DEFAULT_NOME)))
-            .andExpect(jsonPath("$.[*].descricao").value(hasItem(DEFAULT_DESCRICAO)))
+            .andExpect(jsonPath("$.[*].descricao.descricao").value(hasItem(DEFAULT_DESCRICAO_TEXTO)))
+            .andExpect(jsonPath("$.[*].descricao.modo").value(hasItem("normal")))
             .andExpect(jsonPath("$.[*].ativo").value(hasItem(DEFAULT_ATIVO)));
     }
 
@@ -203,7 +207,8 @@ class SalaResourceIT {
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(jsonPath("$.codigo").value(DEFAULT_CODIGO))
             .andExpect(jsonPath("$.nome").value(DEFAULT_NOME))
-            .andExpect(jsonPath("$.descricao").value(DEFAULT_DESCRICAO))
+            .andExpect(jsonPath("$.descricao.descricao").value(DEFAULT_DESCRICAO_TEXTO))
+            .andExpect(jsonPath("$.descricao.modo").value("normal"))
             .andExpect(jsonPath("$.ativo").value(DEFAULT_ATIVO));
     }
 

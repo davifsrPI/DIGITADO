@@ -6,13 +6,25 @@ import axios from 'axios';
 
 type Filtro = 'todas' | 'abertas' | 'fechadas';
 
+// A descrição vem do backend como objeto JSON: o texto livre + o modo da sala (1v1/normal)
+interface DescricaoSala {
+  descricao?: string | null;
+  modo?: '1v1' | 'normal';
+}
+
 // O código de acesso identifica a sala — é a chave primária no banco
 interface Sala {
   codigo: string;
   nome: string;
-  descricao?: string;
+  descricao?: DescricaoSala | string | null;
   ativo: boolean;
 }
+
+// Texto exibível da descrição — tolera o formato antigo (string pura) e o novo (objeto)
+const textoDescricao = (d: Sala['descricao']): string | null => (typeof d === 'string' ? d : (d?.descricao ?? null));
+
+// A sala é de duelo 1v1? (lido do JSON da descrição)
+const ehDuelo = (d: Sala['descricao']): boolean => typeof d === 'object' && d?.modo === '1v1';
 
 // Página do professor para gerenciar suas salas: lista, filtra por status (abertas/fechadas)
 // e permite entrar como professor direto para a tela de jogo
@@ -101,8 +113,11 @@ export const MinhasSalas = () => {
                     {sala.ativo ? '🔓' : '🔒'}
                   </button>
                 </div>
-                <div className="ms-card-nome">{sala.nome}</div>
-                {sala.descricao && <div className="ms-card-desc">{sala.descricao}</div>}
+                <div className="ms-card-nome">
+                  {ehDuelo(sala.descricao) && <span title="Duelo 1v1">⚔️ </span>}
+                  {sala.nome}
+                </div>
+                {textoDescricao(sala.descricao) && <div className="ms-card-desc">{textoDescricao(sala.descricao)}</div>}
                 <div className="ms-card-codigo">{sala.codigo}</div>
                 <button
                   className="ms-entrar-btn"
