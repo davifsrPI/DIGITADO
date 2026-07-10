@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Testes de regressão da Palavra do Dia (fluxo crítico e público):
  *
- * 1. O GET nunca expõe o texto da palavra — só o anagrama;
+ * 1. O GET entrega o texto para o áudio do ditado (a validação continua no servidor);
  * 2. A validação é do backend e as estatísticas são contabilizadas lá;
  * 3. Conta logada tem UMA chance por dia (banco);
  * 4. Anônimo é bloqueado pelo cookie httpOnly emitido pelo servidor.
@@ -58,7 +58,7 @@ class PalavraDoDiaResourceIT {
 
     @Test
     @WithAnonymousUser
-    void getNaoExpoePalavraApenasAnagrama() throws Exception {
+    void getEntregaTextoParaAudioDoDitado() throws Exception {
         restMockMvc
             .perform(get("/api/public/palavra-do-dia"))
             .andExpect(status().isOk())
@@ -66,9 +66,8 @@ class PalavraDoDiaResourceIT {
             .andExpect(jsonPath("$.tamanho").value(6))
             .andExpect(jsonPath("$.jaTentou").value(false))
             .andExpect(jsonPath("$.resultado").isEmpty())
-            // O anagrama existe mas não pode ser a palavra em ordem original
-            .andExpect(jsonPath("$.letrasEmbaralhadas").isNotEmpty())
-            .andExpect(jsonPath("$.letrasEmbaralhadas").value(org.hamcrest.Matchers.not("ESCOLA")));
+            // O desafio é um ditado: o texto vai para a síntese de voz do navegador
+            .andExpect(jsonPath("$.textoAudio").value("escola"));
     }
 
     @Test

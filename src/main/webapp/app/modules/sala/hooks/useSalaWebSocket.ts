@@ -17,6 +17,8 @@ export interface PlacarEntry {
   nome: string;
   pontos: number;
   statusAtual: string;
+  // Respostas suspeitas de burla na partida (colar/corretor bloqueado ou rápida demais)
+  alertas: number;
 }
 
 export interface AlunoConectado {
@@ -147,6 +149,8 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     proxima: () => publicar('proxima'),
     pausar: () => publicar('pausar'),
     encerrar: () => publicar('encerrar'),
-    responder: (respostaDigitada: string) => publicar('responder', { respostaDigitada }),
+    // tentativasBurla: nº de inserções bloqueadas (colar, corretor) durante a rodada —
+    // vai junto para o servidor marcar a resposta como suspeita
+    responder: (respostaDigitada: string, tentativasBurla = 0) => publicar('responder', { respostaDigitada, tentativasBurla }),
   };
 }

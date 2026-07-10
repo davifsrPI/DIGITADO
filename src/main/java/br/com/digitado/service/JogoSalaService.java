@@ -29,6 +29,10 @@ public class JogoSalaService {
     // depois disso o servidor rejeita, mesmo que um cliente adulterado envie
     private static final long FOLGA_RESPOSTA_MS = 2000;
 
+    // Piso de plausibilidade: nenhum humano digita mais rápido que ~80ms por letra.
+    // Resposta que chega antes disso (bot, injeção via DevTools) vira alerta de burla
+    private static final long MIN_MS_POR_LETRA = 80;
+
     private final PalavraRepository palavraRepository;
     private final PalavraEstatisticaService palavraEstatisticaService;
     private final ConquistaEngineService conquistaEngine;
@@ -254,7 +258,14 @@ public class JogoSalaService {
 
     // Processa a resposta de um aluno:
     // compara com a palavra correta, calcula pontos (com bônus de velocidade) e registra no placar
-    public ResultadoResposta responder(String codigoSala, String nomeSala, String login, String nomeAluno, String respostaDigitada) {
+    public ResultadoResposta responder(
+        String codigoSala,
+        String nomeSala,
+        String login,
+        String nomeAluno,
+        String respostaDigitada,
+        int tentativasBurla
+    ) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null || jogo.getPalavraAtual() == null) return null;
         // Cada aluno só pode responder uma vez por palavra
@@ -271,6 +282,22 @@ public class JogoSalaService {
         String cLower = textoCorreto.trim().toLowerCase();
         boolean correta = dLower.equals(cLower);
 
+        // Alerta de burla: o cliente reportou inserções bloqueadas (colar/corretor) ou a
+        // resposta chegou rápido demais para ter sido digitada. A resposta continua valendo —
+        // o alerta aparece no placar do professor, que decide o que fazer
+        boolean suspeita = tentativasBurla > 0 || decorrido < dLower.length() * MIN_MS_POR_LETRA;
+        if (suspeita) {
+            jogo.registrarAlerta(login);
+            LOG.warn(
+                "Resposta suspeita de {} na sala {}: {}ms para {} letras, tentativasBurla={}",
+                login,
+                codigoSala,
+                decorrido,
+                dLower.length(),
+                tentativasBurla
+            );
+        }
+
         // Classifica o tipo de erro para dar feedback mais detalhado ao aluno
         String tipoErro = null;
         if (!correta) {
@@ -279,10 +306,13 @@ public class JogoSalaService {
                 : classificarErro(normalizar(dLower), normalizar(cLower));
         }
 
-        // Contabiliza a tentativa nas colunas de estatística da tabela palavra:
-        // toda pessoa que respondeu conta em total_tentativas; acertos somam em total_acertos.
-        // Feito aqui no backend, onde a resposta é validada — o front não envia contadores.
-        palavraEstatisticaService.registrarTentativa(jogo.getPalavraAtual().getId(), correta);
+        // Contabiliza a tentativa nas colunas de estatística da tabela palavra
+        // (total_tentativas/total_acertos) SOMENTE em duelos 1v1 — salas criadas por
+        // professor ficam de fora para a turma não distorcer a métrica de dificuldade.
+        // A Palavra do Dia contabiliza no próprio fluxo (PalavraDoDiaService.tentar).
+        if (jogo.isModo1v1()) {
+            palavraEstatisticaService.registrarTentativa(jogo.getPalavraAtual().getId(), correta);
+        }
 
         // Registra a resposta e guarda a ordem de acerto (1º, 2º, 3º...)
         int ordem = jogo.registrarResposta(login, correta);
@@ -358,7 +388,15 @@ public class JogoSalaService {
             .sorted(
                 Map.Entry.<String, EstadoJogo.AlunoInfo>comparingByValue(Comparator.comparingInt(EstadoJogo.AlunoInfo::pontos).reversed())
             )
-            .map(e -> new PlacarEntry(e.getKey(), e.getValue().nome(), e.getValue().pontos(), e.getValue().statusAtual()))
+            .map(e ->
+                new PlacarEntry(
+                    e.getKey(),
+                    e.getValue().nome(),
+                    e.getValue().pontos(),
+                    e.getValue().statusAtual(),
+                    jogo.getAlertas(e.getKey())
+                )
+            )
             .collect(Collectors.toList());
         List<EntradaAluno> conectados = jogo
             .getAlunosConectados()
@@ -413,6 +451,8 @@ public class JogoSalaService {
         private final Map<String, String> alunosConectados = new ConcurrentHashMap<>();
         // Conjunto dos logins que já responderam na rodada atual (evita resposta dupla)
         private final Set<String> respondeuNaRodada = ConcurrentHashMap.newKeySet();
+        // Respostas suspeitas (colar/corretor bloqueado ou rápida demais) por jogador na partida
+        private final Map<String, Integer> alertasBurla = new ConcurrentHashMap<>();
         private int ordemRespostas = 0;
         // Rastreamento da PARTIDA para conquistas: sequência de acertos por jogador,
         // estatística acumulada (respostas/acertos) e flag de fim já premiado
@@ -437,6 +477,7 @@ public class JogoSalaService {
             ordemRespostas = 0;
             sequenciaAcertos.clear();
             estatisticasPartida.clear();
+            alertasBurla.clear();
             fimPremiado = false;
             // Reseta o status de todos para "AGUARDANDO" ao começar
             placar.replaceAll((k, v) -> new AlunoInfo(v.nome(), v.pontos(), "AGUARDANDO"));
@@ -515,6 +556,15 @@ public class JogoSalaService {
         // Sequência atual de acertos consecutivos do jogador nesta partida
         int getSequenciaAcertos(String login) {
             return sequenciaAcertos.getOrDefault(login, 0);
+        }
+
+        // Contabiliza uma resposta suspeita do jogador (exibida no placar do professor)
+        void registrarAlerta(String login) {
+            alertasBurla.merge(login, 1, Integer::sum);
+        }
+
+        int getAlertas(String login) {
+            return alertasBurla.getOrDefault(login, 0);
         }
 
         // {respostas, acertos} do jogador nesta partida

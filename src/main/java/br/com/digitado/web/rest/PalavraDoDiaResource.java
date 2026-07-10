@@ -23,8 +23,10 @@ import org.springframework.web.bind.annotation.*;
  * Endpoint PÚBLICO da Palavra do Dia (/api/public/** é permitAll no SecurityConfiguration).
  *
  * Regras de segurança, todas aplicadas no backend:
- * - O texto da palavra nunca é enviado antes da tentativa — só o anagrama;
  * - A validação da resposta é feita aqui (o front só envia o palpite);
+ * - O texto viaja no GET apenas para a síntese de voz do navegador (o desafio é
+ *   um ditado) — quem inspecionar a rede consegue lê-lo, mas a chance única e a
+ *   validação continuam no servidor;
  * - Uma chance por pessoa: conta logada é controlada pelo banco (dia + login);
  *   visitante anônimo é controlado por cookie httpOnly emitido pelo servidor
  *   (JavaScript do front não lê nem escreve esse cookie);
@@ -51,8 +53,8 @@ public class PalavraDoDiaResource {
 
     /**
      * {@code GET /api/public/palavra-do-dia} : estado do desafio de hoje.
-     * Retorna o anagrama e se quem chamou já usou a chance (banco para logado,
-     * cookie para anônimo) — o front apenas renderiza o que vier daqui.
+     * Retorna o texto para o áudio do ditado e se quem chamou já usou a chance
+     * (banco para logado, cookie para anônimo) — o front apenas renderiza o que vier daqui.
      */
     @GetMapping("")
     public PalavraDoDiaVM getPalavraDoDia(@CookieValue(name = COOKIE_TENTATIVA, required = false) String cookie) {
@@ -89,7 +91,7 @@ public class PalavraDoDiaResource {
             true,
             palavraDoDiaService.hoje(),
             palavra.getTexto().length(),
-            palavraDoDiaService.embaralhar(palavra.getTexto()),
+            palavra.getTexto(),
             palavra.getDificuldade() != null ? palavra.getDificuldade().name() : null,
             palavra.getCategoria(),
             // Dica cadastrada no banco (coluna dica da tabela palavra) — pista para o jogador

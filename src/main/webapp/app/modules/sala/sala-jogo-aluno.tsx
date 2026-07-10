@@ -6,12 +6,13 @@ import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
 import { VinhetaPodio } from './vinheta-podio';
 import { AmpulhetaAnimada } from './ampulheta-animada';
+import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
 
 interface Props {
   estado: EstadoJogo | null;
   feedback: FeedbackAluno | null;
   meuLogin: string;
-  onResponder: (resposta: string) => void;
+  onResponder: (resposta: string, tentativasBurla?: number) => void;
   conectado: boolean;
 }
 
@@ -31,6 +32,8 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
   // Vinheta de suspense com o pódio, exibida uma única vez quando a partida encerra
   const [vinhetaFimConcluida, setVinhetaFimConcluida] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Tentativas de burla (colar, corretor) bloqueadas pelo EntradaPalavra na rodada atual
+  const burlasRef = useRef(0);
   const palavraAtualId = useRef<number | null>(null);
   const rankingTriggeredRef = useRef(false);
   // Posições da rodada anterior no top 5 — usado pela animação de ultrapassagem
@@ -45,6 +48,7 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
         palavraAtualId.current = novaId;
         setResposta('');
         setJaRespondeu(false);
+        burlasRef.current = 0;
         setValidacaoLocal(null);
         setFalando(false);
         setShowRanking(false);
@@ -93,7 +97,7 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
       if (!estado?.palavraAtual) return;
       const v = validarResposta(resposta, estado.palavraAtual.texto);
       setValidacaoLocal(v);
-      onResponder(resposta.trim());
+      onResponder(resposta.trim(), burlasRef.current);
       setJaRespondeu(true);
     },
     [resposta, jaRespondeu, estado?.palavraAtual, onResponder],
@@ -237,18 +241,16 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
           <label className="sj-input-label" htmlFor="sj-resposta">
             Digite a palavra que você ouviu:
           </label>
-          <input
+          <EntradaPalavra
             id="sj-resposta"
-            ref={inputRef}
+            inputRef={inputRef}
             className={`sj-word-input${validacaoLocal && !validacaoLocal.correta ? ' sj-input-error' : ''}${validacaoLocal?.correta ? ' sj-input-ok' : ''}`}
-            type="text"
             value={resposta}
-            onChange={e => setResposta(e.target.value)}
+            onChange={setResposta}
+            onBurla={() => {
+              burlasRef.current += 1;
+            }}
             placeholder="escreva aqui..."
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
             disabled={jaRespondeu || !ativo}
           />
           <button type="submit" className="sj-send-btn" disabled={!resposta.trim() || jaRespondeu || !ativo}>

@@ -4,6 +4,7 @@ import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
 import { VinhetaPodio } from './vinheta-podio';
+import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
 
 // Configuração do jogo escolhida pelo professor: quantidade de palavras e
 // TEMPO por dificuldade (fácil/médio/difícil)
@@ -276,7 +277,14 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           {estado.placar.map((p, i) => (
             <div key={p.login} className="sj-final-row">
               <span className="sj-final-rank">{i + 1}º</span>
-              <span className="sj-final-nome">{p.nome || p.login}</span>
+              <span className="sj-final-nome">
+                {p.nome || p.login}
+                {p.alertas > 0 && (
+                  <span className="sj-alerta-burla" title={`${p.alertas} resposta(s) suspeita(s) de colar/corretor nesta partida`}>
+                    ⚠ {p.alertas}
+                  </span>
+                )}
+              </span>
               <span className="sj-final-pts">{p.pontos} pts</span>
             </div>
           ))}
@@ -355,17 +363,12 @@ export const SalaJogoProfessor: React.FC<Props> = ({
         </div>
 
         <form className="sj-input-form" onSubmit={handleEnviar}>
-          <input
-            ref={inputRef}
+          <EntradaPalavra
+            inputRef={inputRef}
             className="sj-word-input"
-            type="text"
             value={resposta}
-            onChange={e => setResposta(e.target.value)}
+            onChange={setResposta}
             placeholder="escreva a palavra ouvida..."
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
             disabled={jaRespondeu || !ativo}
           />
           <button type="submit" className="sj-send-btn" disabled={!resposta.trim() || jaRespondeu || !ativo}>

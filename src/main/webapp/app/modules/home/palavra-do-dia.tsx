@@ -2,15 +2,17 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 import { useAppSelector } from 'app/config/store';
+import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
+import { falarPalavra } from 'app/modules/sala/utils/falar-palavra';
 
-// Estado do desafio vindo do backend — repare que a palavra correta NÃO existe aqui:
-// o back envia apenas o anagrama; o texto certo só vem dentro de `resultado`,
-// depois que a chance única foi consumida
+// Estado do desafio vindo do backend. O desafio é um DITADO: textoAudio serve
+// só para a síntese de voz do navegador e nunca é exibido na tela — a validação
+// da resposta e o controle de chance única continuam no servidor
 interface PalavraDoDia {
   disponivel: boolean;
   data: string;
   tamanho: number;
-  letrasEmbaralhadas?: string;
+  textoAudio?: string;
   dificuldade?: string;
   categoria?: string;
   // Dica cadastrada no banco (coluna dica da tabela palavra) — pista para o jogador
@@ -28,10 +30,10 @@ interface Resultado {
   xpGanho: number;
 }
 
-// Card "Palavra do Dia" da tela inicial. Toda a lógica mora no backend:
-// o front não guarda nada (nem localStorage), não valida nada e não conhece a
-// resposta. O controle de "uma chance" é do servidor — cookie httpOnly para
-// visitantes e registro no banco para contas logadas.
+// Card "Palavra do Dia" da tela inicial — um ditado com chance única.
+// A validação da resposta mora no backend; o front recebe o texto apenas para a
+// síntese de voz e nunca o exibe. O controle de "uma chance" é do servidor —
+// cookie httpOnly para visitantes e registro no banco para contas logadas.
 export const PalavraDoDia = () => {
   const account = useAppSelector(state => state.authentication.account);
   const [desafio, setDesafio] = useState<PalavraDoDia | null>(null);
@@ -39,6 +41,7 @@ export const PalavraDoDia = () => {
   const [palpite, setPalpite] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [falando, setFalando] = useState(false);
 
   // Busca o estado no backend; refaz quando o usuário loga/desloga, porque
   // entrar na conta dá direito à chance da conta (o cookie anônimo é ignorado)
@@ -83,7 +86,7 @@ export const PalavraDoDia = () => {
     <section className="pdd-section">
       <div className="section-label">Desafio diário</div>
       <h2 className="section-title">Palavra do Dia</h2>
-      <p className="pdd-sub">Desembaralhe as letras e escreva a palavra correta. Todo mundo pode jogar — mas só uma chance por dia!</p>
+      <p className="pdd-sub">Ouça a palavra e escreva a grafia correta. Todo mundo pode jogar — mas só uma chance por dia!</p>
 
       <div className="pdd-card">
         <div className="pdd-meta">
@@ -92,14 +95,24 @@ export const PalavraDoDia = () => {
           <span className="pdd-chip">{desafio.tamanho} letras</span>
         </div>
 
-        {/* Letras embaralhadas (anagrama) — único dado da palavra que o back expõe */}
-        <div className="pdd-letras">
-          {(desafio.letrasEmbaralhadas ?? '').split('').map((letra, i) => (
-            <span key={i} className="pdd-letra">
-              {letra}
-            </span>
-          ))}
-        </div>
+        {/* Ditado: o jogador ouve a palavra via síntese de voz — nada dela aparece na tela */}
+        {!desafio.jaTentou && !resultado && (
+          <div className="pdd-audio">
+            <button
+              type="button"
+              className={`pdd-audio-btn${falando ? ' pdd-audio-btn--playing' : ''}`}
+              onClick={() => {
+                if (!desafio.textoAudio) return;
+                setFalando(true);
+                falarPalavra(desafio.textoAudio, { onEnd: () => setFalando(false) });
+              }}
+              aria-label="Ouvir palavra"
+            >
+              <span className="pdd-audio-icon">{falando ? '🔊' : '🔉'}</span>
+            </button>
+            <span className="pdd-audio-hint">Clique para ouvir · pode ouvir quantas vezes quiser</span>
+          </div>
+        )}
 
         {/* Dica vinda do banco de dados — só aparece se a palavra tiver uma cadastrada */}
         {desafio.dica && (
@@ -137,15 +150,13 @@ export const PalavraDoDia = () => {
           </div>
         ) : (
           <form className="pdd-form" onSubmit={enviar}>
-            <input
-              type="text"
+            <EntradaPalavra
               className="pdd-input"
               placeholder="Digite a palavra..."
               value={palpite}
-              onChange={e => setPalpite(e.target.value)}
+              onChange={setPalpite}
               maxLength={desafio.tamanho + 5}
-              autoComplete="off"
-              spellCheck={false}
+              ariaLabel="Palavra do dia"
             />
             <button type="submit" className="pdd-btn" disabled={!palpite.trim() || enviando}>
               {enviando ? 'Enviando...' : 'Tentar'}

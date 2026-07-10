@@ -6,10 +6,8 @@ import br.com.digitado.repository.PalavraDoDiaTentativaRepository;
 import br.com.digitado.repository.PalavraRepository;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -19,8 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Lógica da Palavra do Dia — TODA a informação sensível fica aqui no backend:
  *
  * - A palavra é sorteada de forma determinística pelo dia (mesma palavra para todos
- *   durante o dia inteiro) e o TEXTO NUNCA é enviado ao frontend antes da tentativa;
- *   o cliente recebe apenas as letras embaralhadas (anagrama).
+ *   durante o dia inteiro); o desafio é um ditado — o cliente recebe o texto apenas
+ *   para a síntese de voz, sem exibi-lo.
  * - A validação da resposta acontece aqui, com a mesma regra das partidas.
  * - O controle de "uma chance" é do servidor: conta logada é validada contra o banco
  *   (constraint única por dia+login) e visitante anônimo recebe um cookie httpOnly.
@@ -66,29 +64,6 @@ public class PalavraDoDiaService {
         }
         int indice = (int) (hoje().toEpochDay() % total);
         return palavraRepository.findByAtivaTrue(PageRequest.of(indice, 1, Sort.by("id"))).stream().findFirst();
-    }
-
-    // Embaralha as letras com semente fixa do dia — todo mundo vê o mesmo anagrama
-    // e chamadas repetidas não vazam informação extra sobre a ordem original
-    public String embaralhar(String texto) {
-        List<Character> letras = new ArrayList<>();
-        for (char c : texto.toUpperCase().toCharArray()) {
-            letras.add(c);
-        }
-        Random random = new Random(hoje().toEpochDay());
-        String original = texto.toUpperCase();
-        // Tenta algumas vezes até o anagrama ficar diferente da palavra original
-        for (int i = 0; i < 10; i++) {
-            java.util.Collections.shuffle(letras, random);
-            StringBuilder sb = new StringBuilder();
-            letras.forEach(sb::append);
-            if (!sb.toString().equals(original) || texto.length() <= 1) {
-                return sb.toString();
-            }
-        }
-        StringBuilder sb = new StringBuilder();
-        letras.forEach(sb::append);
-        return sb.toString();
     }
 
     // O usuário logado já usou a chance de hoje? (fonte da verdade: banco)

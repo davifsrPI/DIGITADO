@@ -855,6 +855,18 @@ body.sala-jogo-page .view-container {
   color: #a5b4fc;
 }
 
+/* Indicador de respostas suspeitas de burla — só na tela do professor */
+.sj-alerta-burla {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: help;
+}
+
 /* ═══════════════════════════════════════════════════════════
    JOGO — tela centrada (professor como jogador)
 ═══════════════════════════════════════════════════════════ */

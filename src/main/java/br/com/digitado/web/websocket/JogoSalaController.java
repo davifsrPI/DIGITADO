@@ -168,7 +168,15 @@ public class JogoSalaController {
         if (principal == null) return;
         String login = principal.getName();
         String nomeSala = getNomeSala(codigo);
-        JogoSalaService.ResultadoResposta resultado = jogoService.responder(codigo, nomeSala, login, login, payload.respostaDigitada());
+        int tentativasBurla = payload.tentativasBurla() != null ? payload.tentativasBurla() : 0;
+        JogoSalaService.ResultadoResposta resultado = jogoService.responder(
+            codigo,
+            nomeSala,
+            login,
+            login,
+            payload.respostaDigitada(),
+            tentativasBurla
+        );
         if (resultado == null) return;
 
         // Feedback vai apenas para quem respondeu (via user destination privada)
