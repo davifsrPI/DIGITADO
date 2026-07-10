@@ -76,7 +76,8 @@ const Header = (props: IHeaderProps) => {
             <LocaleMenu currentLocale={props.currentLocale} onClick={handleLocaleChange} />
             <AccountMenu
               isAuthenticated={props.isAuthenticated}
-              displayName={account?.firstName || account?.login}
+              // Apelido é o nome público do jogador — vence o primeiro nome
+              displayName={account?.apelido || account?.firstName || account?.login}
               acertouPalavraDoDia={acertouPalavraDoDia}
             />
           </Nav>

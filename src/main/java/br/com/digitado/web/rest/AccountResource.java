@@ -2,6 +2,7 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.User;
 import br.com.digitado.repository.UserRepository;
+import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.service.MailService;
 import br.com.digitado.service.UserService;
@@ -40,10 +41,18 @@ public class AccountResource {
 
     private final MailService mailService;
 
-    public AccountResource(UserRepository userRepository, UserService userService, MailService mailService) {
+    private final UsuarioRepository usuarioRepository;
+
+    public AccountResource(
+        UserRepository userRepository,
+        UserService userService,
+        MailService mailService,
+        UsuarioRepository usuarioRepository
+    ) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.mailService = mailService;
+        this.usuarioRepository = usuarioRepository;
     }
 
     /**
@@ -88,7 +97,12 @@ public class AccountResource {
     public AdminUserDTO getAccount() {
         return userService
             .getUserWithAuthorities()
-            .map(AdminUserDTO::new)
+            .map(user -> {
+                AdminUserDTO dto = new AdminUserDTO(user);
+                // O apelido mora no Usuario (perfil do jogo, ligado pelo e-mail)
+                usuarioRepository.findByEmail(user.getEmail()).ifPresent(usuario -> dto.setApelido(usuario.getApelido()));
+                return dto;
+            })
             .orElseThrow(() -> new AccountResourceException("User could not be found"));
     }
 
@@ -118,6 +132,15 @@ public class AccountResource {
             userDTO.getLangKey(),
             userDTO.getImageUrl()
         );
+        // Persiste o apelido no Usuario (perfil do jogo) — apelido em branco limpa o campo
+        // e a pessoa volta a aparecer como nome + inicial do sobrenome
+        user
+            .flatMap(u -> usuarioRepository.findByEmail(u.getEmail()))
+            .ifPresent(usuario -> {
+                String apelido = userDTO.getApelido();
+                usuario.setApelido(apelido != null && !apelido.isBlank() ? apelido.trim() : null);
+                usuarioRepository.save(usuario);
+            });
     }
 
     /**

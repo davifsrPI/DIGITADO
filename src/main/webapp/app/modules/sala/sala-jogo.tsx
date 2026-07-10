@@ -37,9 +37,10 @@ export const SalaJogo: React.FC = () => {
     return () => document.body.classList.remove('sala-jogo-page');
   }, []);
 
-  // Nome de exibição: usa o primeiro nome do usuário autenticado, ou o login como fallback
+  // Nome de exibição: apelido público primeiro; sem apelido, primeiro nome; por fim o login.
+  // O servidor revalida na entrada (o apelido do banco vence o que o cliente enviar).
   const login = account?.login ?? 'anonimo';
-  const nome = account?.firstName ? `${account.firstName} ${account.lastName ?? ''}`.trim() : login;
+  const nome = account?.apelido || (account?.firstName ? `${account.firstName} ${account.lastName ?? ''}`.trim() : login);
 
   // ─── Estado local da página ───────────────────────────────────────────────
   const [estado, setEstado] = useState<EstadoJogo | null>(null);

@@ -3,6 +3,8 @@ export interface IUser {
   login?: string;
   firstName?: string;
   lastName?: string;
+  // Apelido público do jogador — o que aparece no ranking, placar e cabeçalho
+  apelido?: string;
   email?: string;
   activated?: boolean;
   langKey?: string;
@@ -19,6 +21,7 @@ export const defaultValue: Readonly<IUser> = {
   login: '',
   firstName: '',
   lastName: '',
+  apelido: '',
   email: '',
   activated: true,
   langKey: '',

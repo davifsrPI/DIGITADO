@@ -25,6 +25,13 @@ export const SettingsPage = () => {
     };
   }, []);
 
+  // Classe no body: remove a moldura branca do card padrão do JHipster (jh-card)
+  // e aplica o tema escuro da página, como nas demais telas do jogo
+  useEffect(() => {
+    document.body.classList.add('settings-page');
+    return () => document.body.classList.remove('settings-page');
+  }, []);
+
   useEffect(() => {
     if (successMessage) {
       toast.success(translate(successMessage));
@@ -39,25 +46,6 @@ export const SettingsPage = () => {
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [senhaExclusao, setSenhaExclusao] = useState('');
   const [processando, setProcessando] = useState(false);
-
-  // Portabilidade: baixa o JSON com todos os dados do titular — montado
-  // inteiramente no backend a partir do token (o front não envia nada)
-  const baixarMeusDados = async () => {
-    setProcessando(true);
-    try {
-      const res = await axios.get('/api/account/export', { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'meus-dados-digitado.json';
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error('Não foi possível exportar seus dados. Tente novamente.');
-    } finally {
-      setProcessando(false);
-    }
-  };
 
   // Exclusão: exige a senha atual (validada no backend) — token roubado não basta.
   // Após excluir, remove o token local e recarrega como visitante.
@@ -125,6 +113,21 @@ export const SettingsPage = () => {
               />
             </div>
 
+            {/* Apelido: o nome público do jogador — é o que os outros veem no
+                ranking, no placar das salas e no pódio */}
+            <ValidatedField
+              className="st-field"
+              name="apelido"
+              label="Apelido (nome público no jogo)"
+              id="apelido"
+              placeholder="Como você quer aparecer no jogo"
+              validate={{
+                minLength: { value: 2, message: 'O apelido precisa de ao menos 2 caracteres.' },
+                maxLength: { value: 30, message: 'O apelido pode ter no máximo 30 caracteres.' },
+              }}
+              data-cy="apelido"
+            />
+
             <ValidatedField
               name="email"
               label={translate('global.form.email.label')}
@@ -153,14 +156,10 @@ export const SettingsPage = () => {
           </ValidatedForm>
         </div>
 
-        {/* ── Meus dados (LGPD art. 18): portabilidade e exclusão ── */}
+        {/* ── Meus dados (LGPD art. 18): exclusão da conta ── */}
         <div className="st-card st-lgpd">
           <h3 className="st-lgpd-titulo">Meus dados (LGPD)</h3>
-          <p className="st-lgpd-sub">Você pode baixar uma cópia de todos os seus dados pessoais ou excluir sua conta definitivamente.</p>
-
-          <button type="button" className="st-lgpd-btn" onClick={baixarMeusDados} disabled={processando} data-cy="exportarDados">
-            ⬇ Baixar meus dados (JSON)
-          </button>
+          <p className="st-lgpd-sub">Você pode excluir sua conta e todos os seus dados definitivamente.</p>
 
           {!confirmandoExclusao ? (
             <button type="button" className="st-lgpd-btn st-lgpd-btn--perigo" onClick={() => setConfirmandoExclusao(true)}>

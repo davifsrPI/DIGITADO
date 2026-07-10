@@ -3,6 +3,7 @@ package br.com.digitado.web.websocket;
 import br.com.digitado.domain.enumeration.TipoSala;
 import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.repository.UserRepository;
+import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.service.ConquistaEngineService;
 import br.com.digitado.service.JogoSalaService;
@@ -30,6 +31,7 @@ public class JogoSalaController {
     private final JogoSalaService jogoService;
     private final SalaRepository salaRepository;
     private final UserRepository userRepository;
+    private final UsuarioRepository usuarioRepository;
     private final SimpMessagingTemplate messaging;
     private final ConquistaEngineService conquistaEngine;
 
@@ -37,14 +39,29 @@ public class JogoSalaController {
         JogoSalaService jogoService,
         SalaRepository salaRepository,
         UserRepository userRepository,
+        UsuarioRepository usuarioRepository,
         SimpMessagingTemplate messaging,
         ConquistaEngineService conquistaEngine
     ) {
         this.jogoService = jogoService;
         this.salaRepository = salaRepository;
         this.userRepository = userRepository;
+        this.usuarioRepository = usuarioRepository;
         this.messaging = messaging;
         this.conquistaEngine = conquistaEngine;
+    }
+
+    // Nome público do jogador no placar: o APELIDO cadastrado no perfil vence o nome
+    // enviado pelo cliente (que fica só como fallback) — resolvido no servidor, um
+    // cliente adulterado não escolhe como aparece para os outros
+    private String nomeExibicao(String login, String nomeEnviado) {
+        return userRepository
+            .findOneByLogin(login)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .map(u -> u.getApelido())
+            .filter(a -> a != null && !a.isBlank())
+            .map(String::trim)
+            .orElse(nomeEnviado);
     }
 
     // Registra um aluno (ou professor) na sala quando ele se conecta.
@@ -55,9 +72,10 @@ public class JogoSalaController {
         if (principal == null) return;
         String login = principal.getName();
         String nomeSala = getNomeSala(codigo);
+        String nome = nomeExibicao(login, entrada.nome());
         boolean duelo = salaRepository.findByCodigo(codigo).map(s -> s.getTipo() == TipoSala.UM_V_UM).orElse(false);
         if (duelo) {
-            boolean entrou = jogoService.registrarNoDuelo(codigo, login, entrada.nome());
+            boolean entrou = jogoService.registrarNoDuelo(codigo, login, nome);
             if (!entrou) {
                 LOG.warn("Duelo {} cheio — entrada negada para {}", codigo, login);
                 messaging.convertAndSendToUser(
@@ -68,7 +86,7 @@ public class JogoSalaController {
                 return;
             }
         } else {
-            jogoService.registrarAluno(codigo, login, entrada.nome());
+            jogoService.registrarAluno(codigo, login, nome);
         }
         // Conquista "Bem-vindo à Turma" (primeira sala) — nunca derruba a conexão
         try {

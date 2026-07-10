@@ -28,8 +28,8 @@ export const RegisterPage = () => {
 
   const currentLocale = useAppSelector(state => state.locale.currentLocale);
 
-  const handleValidSubmit = ({ username, email, firstPassword }) => {
-    dispatch(handleRegister({ login: username, email, password: firstPassword, langKey: currentLocale }));
+  const handleValidSubmit = ({ username, apelido, email, firstPassword }) => {
+    dispatch(handleRegister({ login: username, apelido, email, password: firstPassword, langKey: currentLocale }));
   };
 
   const updatePassword = event => setPassword(event.target.value);
@@ -94,6 +94,19 @@ export const RegisterPage = () => {
                 maxLength: { value: 50, message: translate('register.messages.validate.login.maxlength') },
               }}
               data-cy="username"
+            />
+            {/* Apelido: o nome público do jogador — é o que aparece no ranking,
+                no placar das salas e no pódio */}
+            <ValidatedField
+              name="apelido"
+              label="Apelido"
+              placeholder="Como você quer aparecer no jogo"
+              validate={{
+                required: { value: true, message: 'Escolha um apelido.' },
+                minLength: { value: 2, message: 'O apelido precisa de ao menos 2 caracteres.' },
+                maxLength: { value: 30, message: 'O apelido pode ter no máximo 30 caracteres.' },
+              }}
+              data-cy="apelido"
             />
             <ValidatedField
               name="email"

@@ -43,7 +43,7 @@ export const Lobby = () => {
             Online
           </span>
           <h1>
-            Olá, <span className="lobby-name">{account?.firstName || account?.login}</span> 👋
+            Olá, <span className="lobby-name">{account?.apelido || account?.firstName || account?.login}</span> 👋
           </h1>
           <p>Digite o código da sala para começar</p>
         </div>

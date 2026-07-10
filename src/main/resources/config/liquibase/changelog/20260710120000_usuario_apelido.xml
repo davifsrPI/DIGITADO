@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Apelido público do jogador: nome de exibição usado em todo lugar visível
+        (ranking, placar das salas, pódio, cabeçalho). Opcional — quem não definir
+        continua aparecendo como nome + inicial do sobrenome.
+    -->
+    <changeSet id="20260710120000-1" author="digitado">
+        <addColumn tableName="usuario">
+            <column name="apelido" type="varchar(30)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

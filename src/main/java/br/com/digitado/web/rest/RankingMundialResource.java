@@ -80,8 +80,12 @@ public class RankingMundialResource {
         return new RankingMundialVM(entries, meuXp, minhaPosicao, pagina.getTotalElements(), pagina.hasNext());
     }
 
-    // Nome público no ranking: primeiro nome + inicial do sobrenome (privacidade)
+    // Nome público no ranking: o APELIDO escolhido pelo jogador; quem não definiu
+    // cai no fallback primeiro nome + inicial do sobrenome (privacidade)
     private String nomeExibicao(Usuario u) {
+        if (u.getApelido() != null && !u.getApelido().isBlank()) {
+            return u.getApelido().trim();
+        }
         String nome = u.getNome() != null ? u.getNome().trim() : "Aluno";
         String sobrenome = u.getSobrenome() != null ? u.getSobrenome().trim() : "";
         if (!sobrenome.isEmpty()) {

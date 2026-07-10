@@ -29,6 +29,14 @@ public class AdminUserDTO implements Serializable {
     @Size(max = 50)
     private String lastName;
 
+    /**
+     * Apelido público do jogador — mora na tabela usuario (perfil do jogo), não na
+     * jhi_user; este DTO só o transporta: o AccountResource preenche no GET /account
+     * e persiste no Usuario no POST /account e no cadastro.
+     */
+    @Size(max = 30)
+    private String apelido;
+
     @Email
     @Size(min = 5, max = 254)
     private String email;
@@ -101,6 +109,14 @@ public class AdminUserDTO implements Serializable {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    public String getApelido() {
+        return apelido;
+    }
+
+    public void setApelido(String apelido) {
+        this.apelido = apelido;
     }
 
     public String getEmail() {

@@ -33,6 +33,11 @@ public class Usuario implements Serializable {
     @Column(name = "sobrenome")
     private String sobrenome;
 
+    // Apelido público do jogador: é o que aparece para os outros (ranking, placar,
+    // pódio). Quem não definiu cai no fallback nome + inicial do sobrenome.
+    @Column(name = "apelido", length = 30)
+    private String apelido;
+
     /**
      * XP acumulado do usuário (palavra do dia, conquistas...) — alimenta o Ranking Mundial.
      * insertable/updatable = false: o JPA nunca escreve nesta coluna — o incremento é
@@ -126,6 +131,19 @@ public class Usuario implements Serializable {
 
     public void setSobrenome(String sobrenome) {
         this.sobrenome = sobrenome;
+    }
+
+    public String getApelido() {
+        return this.apelido;
+    }
+
+    public Usuario apelido(String apelido) {
+        this.setApelido(apelido);
+        return this;
+    }
+
+    public void setApelido(String apelido) {
+        this.apelido = apelido;
     }
 
     public String getEmail() {

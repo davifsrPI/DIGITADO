@@ -135,15 +135,17 @@ public class UserService {
         authorityRepository.findById(AuthoritiesConstants.USER).ifPresent(authorities::add);
         newUser.setAuthorities(authorities);
         userRepository.save(newUser);
-        createUsuarioForUser(newUser, encryptedPassword, TipoUsuario.ALUNO);
+        createUsuarioForUser(newUser, encryptedPassword, TipoUsuario.ALUNO, userDTO.getApelido());
         LOG.debug("Created Information for User: {}", newUser);
         return newUser;
     }
 
-    private void createUsuarioForUser(User user, String encryptedPassword, TipoUsuario tipo) {
+    private void createUsuarioForUser(User user, String encryptedPassword, TipoUsuario tipo, String apelido) {
         Usuario usuario = new Usuario();
         usuario.setNome(user.getFirstName() != null ? user.getFirstName() : user.getLogin());
         usuario.setSobrenome(user.getLastName() != null ? user.getLastName() : "");
+        // Apelido escolhido no cadastro — é o nome público do jogador no ranking e nas salas
+        usuario.setApelido(apelido != null && !apelido.isBlank() ? apelido.trim() : null);
         String email = user.getEmail() != null ? user.getEmail() : user.getLogin() + "@digitado.local";
         usuario.setEmail(email);
         usuario.setSenha(encryptedPassword);
@@ -195,7 +197,7 @@ public class UserService {
             user.setAuthorities(authorities);
         }
         userRepository.save(user);
-        createUsuarioForUser(user, encryptedPassword, TipoUsuario.ALUNO);
+        createUsuarioForUser(user, encryptedPassword, TipoUsuario.ALUNO, userDTO.getApelido());
         LOG.debug("Created Information for User: {}", user);
         return user;
     }
