@@ -2,6 +2,7 @@ import './sala-jogo-styles.scss';
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 
 import { useAppSelector } from 'app/config/store';
 import { ErroWS, EstadoJogo, FeedbackAluno, useSalaWebSocket } from './hooks/useSalaWebSocket';
@@ -30,8 +31,26 @@ export const SalaJogo: React.FC = () => {
       palavrasIds?: number[];
     };
   } | null;
-  const isProfessor = locationState?.isProfessor === true;
   const gameConfig = locationState?.gameConfig;
+
+  // O papel de professor chega pelo estado de navegação, mas ele se perde ao
+  // RECARREGAR a página — sem esta recuperação, o professor caía para sempre na
+  // visão de aluno da própria sala. Quando o estado não veio, pergunta ao servidor
+  // se o usuário logado é o dono (null = ainda verificando).
+  const [souProfessorServidor, setSouProfessorServidor] = useState<boolean | null>(null);
+  const papelDesconhecido = locationState?.isProfessor === undefined;
+  useEffect(() => {
+    if (!papelDesconhecido) return;
+    axios
+      .get<{ souProfessor: boolean }>(`/api/salas/${codigo}/sou-professor`)
+      .then(res => setSouProfessorServidor(res.data.souProfessor))
+      .catch(() => setSouProfessorServidor(false));
+  }, [codigo, papelDesconhecido]);
+
+  const isProfessor = locationState?.isProfessor === true || souProfessorServidor === true;
+  // Ainda não sabemos o papel (reload + resposta do servidor pendente): segura a
+  // renderização para não mostrar a visão de aluno ao professor por um instante
+  const verificandoPapel = papelDesconhecido && souProfessorServidor === null;
 
   // Remove o card branco padrão do layout (jh-card) — a página tem fundo escuro próprio
   useEffect(() => {
@@ -94,7 +113,9 @@ export const SalaJogo: React.FC = () => {
           </div>
         )}
 
-        {isProfessor ? (
+        {verificandoPapel ? (
+          <div style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', padding: '60px 0', fontSize: 15 }}>Carregando sala...</div>
+        ) : isProfessor ? (
           <SalaJogoProfessor
             estado={estado}
             codigoSala={codigo}

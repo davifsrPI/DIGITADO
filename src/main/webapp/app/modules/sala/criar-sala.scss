@@ -426,6 +426,11 @@ body.criar-sala-page .view-container {
   transition: background 0.15s;
   flex-shrink: 0;
 
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
   &:hover {
     background: rgba(34, 197, 94, 0.25);
   }
@@ -434,6 +439,95 @@ body.criar-sala-page .view-container {
     padding: 4px 10px;
     font-size: 11px;
   }
+}
+
+/* ---- CADASTRO RÁPIDO de palavra inexistente ---- */
+
+.cs-cadastro-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.cs-cadastro-titulo {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0 0 10px;
+
+  strong {
+    color: white;
+  }
+}
+
+.cs-cadastro-difs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.cs-dif-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-family: 'Poppins', sans-serif;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &--active {
+    background: rgba(255, 255, 255, 0.08);
+    font-weight: 600;
+  }
+}
+
+.cs-cadastro-acoes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cs-cadastro-cancelar {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: underline;
+  }
+}
+
+.cs-cadastro-nota {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 10px 0 0;
+}
+
+.cs-cadastro-erro {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
 }
 
 .cs-extra-words {
@@ -514,6 +608,21 @@ body.criar-sala-page .view-container {
   margin-bottom: 10px;
 }
 
+.cs-sorteio-retry {
+  background: none;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: 6px;
+  color: #fbbf24;
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(251, 191, 36, 0.15);
+  }
+}
+
 .cs-sorteadas-group {
   margin-bottom: 10px;
 
@@ -536,24 +645,49 @@ body.criar-sala-page .view-container {
   font-size: 11px;
 }
 
-.cs-sorteadas-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.cs-sorteadas-ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-/* Botão "gerar outra" dentro do chip: hover verde (troca), não vermelho (remoção) */
-.cs-word-chip button.cs-regen-word-btn {
-  font-size: 13px;
+.cs-sorteada-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Botão "Trocar" na frente de cada palavra sorteada */
+.cs-trocar-btn {
+  flex-shrink: 0;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 6px;
+  color: #a5b4fc;
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
 
   &:hover {
-    color: #4ade80;
+    background: rgba(99, 102, 241, 0.3);
   }
 
   &:disabled {
-    cursor: default;
     opacity: 0.5;
+    cursor: default;
   }
+}
+
+.cs-sorteada-texto {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* ---- CODE ---- */

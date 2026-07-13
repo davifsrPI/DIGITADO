@@ -3,7 +3,10 @@ package br.com.digitado.web.rest;
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.enumeration.Dificuldade;
 import br.com.digitado.repository.PalavraRepository;
+import br.com.digitado.repository.UserRepository;
+import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.AuthoritiesConstants;
+import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -39,9 +42,13 @@ public class PalavraResource {
     private String applicationName;
 
     private final PalavraRepository palavraRepository;
+    private final UserRepository userRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public PalavraResource(PalavraRepository palavraRepository) {
+    public PalavraResource(PalavraRepository palavraRepository, UserRepository userRepository, UsuarioRepository usuarioRepository) {
         this.palavraRepository = palavraRepository;
+        this.userRepository = userRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     // Busca uma palavra pelo texto exato; se não encontrar, retorna até 5 palavras semelhantes
@@ -62,6 +69,52 @@ public class PalavraResource {
         response.put("exata", false);
         response.put("similares", similares);
         return ResponseEntity.ok(response);
+    }
+
+    // Corpo do cadastro rápido: a palavra digitada e a dificuldade marcada pelo professor
+    public record SugestaoPalavraPayload(String texto, String dificuldade) {}
+
+    // Cadastro rápido feito na tela de criação de sala: palavra que não existe no
+    // banco entra como INATIVA — vale como palavra extra da sala de quem cadastrou,
+    // mas fica fora dos sorteios e da Palavra do Dia até um admin ativá-la.
+    // Se a palavra já existir (qualquer caixa), devolve a existente: nunca duplica.
+    @PostMapping("/sugerir")
+    public ResponseEntity<Palavra> sugerirPalavra(@RequestBody SugestaoPalavraPayload payload) {
+        if (payload == null || payload.texto() == null || payload.texto().isBlank()) {
+            throw new BadRequestAlertException("Texto vazio", ENTITY_NAME, "textovazio");
+        }
+        String texto = payload.texto().trim().toLowerCase();
+        if (texto.length() > 60) {
+            throw new BadRequestAlertException("Palavra longa demais", ENTITY_NAME, "textolongo");
+        }
+        // Já existe (mesmo inativa)? Devolve a existente — também cobre a corrida de
+        // duas pessoas cadastrando a mesma palavra quase ao mesmo tempo
+        Optional<Palavra> existente = palavraRepository.findByTextoIgnoreCase(texto);
+        if (existente.isPresent()) {
+            return ResponseEntity.ok(existente.orElseThrow());
+        }
+        Dificuldade dificuldade;
+        try {
+            dificuldade = Dificuldade.valueOf(payload.dificuldade().trim().toUpperCase());
+        } catch (Exception e) {
+            throw new BadRequestAlertException("Dificuldade inválida", ENTITY_NAME, "dificuldadeinvalida");
+        }
+        Palavra palavra = new Palavra();
+        palavra.setTexto(texto);
+        palavra.setAtiva(false);
+        palavra.setDificuldadeCadastrada(dificuldade);
+        palavra.setIdioma("PT");
+        String semAcento = java.text.Normalizer.normalize(texto, java.text.Normalizer.Form.NFD).replaceAll(
+            "\\p{InCombiningDiacriticalMarks}+",
+            ""
+        );
+        palavra.setPossuiAcento(!semAcento.equals(texto));
+        // Registra quem sugeriu (facilita a curadoria do admin depois)
+        SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .ifPresent(palavra::setCriador);
+        return ResponseEntity.ok(palavraRepository.save(palavra));
     }
 
     // Sorteia palavras ativas de uma dificuldade, excluindo ids já escolhidos.

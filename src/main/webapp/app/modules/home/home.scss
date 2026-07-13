@@ -582,38 +582,94 @@ body.home-page {
 }
 
 .pdd-audio-btn {
-  width: 84px;
-  height: 84px;
+  position: relative;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  border: 1px solid rgba(250, 204, 21, 0.4);
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 34px;
+  border: none;
+  background: linear-gradient(145deg, #fde047, #f59e0b);
+  color: #422006;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  box-shadow:
+    0 10px 30px rgba(250, 204, 21, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4);
   transition:
     transform 0.15s,
-    background 0.2s;
+    box-shadow 0.2s;
+
+  // Anel decorativo em volta do botão
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -9px;
+    border-radius: 50%;
+    border: 1px solid rgba(250, 204, 21, 0.35);
+    transition: border-color 0.2s;
+  }
 
   &:hover {
-    background: rgba(250, 204, 21, 0.15);
-    transform: scale(1.05);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow:
+      0 14px 38px rgba(250, 204, 21, 0.5),
+      inset 0 2px 0 rgba(255, 255, 255, 0.4);
+
+    &::before {
+      border-color: rgba(250, 204, 21, 0.6);
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(250, 204, 21, 0.55);
+    outline-offset: 5px;
   }
 }
 
+.pdd-audio-svg {
+  width: 44px;
+  height: 44px;
+}
+
 .pdd-audio-btn--playing {
-  background: rgba(250, 204, 21, 0.2);
-  animation: pdd-pulse 1s ease-in-out infinite;
+  animation: pdd-pulse 1.2s ease-in-out infinite;
+
+  // As ondas do alto-falante pulsam alternadas enquanto o áudio toca
+  .pdd-wave--1 {
+    animation: pdd-wave-fade 1s ease-in-out infinite;
+  }
+
+  .pdd-wave--2 {
+    animation: pdd-wave-fade 1s ease-in-out infinite 0.25s;
+  }
 }
 
 @keyframes pdd-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.35);
+    box-shadow:
+      0 10px 30px rgba(250, 204, 21, 0.35),
+      0 0 0 0 rgba(250, 204, 21, 0.35);
   }
   50% {
-    box-shadow: 0 0 0 12px rgba(250, 204, 21, 0);
+    box-shadow:
+      0 10px 30px rgba(250, 204, 21, 0.35),
+      0 0 0 14px rgba(250, 204, 21, 0);
+  }
+}
+
+@keyframes pdd-wave-fade {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
@@ -811,9 +867,13 @@ body.home-page {
   }
 
   .pdd-audio-btn {
-    width: 72px;
-    height: 72px;
-    font-size: 28px;
+    width: 76px;
+    height: 76px;
+  }
+
+  .pdd-audio-svg {
+    width: 36px;
+    height: 36px;
   }
 
   .pdd-form {

@@ -18,6 +18,7 @@ import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -267,6 +268,17 @@ public class SalaResource {
         LOG.debug("REST request to get Sala : {}", codigo);
         Optional<Sala> sala = salaRepository.findById(codigo);
         return ResponseUtil.wrapOrNotFound(sala);
+    }
+
+    // O papel de professor vive no estado de navegação do front e se perde ao
+    // recarregar a página da sala — este endpoint permite à tela redescobrir se o
+    // usuário logado é o dono (ou admin) e renderizar a visão de professor de novo.
+    @GetMapping("/{codigo}/sou-professor")
+    public ResponseEntity<Map<String, Boolean>> souProfessor(@PathVariable("codigo") String codigo) {
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
+        }
+        return ResponseEntity.ok(Map.of("souProfessor", isOwnerOrAdmin(codigo)));
     }
 
     // Exclui uma sala — apenas o professor dono ou admin podem excluir

@@ -66,8 +66,19 @@ export const CriarSala = () => {
   const [sorteadas, setSorteadas] = useState<Palavra[]>([]);
   const [sorteioLoading, setSorteioLoading] = useState(false);
   const [sorteioAviso, setSorteioAviso] = useState<string | null>(null);
+  // Sorteio falhou (backend fora do ar/reiniciando): mostra aviso com "tentar novamente"
+  // em vez de falhar em silêncio parecendo que a funcionalidade não existe
+  const [sorteioErro, setSorteioErro] = useState(false);
   // Id da palavra sendo trocada pelo "gerar outra" (desabilita o botão dela)
   const [regenId, setRegenId] = useState<number | null>(null);
+  // Cadastro rápido de palavra que não existe no banco: abre a caixa de dificuldade
+  // e salva como INATIVA (extra da sala; admin ativa depois para o acervo geral)
+  const [cadastro, setCadastro] = useState<{ aberto: boolean; dificuldade: Dificuldade | null; salvando: boolean; erro: string | null }>({
+    aberto: false,
+    dificuldade: null,
+    salvando: false,
+    erro: null,
+  });
   const sorteioDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Nº de sequência do sorteio: descarta respostas de requisições obsoletas
   // (o professor pode clicar +/− várias vezes antes de a primeira resposta chegar)
@@ -103,6 +114,8 @@ export const CriarSala = () => {
   const reconciliarSorteio = async (qtds: Record<Dificuldade, number>) => {
     const seq = ++sorteioSeqRef.current;
     setSorteioLoading(true);
+    setSorteioErro(false);
+    let falhou = false;
     let lista = [...sorteadasRef.current];
     for (const { key } of DIFFS) {
       const atuais = lista.filter(w => w.dificuldade === key).length;
@@ -124,13 +137,16 @@ export const CriarSala = () => {
           if (seq !== sorteioSeqRef.current) return; // outra reconciliação já começou
           lista = [...lista, ...novas];
         } catch {
-          // banco indisponível: mantém o que já tem — a partida completa o resto ao iniciar
+          // backend indisponível (ex: reiniciando): mantém o que já tem e avisa —
+          // o professor pode tentar de novo; a partida completa o resto ao iniciar
+          falhou = true;
         }
       }
     }
     if (seq === sorteioSeqRef.current) {
       setSorteadas(lista);
       setSorteioLoading(false);
+      setSorteioErro(falhou);
     }
   };
 
@@ -166,9 +182,26 @@ export const CriarSala = () => {
     }
   };
 
+  // Confirma o cadastro rápido: salva no banco (inativa) e já adiciona como extra da sala.
+  // O backend nunca duplica: se alguém cadastrou a mesma palavra antes, devolve a existente.
+  const confirmarCadastro = async () => {
+    const texto = wordSearch.trim();
+    if (!texto || !cadastro.dificuldade || cadastro.salvando) return;
+    setCadastro(prev => ({ ...prev, salvando: true, erro: null }));
+    try {
+      const { data } = await axios.post<Palavra>('/api/palavras/sugerir', { texto, dificuldade: cadastro.dificuldade });
+      addWord(data);
+      setCadastro({ aberto: false, dificuldade: null, salvando: false, erro: null });
+    } catch {
+      setCadastro(prev => ({ ...prev, salvando: false, erro: 'Não foi possível cadastrar a palavra. Tente novamente.' }));
+    }
+  };
+
   // Busca palavras no banco com debounce de 500ms — evita requisição a cada tecla digitada
   const handleWordSearch = (val: string) => {
     setWordSearch(val);
+    // Mudou a busca: fecha a caixa de cadastro da palavra anterior
+    setCadastro({ aberto: false, dificuldade: null, salvando: false, erro: null });
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!val.trim()) {
       setBusca({ status: 'idle' });
@@ -404,7 +437,15 @@ export const CriarSala = () => {
                     {sorteioLoading && <span className="cs-sorteadas-loading">sorteando...</span>}
                   </div>
                   {sorteioAviso && <div className="cs-sorteio-aviso">{sorteioAviso}</div>}
-                  {sorteadas.length === 0 && !sorteioLoading && (
+                  {sorteioErro && (
+                    <div className="cs-sorteio-aviso">
+                      Não foi possível sortear as palavras — o servidor pode estar reiniciando.{' '}
+                      <button type="button" className="cs-sorteio-retry" onClick={() => void reconciliarSorteio(quantidades)}>
+                        Tentar novamente
+                      </button>
+                    </div>
+                  )}
+                  {sorteadas.length === 0 && !sorteioLoading && !sorteioErro && (
                     <p className="cs-sorteadas-vazio">Nenhuma palavra sorteada — aumente as quantidades acima.</p>
                   )}
                   {DIFFS.map(({ key, color, label }) => {
@@ -419,23 +460,23 @@ export const CriarSala = () => {
                             <span className="cs-sorteadas-falta"> (banco sem mais palavras dessa dificuldade)</span>
                           )}
                         </span>
-                        <div className="cs-sorteadas-list">
+                        <ul className="cs-sorteadas-ul">
                           {doNivel.map(w => (
-                            <span key={w.id} className="cs-word-chip">
-                              {w.texto}
+                            <li key={w.id} className="cs-sorteada-row">
                               <button
                                 type="button"
-                                className="cs-regen-word-btn"
+                                className="cs-trocar-btn"
                                 onClick={() => gerarOutra(w)}
                                 disabled={regenId !== null}
-                                title="Gerar outra palavra no lugar desta"
-                                aria-label={`Gerar outra palavra no lugar de ${w.texto}`}
+                                title="Trocar por outra palavra da mesma dificuldade"
+                                aria-label={`Trocar a palavra ${w.texto}`}
                               >
-                                {regenId === w.id ? '…' : '🔄'}
+                                {regenId === w.id ? 'Trocando...' : 'Trocar'}
                               </button>
-                            </span>
+                              <span className="cs-sorteada-texto">{w.texto}</span>
+                            </li>
                           ))}
-                        </div>
+                        </ul>
                       </div>
                     );
                   })}
@@ -498,10 +539,67 @@ export const CriarSala = () => {
               )}
 
               {busca.status === 'notfound' && (
-                <div className="cs-search-status cs-search-notfound">
-                  <span className="cs-search-x">✗</span>
-                  Palavra não encontrada no banco de dados
-                </div>
+                <>
+                  <div className="cs-search-status cs-search-notfound">
+                    <div className="cs-search-info">
+                      <span className="cs-search-x">✗</span>
+                      Palavra não encontrada no banco de dados
+                    </div>
+                    {!cadastro.aberto && (
+                      <button
+                        type="button"
+                        className="cs-add-word-btn"
+                        onClick={() => setCadastro({ aberto: true, dificuldade: null, salvando: false, erro: null })}
+                      >
+                        + Cadastrar
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Caixa de cadastro rápido: marca a dificuldade e salva como inativa */}
+                  {cadastro.aberto && (
+                    <div className="cs-cadastro-box">
+                      <p className="cs-cadastro-titulo">
+                        Cadastrar <strong>&ldquo;{wordSearch.trim().toLowerCase()}&rdquo;</strong> — marque a dificuldade:
+                      </p>
+                      <div className="cs-cadastro-difs">
+                        {DIFFS.map(({ key, color }) => (
+                          <button
+                            key={key}
+                            type="button"
+                            className={`cs-dif-opt${cadastro.dificuldade === key ? ' cs-dif-opt--active' : ''}`}
+                            style={cadastro.dificuldade === key ? { borderColor: color, color } : undefined}
+                            onClick={() => setCadastro(prev => ({ ...prev, dificuldade: key }))}
+                          >
+                            <span className="cs-diff-dot" style={{ background: color }} />
+                            {DIFF_LABELS[key]}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="cs-cadastro-acoes">
+                        <button
+                          type="button"
+                          className="cs-add-word-btn"
+                          disabled={!cadastro.dificuldade || cadastro.salvando}
+                          onClick={() => void confirmarCadastro()}
+                        >
+                          {cadastro.salvando ? 'Cadastrando...' : '✓ Confirmar cadastro'}
+                        </button>
+                        <button
+                          type="button"
+                          className="cs-cadastro-cancelar"
+                          onClick={() => setCadastro({ aberto: false, dificuldade: null, salvando: false, erro: null })}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                      <p className="cs-cadastro-nota">
+                        A palavra entra como extra desta sala e fica pendente de aprovação para o acervo geral.
+                      </p>
+                      {cadastro.erro && <div className="cs-cadastro-erro">{cadastro.erro}</div>}
+                    </div>
+                  )}
+                </>
               )}
 
               {extraWords.length > 0 && (

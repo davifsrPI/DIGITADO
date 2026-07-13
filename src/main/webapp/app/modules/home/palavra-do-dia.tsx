@@ -108,9 +108,30 @@ export const PalavraDoDia = () => {
               }}
               aria-label="Ouvir palavra"
             >
-              <span className="pdd-audio-icon">{falando ? '🔊' : '🔉'}</span>
+              {/* Alto-falante em SVG (nítido em qualquer tela, herda a cor do botão);
+                  as ondas pulsam via CSS enquanto o áudio toca */}
+              <svg className="pdd-audio-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M4 9.5v5a1 1 0 0 0 1 1h2.6l4.1 3.3a1 1 0 0 0 1.6-.8V6a1 1 0 0 0-1.6-.8L7.6 8.5H5a1 1 0 0 0-1 1z"
+                  fill="currentColor"
+                />
+                <path
+                  className="pdd-wave pdd-wave--1"
+                  d="M16 9.4a3.8 3.8 0 0 1 0 5.2"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+                <path
+                  className="pdd-wave pdd-wave--2"
+                  d="M18.4 7a7.4 7.4 0 0 1 0 10"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
-            <span className="pdd-audio-hint">Clique para ouvir · pode ouvir quantas vezes quiser</span>
+            <span className="pdd-audio-hint">{falando ? 'Reproduzindo...' : 'Clique para ouvir · pode ouvir quantas vezes quiser'}</span>
           </div>
         )}
 
