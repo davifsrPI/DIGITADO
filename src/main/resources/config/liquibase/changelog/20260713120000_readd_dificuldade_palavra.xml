@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Recria a coluna dificuldade na tabela palavra (removida em 20260704120000),
+        agora com um papel diferente: é a dificuldade CADASTRADA, usada como fallback
+        enquanto a palavra ainda não tem amostra estatística suficiente.
+
+        Regra (Palavra.getDificuldade e PalavraRepository.findRandomByDificuldade):
+          - total_tentativas >= 15 -> dificuldade CALCULADA pela taxa de acerto
+            (0–35% = DIFICIL, 36–65% = MEDIO, 66%+ = FACIL)
+          - total_tentativas < 15  -> usa esta coluna; se nula, cai no
+            fallback determinístico por id (MOD(id, 3))
+    -->
+    <!-- Em ambientes onde a coluna já foi criada à mão (ex: importação direta de
+         palavras no banco de dev), só marca o changeset como aplicado — sem a
+         precondição o addColumn falha com coluna duplicada e trava a fila de
+         migrações seguintes (o Liquibase assíncrono do JHipster apenas loga o erro) -->
+    <changeSet id="20260713120000-1" author="digitado">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="palavra" columnName="dificuldade"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="palavra">
+            <column name="dificuldade" type="varchar(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

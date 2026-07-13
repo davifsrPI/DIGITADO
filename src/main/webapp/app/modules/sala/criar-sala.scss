@@ -474,6 +474,88 @@ body.criar-sala-page .view-container {
   }
 }
 
+/* ---- PALAVRAS SORTEADAS (sala de turma) ---- */
+
+.cs-sorteadas {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cs-sorteadas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.cs-sorteadas-loading {
+  font-weight: 400;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.cs-sorteadas-vazio {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+.cs-sorteio-aviso {
+  font-size: 12px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+
+.cs-sorteadas-group {
+  margin-bottom: 10px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.cs-sorteadas-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 6px;
+}
+
+.cs-sorteadas-falta {
+  color: #fbbf24;
+  font-size: 11px;
+}
+
+.cs-sorteadas-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Botão "gerar outra" dentro do chip: hover verde (troca), não vermelho (remoção) */
+.cs-word-chip button.cs-regen-word-btn {
+  font-size: 13px;
+
+  &:hover {
+    color: #4ade80;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+}
+
 /* ---- CODE ---- */
 
 .cs-code-display {

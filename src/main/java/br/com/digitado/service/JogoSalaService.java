@@ -116,14 +116,29 @@ public class JogoSalaService {
         List<Long> recentes = jogo.getIdsPalavras();
         List<Long> excluir = recentes.isEmpty() ? List.of(-1L) : recentes;
         List<Palavra> palavras = new ArrayList<>();
-        palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.FACIL.name(), payload.qtdFacil(), excluir));
-        palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.MEDIO.name(), payload.qtdMedio(), excluir));
-        palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.DIFICIL.name(), payload.qtdDificil(), excluir));
+        // Palavras já sorteadas na tela de criação da sala: a PRIMEIRA partida usa
+        // exatamente essas (o professor viu a lista e pôde trocar cada uma). Numa
+        // partida seguinte da mesma sala elas viram "recentes" e o sorteio por
+        // quantidade assume, mantendo a regra de não repetir a partida anterior.
+        List<Long> fixas = payload.palavrasIds() != null ? payload.palavrasIds() : List.of();
+        boolean usarFixas = !fixas.isEmpty() && recentes.isEmpty();
+        int totalPedido;
+        if (usarFixas) {
+            for (Long id : fixas) {
+                palavraRepository.findById(id).filter(p -> Boolean.TRUE.equals(p.getAtiva())).ifPresent(palavras::add);
+            }
+            totalPedido = fixas.size();
+        } else {
+            palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.FACIL.name(), payload.qtdFacil(), excluir));
+            palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.MEDIO.name(), payload.qtdMedio(), excluir));
+            palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.DIFICIL.name(), payload.qtdDificil(), excluir));
+            totalPedido = payload.qtdFacil() + payload.qtdMedio() + payload.qtdDificil();
+        }
         // A dificuldade é uma MÉTRICA (taxa de acerto), então alguma faixa pode não ter
-        // palavras suficientes (ex: banco novo, onde quase tudo ainda é MEDIO).
+        // palavras suficientes (ex: banco novo, onde quase tudo ainda é MEDIO) — e uma
+        // palavra fixa pode ter sido desativada entre a criação da sala e o início.
         // Completa a diferença sorteando entre as demais palavras ativas, para a
         // partida sempre ter o total de palavras que o professor pediu.
-        int totalPedido = payload.qtdFacil() + payload.qtdMedio() + payload.qtdDificil();
         int faltam = totalPedido - palavras.size();
         if (faltam > 0) {
             List<Long> indisponiveis = new ArrayList<>(recentes);

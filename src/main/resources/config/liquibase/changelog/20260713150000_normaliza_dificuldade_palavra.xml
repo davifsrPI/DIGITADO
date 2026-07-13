@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Normaliza os valores da coluna dificuldade para os NOMES DO ENUM
+        (FACIL/MEDIO/DIFICIL). Palavras importadas direto no banco chegaram com
+        'facil'/'media'/'dificil' (minúsculas e "media" no feminino), o que quebrava
+        o mapeamento JPA com IllegalArgumentException — derrubando a Palavra do Dia
+        e qualquer endpoint que serializasse uma Palavra.
+
+        Idempotente: valores já normalizados são mapeados para eles mesmos;
+        qualquer valor irreconhecível vira NULL (cai no fallback determinístico).
+    -->
+    <changeSet id="20260713150000-1" author="digitado">
+        <sql>
+            UPDATE palavra SET dificuldade = CASE
+                WHEN LOWER(dificuldade) = 'facil' THEN 'FACIL'
+                WHEN LOWER(dificuldade) IN ('medio', 'media') THEN 'MEDIO'
+                WHEN LOWER(dificuldade) = 'dificil' THEN 'DIFICIL'
+                ELSE NULL END
+            WHERE dificuldade IS NOT NULL
+        </sql>
+    </changeSet>
+</databaseChangeLog>

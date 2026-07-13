@@ -16,6 +16,9 @@ interface GameConfig {
   qtdMedio: number;
   qtdDificil: number;
   palavrasExtrasIds: number[];
+  // Palavras já sorteadas na tela de criação da sala — quando presentes, a 1ª
+  // partida usa exatamente essas em vez de sortear na hora
+  palavrasIds?: number[];
 }
 
 interface Props {
@@ -255,8 +258,21 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           disabled={
             !conectado || (cfg.qtdFacil + cfg.qtdMedio + cfg.qtdDificil === 0 && (initialGameConfig?.palavrasExtrasIds?.length ?? 0) === 0)
           }
-          // Preserva as palavras extras escolhidas na tela de criação da sala
-          onClick={() => onIniciar({ ...cfg, palavrasExtrasIds: initialGameConfig?.palavrasExtrasIds ?? [] })}
+          // Preserva as palavras extras e as palavras pré-sorteadas na tela de criação.
+          // Se o professor mudou as QUANTIDADES aqui no lobby, a lista pré-sorteada não
+          // corresponde mais à configuração — descarta e deixa o servidor sortear na hora.
+          onClick={() => {
+            const qtdsIntactas =
+              !!initialGameConfig &&
+              cfg.qtdFacil === initialGameConfig.qtdFacil &&
+              cfg.qtdMedio === initialGameConfig.qtdMedio &&
+              cfg.qtdDificil === initialGameConfig.qtdDificil;
+            onIniciar({
+              ...cfg,
+              palavrasExtrasIds: initialGameConfig?.palavrasExtrasIds ?? [],
+              palavrasIds: qtdsIntactas ? (initialGameConfig?.palavrasIds ?? []) : [],
+            });
+          }}
         >
           {conectado ? '▶ Iniciar partida' : 'Conectando...'}
         </button>

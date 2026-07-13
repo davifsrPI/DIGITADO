@@ -6,6 +6,7 @@ export interface IPalavra {
   id?: number;
   texto?: string;
   dificuldade?: keyof typeof Dificuldade;
+  dificuldadeCadastrada?: keyof typeof Dificuldade | null;
   categoria?: string | null;
   idioma?: string | null;
   possuiAcento?: boolean | null;

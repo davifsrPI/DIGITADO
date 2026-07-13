@@ -1,5 +1,6 @@
 package br.com.digitado.domain;
 
+import br.com.digitado.domain.converter.DificuldadeConverter;
 import br.com.digitado.domain.enumeration.Dificuldade;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -44,6 +45,21 @@ public class Palavra implements Serializable {
 
     @Column(name = "ativa")
     private Boolean ativa;
+
+    /**
+     * Dificuldade CADASTRADA (opcional, definida na curadoria da palavra).
+     * Só vale enquanto a palavra tem pouca amostra: com menos de
+     * {@link #MIN_TENTATIVAS_PARA_METRICA} tentativas, getDificuldade() usa este
+     * valor; a partir daí, a dificuldade passa a ser a métrica calculada pela
+     * taxa de acerto e este campo deixa de influenciar.
+     *
+     * Conversor próprio no lugar de @Enumerated(STRING): palavras importadas
+     * direto no banco podem trazer 'facil'/'media'/'dificil' — o conversor tolera
+     * essas variações em vez de estourar IllegalArgumentException na leitura.
+     */
+    @Convert(converter = DificuldadeConverter.class)
+    @Column(name = "dificuldade")
+    private Dificuldade dificuldadeCadastrada;
 
     /**
      * Estatísticas da palavra: total de pessoas que a fizeram (acertando ou não)
@@ -108,19 +124,31 @@ public class Palavra implements Serializable {
     }
 
     /**
-     * Dificuldade CALCULADA pela taxa de acerto da palavra (não é mais coluna no banco):
+     * A dificuldade só passa a ser CALCULADA pela taxa de acerto quando a palavra
+     * acumula esta quantidade mínima de tentativas — abaixo disso a amostra é
+     * pequena demais e vale a dificuldade cadastrada. O mesmo limiar está fixo no
+     * SQL de PalavraRepository.findRandomByDificuldade — mantenha os dois iguais.
+     */
+    public static final int MIN_TENTATIVAS_PARA_METRICA = 15;
+
+    /**
+     * Dificuldade efetiva da palavra:
+     *
+     * Com pelo menos {@link #MIN_TENTATIVAS_PARA_METRICA} tentativas, é CALCULADA
+     * pela taxa de acerto:
      *
      *   percentual = total_acertos / total_tentativas
      *   0–35%  -> DIFICIL   (poucas pessoas acertam)
      *   36–65% -> MEDIO
      *   66%+   -> FACIL     (maioria acerta)
      *
-     * Palavra sem nenhuma tentativa entra "aleatoriamente" numa das três faixas —
-     * de forma determinística pelo id (id % 3), porque a classificação precisa ser
-     * estável: o tempo da rodada é recalculado a partir dela durante o jogo, e o
-     * sorteio em SQL precisa classificar exatamente igual. Assim que houver
-     * registros, a palavra passa a seguir a métrica. A mesma regra existe em SQL no
-     * PalavraRepository.findRandomByDificuldade — mantenha as duas em sincronia.
+     * Com menos tentativas que isso, vale a dificuldade CADASTRADA na coluna
+     * dificuldade; se também não houver cadastro, a palavra entra "aleatoriamente"
+     * numa das três faixas — de forma determinística pelo id (id % 3), porque a
+     * classificação precisa ser estável: o tempo da rodada é recalculado a partir
+     * dela durante o jogo, e o sorteio em SQL precisa classificar exatamente igual.
+     * A mesma regra existe em SQL no PalavraRepository.findRandomByDificuldade —
+     * mantenha as duas em sincronia.
      *
      * Sem @Transient de propósito: a entidade usa acesso por campo (anotações nos
      * atributos), então o Hibernate ignora getters sem campo correspondente — e o
@@ -139,7 +167,10 @@ public class Palavra implements Serializable {
     @JsonProperty("dificuldade")
     public Dificuldade getDificuldade() {
         long tentativas = getTotalTentativas();
-        if (tentativas == 0) {
+        if (tentativas < MIN_TENTATIVAS_PARA_METRICA) {
+            if (dificuldadeCadastrada != null) {
+                return dificuldadeCadastrada;
+            }
             if (id == null) {
                 return Dificuldade.MEDIO;
             }
@@ -222,6 +253,19 @@ public class Palavra implements Serializable {
 
     public void setAtiva(Boolean ativa) {
         this.ativa = ativa;
+    }
+
+    public Dificuldade getDificuldadeCadastrada() {
+        return this.dificuldadeCadastrada;
+    }
+
+    public Palavra dificuldadeCadastrada(Dificuldade dificuldadeCadastrada) {
+        this.setDificuldadeCadastrada(dificuldadeCadastrada);
+        return this;
+    }
+
+    public void setDificuldadeCadastrada(Dificuldade dificuldadeCadastrada) {
+        this.dificuldadeCadastrada = dificuldadeCadastrada;
     }
 
     public Usuario getCriador() {

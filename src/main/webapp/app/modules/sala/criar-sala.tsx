@@ -61,6 +61,22 @@ export const CriarSala = () => {
   const [busca, setBusca] = useState<BuscaResult>({ status: 'idle' });
   const [extraWords, setExtraWords] = useState<Palavra[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Palavras JÁ SORTEADAS para a partida (só sala de turma): o professor vê a lista
+  // e pode trocar cada uma; a partida usa exatamente essas palavras
+  const [sorteadas, setSorteadas] = useState<Palavra[]>([]);
+  const [sorteioLoading, setSorteioLoading] = useState(false);
+  const [sorteioAviso, setSorteioAviso] = useState<string | null>(null);
+  // Id da palavra sendo trocada pelo "gerar outra" (desabilita o botão dela)
+  const [regenId, setRegenId] = useState<number | null>(null);
+  const sorteioDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Nº de sequência do sorteio: descarta respostas de requisições obsoletas
+  // (o professor pode clicar +/− várias vezes antes de a primeira resposta chegar)
+  const sorteioSeqRef = useRef(0);
+  // Espelhos em ref para o sorteio ler o valor atual sem recriar o efeito
+  const sorteadasRef = useRef<Palavra[]>([]);
+  sorteadasRef.current = sorteadas;
+  const extraWordsRef = useRef<Palavra[]>([]);
+  extraWordsRef.current = extraWords;
 
   // Adiciona classe ao body para aplicar estilos de fundo específicos desta página
   useEffect(() => {
@@ -71,6 +87,83 @@ export const CriarSala = () => {
   // Incrementa/decrementa a quantidade de palavras de uma dificuldade, limitado entre 0 e 30
   const adj = (key: Dificuldade, delta: number) => {
     setQuantidades(prev => ({ ...prev, [key]: Math.max(0, Math.min(30, prev[key] + delta)) }));
+  };
+
+  // Sorteia palavras no servidor, excluindo as que já estão na tela (sorteadas + extras)
+  const sortearNoServidor = async (dificuldade: Dificuldade, quantidade: number, excluirExtra: number[] = []) => {
+    const excluir = [...sorteadasRef.current.map(w => w.id), ...extraWordsRef.current.map(w => w.id), ...excluirExtra];
+    const { data } = await axios.get<Palavra[]>('/api/palavras/sortear', {
+      params: { dificuldade, quantidade, excluirIds: excluir.length ? excluir.join(',') : undefined },
+    });
+    return data;
+  };
+
+  // Ajusta a lista de sorteadas às quantidades escolhidas: excedentes saem do fim
+  // de cada faixa; o que falta é sorteado no servidor sem repetir as já exibidas
+  const reconciliarSorteio = async (qtds: Record<Dificuldade, number>) => {
+    const seq = ++sorteioSeqRef.current;
+    setSorteioLoading(true);
+    let lista = [...sorteadasRef.current];
+    for (const { key } of DIFFS) {
+      const atuais = lista.filter(w => w.dificuldade === key).length;
+      if (atuais > qtds[key]) {
+        let excesso = atuais - qtds[key];
+        for (let i = lista.length - 1; i >= 0 && excesso > 0; i--) {
+          if (lista[i].dificuldade === key) {
+            lista.splice(i, 1);
+            excesso--;
+          }
+        }
+      } else if (atuais < qtds[key]) {
+        try {
+          const novas = await sortearNoServidor(
+            key,
+            qtds[key] - atuais,
+            lista.map(w => w.id),
+          );
+          if (seq !== sorteioSeqRef.current) return; // outra reconciliação já começou
+          lista = [...lista, ...novas];
+        } catch {
+          // banco indisponível: mantém o que já tem — a partida completa o resto ao iniciar
+        }
+      }
+    }
+    if (seq === sorteioSeqRef.current) {
+      setSorteadas(lista);
+      setSorteioLoading(false);
+    }
+  };
+
+  // Re-sorteia quando as quantidades mudam (com debounce — os cliques em +/− são rápidos).
+  // Só na sala de turma: no duelo 1v1 o criador também joga, então ver as palavras
+  // antes da partida seria vantagem injusta — lá o sorteio continua às cegas no início.
+  useEffect(() => {
+    if (is1v1) return;
+    if (sorteioDebounceRef.current) clearTimeout(sorteioDebounceRef.current);
+    sorteioDebounceRef.current = setTimeout(() => {
+      void reconciliarSorteio(quantidades);
+    }, 300);
+    return () => {
+      if (sorteioDebounceRef.current) clearTimeout(sorteioDebounceRef.current);
+    };
+  }, [quantidades, is1v1]);
+
+  // Troca uma palavra sorteada por outra da mesma dificuldade que ainda não esteja na tela
+  const gerarOutra = async (palavra: Palavra) => {
+    setRegenId(palavra.id);
+    setSorteioAviso(null);
+    try {
+      const novas = await sortearNoServidor(palavra.dificuldade, 1);
+      if (novas.length > 0) {
+        setSorteadas(prev => prev.map(w => (w.id === palavra.id ? novas[0] : w)));
+      } else {
+        setSorteioAviso(`O banco não tem outra palavra ${DIFF_LABELS[palavra.dificuldade].toLowerCase()} disponível.`);
+      }
+    } catch {
+      setSorteioAviso('Não foi possível sortear outra palavra. Tente novamente.');
+    } finally {
+      setRegenId(null);
+    }
   };
 
   // Busca palavras no banco com debounce de 500ms — evita requisição a cada tecla digitada
@@ -146,6 +239,9 @@ export const CriarSala = () => {
               qtdMedio: quantidades.MEDIO,
               qtdDificil: quantidades.DIFICIL,
               palavrasExtrasIds: extraWords.map(w => w.id),
+              // Palavras já sorteadas e conferidas nesta tela — a partida usa exatamente
+              // essas (vazio no 1v1, onde o sorteio continua acontecendo só ao iniciar)
+              palavrasIds: sorteadas.map(w => w.id),
             },
           },
         });
@@ -298,6 +394,53 @@ export const CriarSala = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Palavras sorteadas para a partida — visíveis só na sala de turma
+                  (no 1v1 o criador joga, então ver as palavras seria vantagem) */}
+              {!is1v1 && (
+                <div className="cs-sorteadas">
+                  <div className="cs-sorteadas-header">
+                    <span>Palavras sorteadas</span>
+                    {sorteioLoading && <span className="cs-sorteadas-loading">sorteando...</span>}
+                  </div>
+                  {sorteioAviso && <div className="cs-sorteio-aviso">{sorteioAviso}</div>}
+                  {sorteadas.length === 0 && !sorteioLoading && (
+                    <p className="cs-sorteadas-vazio">Nenhuma palavra sorteada — aumente as quantidades acima.</p>
+                  )}
+                  {DIFFS.map(({ key, color, label }) => {
+                    const doNivel = sorteadas.filter(w => w.dificuldade === key);
+                    if (doNivel.length === 0) return null;
+                    return (
+                      <div key={key} className="cs-sorteadas-group">
+                        <span className="cs-sorteadas-group-label">
+                          <span className="cs-diff-dot" style={{ background: color }} />
+                          {label}
+                          {doNivel.length < quantidades[key] && !sorteioLoading && (
+                            <span className="cs-sorteadas-falta"> (banco sem mais palavras dessa dificuldade)</span>
+                          )}
+                        </span>
+                        <div className="cs-sorteadas-list">
+                          {doNivel.map(w => (
+                            <span key={w.id} className="cs-word-chip">
+                              {w.texto}
+                              <button
+                                type="button"
+                                className="cs-regen-word-btn"
+                                onClick={() => gerarOutra(w)}
+                                disabled={regenId !== null}
+                                title="Gerar outra palavra no lugar desta"
+                                aria-label={`Gerar outra palavra no lugar de ${w.texto}`}
+                              >
+                                {regenId === w.id ? '…' : '🔄'}
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* PASSO 3 — BUSCA DE PALAVRAS */}

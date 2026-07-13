@@ -20,6 +20,7 @@
       "id": "ID",
       "texto": "Texto",
       "dificuldade": "Dificuldade",
+      "dificuldadeCadastrada": "Dificuldade cadastrada",
       "categoria": "Categoria",
       "idioma": "Idioma",
       "possuiAcento": "Possui Acento",

@@ -26,6 +26,8 @@ export const SalaJogo: React.FC = () => {
       qtdMedio: number;
       qtdDificil: number;
       palavrasExtrasIds: number[];
+      // Palavras já sorteadas na tela de criação — a 1ª partida usa exatamente essas
+      palavrasIds?: number[];
     };
   } | null;
   const isProfessor = locationState?.isProfessor === true;

@@ -1,6 +1,7 @@
 package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.Palavra;
+import br.com.digitado.domain.enumeration.Dificuldade;
 import br.com.digitado.repository.PalavraRepository;
 import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
@@ -61,6 +62,27 @@ public class PalavraResource {
         response.put("exata", false);
         response.put("similares", similares);
         return ResponseEntity.ok(response);
+    }
+
+    // Sorteia palavras ativas de uma dificuldade, excluindo ids já escolhidos.
+    // Usado na tela de criação de sala: o professor vê as palavras sorteadas e pode
+    // trocar uma por outra ("gerar outra") sem repetir as que já estão na lista.
+    @GetMapping("/sortear")
+    public ResponseEntity<List<Palavra>> sortearPalavras(
+        @RequestParam String dificuldade,
+        @RequestParam(defaultValue = "1") int quantidade,
+        @RequestParam(required = false) List<Long> excluirIds
+    ) {
+        Dificuldade dif;
+        try {
+            dif = Dificuldade.valueOf(dificuldade.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestAlertException("Dificuldade inválida", ENTITY_NAME, "dificuldadeinvalida");
+        }
+        int n = Math.max(1, Math.min(30, quantidade));
+        // NOT IN vazio quebra o SQL nativo — usa um id impossível como sentinela
+        List<Long> excluir = excluirIds == null || excluirIds.isEmpty() ? List.of(-1L) : excluirIds;
+        return ResponseEntity.ok(palavraRepository.findRandomByDificuldadeExcluindo(dif.name(), n, excluir));
     }
 
     /**
@@ -155,7 +177,11 @@ public class PalavraResource {
                 if (palavra.getTexto() != null) {
                     existingPalavra.setTexto(palavra.getTexto());
                 }
-                // dificuldade não é mais editável: é calculada pela taxa de acerto
+                // dificuldade cadastrada: vale enquanto a palavra tem menos de 15
+                // tentativas; depois disso a taxa de acerto assume
+                if (palavra.getDificuldadeCadastrada() != null) {
+                    existingPalavra.setDificuldadeCadastrada(palavra.getDificuldadeCadastrada());
+                }
                 if (palavra.getCategoria() != null) {
                     existingPalavra.setCategoria(palavra.getCategoria());
                 }

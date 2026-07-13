@@ -145,6 +145,8 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
       qtdMedio: number;
       qtdDificil: number;
       palavrasExtrasIds: number[];
+      // Palavras pré-sorteadas na criação da sala (vazio = sortear ao iniciar)
+      palavrasIds?: number[];
     }) => publicar('iniciar', payload),
     proxima: () => publicar('proxima'),
     pausar: () => publicar('pausar'),

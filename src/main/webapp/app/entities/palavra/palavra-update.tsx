@@ -55,6 +55,8 @@ export const PalavraUpdate = () => {
     const entity = {
       ...palavraEntity,
       ...values,
+      // select vazio envia '' — o backend espera enum ou null
+      dificuldadeCadastrada: values.dificuldadeCadastrada || null,
       criador: usuarios.find(it => it.id.toString() === values.criador?.toString()),
       listas: mapIdList(values.listas),
     };
@@ -110,7 +112,20 @@ export const PalavraUpdate = () => {
                   required: { value: true, message: translate('entity.validation.required') },
                 }}
               />
-              {/* dificuldade não é mais editável: é calculada pela taxa de acerto da palavra */}
+              {/* dificuldade cadastrada: usada enquanto a palavra tem menos de 15 tentativas;
+                  a partir daí a dificuldade exibida passa a ser calculada pela taxa de acerto */}
+              <ValidatedField
+                label={translate('digitadoApp.palavra.dificuldadeCadastrada')}
+                id="palavra-dificuldadeCadastrada"
+                name="dificuldadeCadastrada"
+                data-cy="dificuldadeCadastrada"
+                type="select"
+              >
+                <option value="" key="0" />
+                <option value="FACIL">{translate('digitadoApp.Dificuldade.FACIL')}</option>
+                <option value="MEDIO">{translate('digitadoApp.Dificuldade.MEDIO')}</option>
+                <option value="DIFICIL">{translate('digitadoApp.Dificuldade.DIFICIL')}</option>
+              </ValidatedField>
               <ValidatedField
                 label={translate('digitadoApp.palavra.categoria')}
                 id="palavra-categoria"
