@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+
 # DIGITADO
 
 This application was generated using JHipster 8.11.0, you can find documentation and help at [https://www.jhipster.tech/documentation-archive/v8.11.0](https://www.jhipster.tech/documentation-archive/v8.11.0).
@@ -239,4 +241,9 @@ To configure CI for your project, run the ci-cd sub-generator (`jhipster ci-cd`)
 [BrowserSync]: https://www.browsersync.io/
 [Jest]: https://jestjs.io
 [Leaflet]: https://leafletjs.com/
-[DefinitelyTyped]: https://definitelytyped.org/
+
+# [DefinitelyTyped]: https://definitelytyped.org/
+
+# digitado
+
+> > > > > > > 06a7cca929e699292a78e092fbe009868e3c6516
