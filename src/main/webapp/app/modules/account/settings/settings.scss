@@ -177,6 +177,22 @@ body.settings-page {
   transform: translateY(0);
 }
 
+/* Barra de força da senha (página Alterar senha) — texto legível no tema escuro */
+.st-card #strength {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  display: block;
+  margin: -8px 0 20px;
+
+  ul#strengthBar {
+    display: inline;
+    list-style: none;
+    margin: 0 0 0 12px;
+    padding: 0;
+    vertical-align: 1px;
+  }
+}
+
 /* ── Meus dados (LGPD): portabilidade e exclusão ── */
 .st-lgpd {
   margin-top: 24px;

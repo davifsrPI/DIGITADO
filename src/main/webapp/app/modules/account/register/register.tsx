@@ -7,6 +7,7 @@ import axios from 'axios';
 import './register.scss';
 
 import PasswordStrengthBar from 'app/shared/layout/password/password-strength-bar';
+import { validarSenhaForte } from 'app/shared/util/senha-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { handleRegister, reset } from './register.reducer';
 
@@ -139,8 +140,9 @@ export const RegisterPage = () => {
               onChange={updatePassword}
               validate={{
                 required: { value: true, message: translate('global.messages.validate.newpassword.required') },
-                minLength: { value: 4, message: translate('global.messages.validate.newpassword.minlength') },
+                minLength: { value: 8, message: translate('global.messages.validate.newpassword.minlength') },
                 maxLength: { value: 50, message: translate('global.messages.validate.newpassword.maxlength') },
+                validate: validarSenhaForte,
               }}
               data-cy="firstPassword"
             />
@@ -152,7 +154,7 @@ export const RegisterPage = () => {
               type="password"
               validate={{
                 required: { value: true, message: translate('global.messages.validate.confirmpassword.required') },
-                minLength: { value: 4, message: translate('global.messages.validate.confirmpassword.minlength') },
+                minLength: { value: 8, message: translate('global.messages.validate.confirmpassword.minlength') },
                 maxLength: { value: 50, message: translate('global.messages.validate.confirmpassword.maxlength') },
                 validate: v => v === password || translate('global.messages.error.dontmatch'),
               }}

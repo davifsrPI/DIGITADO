@@ -72,13 +72,13 @@
       "validate": {
         "newpassword": {
           "required": "A senha é obrigatória.",
-          "minlength": "A senha deve ter pelo menos 4 caracteres",
+          "minlength": "A senha deve ter pelo menos 8 caracteres",
           "maxlength": "A senha não pode ter mais de 50 caracteres",
           "strength": "Nível de dificuldade da senha:"
         },
         "confirmpassword": {
           "required": "A confirmação da senha é obrigatória.",
-          "minlength": "A confirmação da senha deve ter pelo menos 4 caracteres",
+          "minlength": "A confirmação da senha deve ter pelo menos 8 caracteres",
           "maxlength": "A confirmação da senha não pode ter mais de 50 caracteres"
         },
         "email": {
