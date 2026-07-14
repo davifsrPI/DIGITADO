@@ -126,6 +126,8 @@ export const SalaJogo: React.FC = () => {
             onEncerrar={encerrar}
             onResponder={responder}
             initialGameConfig={gameConfig}
+            // Login do professor: a tela usa para excluí-lo das contagens e do ranking
+            meuLogin={login}
           />
         ) : (
           <SalaJogoAluno estado={estado} feedback={feedback} meuLogin={login} onResponder={responder} conectado={conectado} />

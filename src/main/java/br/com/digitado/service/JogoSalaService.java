@@ -268,6 +268,46 @@ public class JogoSalaService {
         return buildEstado(codigoSala, nomeSala, jogo, jogo.getTipo());
     }
 
+    // ===== Relatório da partida (tela do professor) =====
+
+    /**
+     * Uma resposta digitada por um jogador em uma rodada, exatamente como chegou:
+     * quem respondeu (login + nome de exibição), o texto digitado, se acertou e a
+     * ordem de chegada (1º, 2º...). Alimenta o relatório "quem escreveu o quê".
+     */
+    public record RespostaDetalhe(String login, String nome, String texto, boolean correta, int ordem) {}
+
+    /**
+     * Consolidado de UMA palavra da partida para o relatório do professor:
+     * o texto e a dificuldade da palavra, os totais (quantos responderam e
+     * quantos acertaram — o % é calculado no frontend) e a lista de respostas.
+     */
+    public record RelatorioPalavra(
+        int indice,
+        String texto,
+        String dificuldade,
+        int totalRespostas,
+        int totalAcertos,
+        List<RespostaDetalhe> respostas
+    ) {}
+
+    /**
+     * Monta o relatório da partida em andamento (ou recém-encerrada) da sala:
+     * uma entrada por palavra JÁ JOGADA, com as respostas de cada jogador.
+     *
+     * Exposto via GET /api/salas/{codigo}/relatorio, restrito ao professor dono
+     * (ou admin) — é ele quem vê o texto das palavras e as respostas dos alunos.
+     * Sala sem estado em memória (servidor reiniciado / partida não iniciada)
+     * devolve lista vazia, e o frontend trata como "sem dados ainda".
+     */
+    public List<RelatorioPalavra> gerarRelatorio(String codigoSala) {
+        EstadoJogo jogo = jogos.get(codigoSala);
+        if (jogo == null) {
+            return List.of();
+        }
+        return jogo.gerarRelatorio();
+    }
+
     // Resultado de uma resposta: contém o feedback individual + o estado atualizado da sala
     public record ResultadoResposta(FeedbackAluno feedback, EstadoJogoDTO estado) {}
 
@@ -331,6 +371,9 @@ public class JogoSalaService {
 
         // Registra a resposta e guarda a ordem de acerto (1º, 2º, 3º...)
         int ordem = jogo.registrarResposta(login, correta);
+        // Guarda a resposta LITERAL digitada (aparada, sem alterar caixa) no
+        // histórico da rodada — é o que o professor vê no relatório da partida
+        jogo.registrarRespostaDetalhada(login, nomeAluno, respostaDigitada.trim(), correta, ordem);
         int pontos = 0;
         if (correta) {
             // Pontuação = base (por ordem de acerto) + bônus de velocidade proporcional ao tempo restante
@@ -477,6 +520,18 @@ public class JogoSalaService {
         // Sala de duelo 1v1: no máximo 2 jogadores e conquistas próprias no fim
         private volatile boolean modo1v1 = false;
 
+        /**
+         * Registro DETALHADO da partida para o relatório do professor:
+         * índice da palavra (posição na lista embaralhada) → lista de respostas
+         * digitadas naquela rodada, na ordem de chegada.
+         *
+         * É daqui que sai o relatório "quem escreveu o quê" — tanto o painel ao
+         * vivo (contagem e % de acerto por palavra) quanto o relatório final.
+         * Vive apenas em memória, como todo o EstadoJogo: reiniciar o servidor
+         * descarta o histórico da partida em andamento.
+         */
+        private final Map<Integer, List<RespostaDetalhe>> respostasDetalhadas = new ConcurrentHashMap<>();
+
         public record AlunoInfo(String nome, int pontos, String statusAtual) {}
 
         // Começa o jogo: define as palavras, redefine o índice para 0 e registra o timestamp de início
@@ -493,6 +548,8 @@ public class JogoSalaService {
             sequenciaAcertos.clear();
             estatisticasPartida.clear();
             alertasBurla.clear();
+            // Partida nova = relatório novo: as respostas da partida anterior são descartadas
+            respostasDetalhadas.clear();
             fimPremiado = false;
             // Reseta o status de todos para "AGUARDANDO" ao começar
             placar.replaceAll((k, v) -> new AlunoInfo(v.nome(), v.pontos(), "AGUARDANDO"));
@@ -541,6 +598,52 @@ public class JogoSalaService {
                 if (correta) estat[1]++;
             }
             return ordem;
+        }
+
+        /**
+         * Anexa a resposta digitada ao histórico da PALAVRA ATUAL (indiceAtual).
+         * Chamado logo após registrarResposta — que já garantiu resposta única por
+         * jogador na rodada e definiu a ordem de chegada. A lista é sincronizada
+         * porque vários alunos respondem ao mesmo tempo.
+         */
+        void registrarRespostaDetalhada(String login, String nome, String texto, boolean correta, int ordem) {
+            respostasDetalhadas
+                .computeIfAbsent(indiceAtual, k -> Collections.synchronizedList(new ArrayList<>()))
+                .add(new RespostaDetalhe(login, nome, texto, correta, ordem));
+        }
+
+        /**
+         * Consolida o relatório da partida: uma entrada por palavra já jogada
+         * (índice 0 até o atual, inclusive — a rodada em curso entra com as
+         * respostas que já chegaram, alimentando o painel ao vivo do professor).
+         * Palavras ainda não sorteadas para jogo ficam de fora: o relatório nunca
+         * antecipa o que vem pela frente.
+         */
+        List<RelatorioPalavra> gerarRelatorio() {
+            List<RelatorioPalavra> relatorio = new ArrayList<>();
+            // Partida encerrada: indiceAtual pode ter passado do fim da lista
+            int ultimo = Math.min(indiceAtual, palavras.size() - 1);
+            for (int i = 0; i <= ultimo; i++) {
+                Palavra p = palavras.get(i);
+                List<RespostaDetalhe> respostas = respostasDetalhadas.getOrDefault(i, List.of());
+                // Cópia defensiva: a rodada atual ainda recebe respostas enquanto isto roda
+                List<RespostaDetalhe> copia;
+                synchronized (respostas) {
+                    copia = List.copyOf(respostas);
+                }
+                int acertos = (int) copia.stream().filter(RespostaDetalhe::correta).count();
+                relatorio.add(
+                    new RelatorioPalavra(
+                        i,
+                        p.getTexto(),
+                        p.getDificuldade() != null ? p.getDificuldade().name() : null,
+                        copia.size(),
+                        acertos,
+                        copia
+                    )
+                );
+            }
+            return relatorio;
         }
 
         void adicionarPontos(String login, String nome, int pontos) {

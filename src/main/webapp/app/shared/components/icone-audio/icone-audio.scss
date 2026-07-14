@@ -1,0 +1,25 @@
+.ia-icone {
+  width: 24px;
+  height: 24px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Enquanto o áudio toca, as ondas do alto-falante pulsam alternadas */
+.ia-tocando .ia-wave--1 {
+  animation: ia-wave-fade 1s ease-in-out infinite;
+}
+
+.ia-tocando .ia-wave--2 {
+  animation: ia-wave-fade 1s ease-in-out infinite 0.25s;
+}
+
+@keyframes ia-wave-fade {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}

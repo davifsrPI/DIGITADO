@@ -7,6 +7,7 @@ import { RankingNuvem } from './ranking-nuvem';
 import { VinhetaPodio } from './vinheta-podio';
 import { AmpulhetaAnimada } from './ampulheta-animada';
 import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
+import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
 
 interface Props {
   estado: EstadoJogo | null;
@@ -232,7 +233,7 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
             disabled={!ativo || !estado.palavraAtual}
             aria-label="Ouvir palavra"
           >
-            <span className="sj-audio-icon">{falando ? '🔊' : '🔉'}</span>
+            <IconeAudio tocando={falando} className="sj-audio-svg" />
           </button>
           <span className="sj-audio-hint">Clique para ouvir · pode ouvir quantas vezes quiser</span>
         </div>

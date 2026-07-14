@@ -1,10 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { EstadoJogo } from './hooks/useSalaWebSocket';
 import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
 import { VinhetaPodio } from './vinheta-podio';
-import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
+import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
 
 // Configuração do jogo escolhida pelo professor: quantidade de palavras e
 // TEMPO por dificuldade (fácil/médio/difícil)
@@ -31,7 +33,38 @@ interface Props {
   onEncerrar: () => void;
   onResponder: (resposta: string) => void;
   initialGameConfig?: GameConfig;
+  // Login do próprio professor: usado para EXCLUÍ-LO das contagens ao vivo e do
+  // ranking — ele comanda a partida, não compete com os alunos
+  meuLogin?: string;
 }
+
+// ─── Relatório da partida (visão do professor) ──────────────────────────────
+// Espelhos dos records RespostaDetalhe/RelatorioPalavra do JogoSalaService,
+// servidos por GET /api/salas/{codigo}/relatorio (restrito ao dono da sala):
+// cada palavra já jogada com as respostas digitadas e os totais de acerto.
+
+// Uma resposta individual: quem respondeu, o texto exato digitado e o resultado
+interface RespostaDetalhe {
+  login: string;
+  nome: string;
+  texto: string;
+  correta: boolean;
+  ordem: number;
+}
+
+// Consolidado de uma palavra da partida (o % de acerto é calculado aqui no front)
+interface RelatorioPalavra {
+  indice: number;
+  texto: string;
+  dificuldade: string | null;
+  totalRespostas: number;
+  totalAcertos: number;
+  respostas: RespostaDetalhe[];
+}
+
+// Cores/rótulos por dificuldade — mesma paleta usada no restante das telas da sala
+const COR_DIFICULDADE: Record<string, string> = { FACIL: '#4ade80', MEDIO: '#fbbf24', DIFICIL: '#f87171' };
+const LABEL_DIFICULDADE: Record<string, string> = { FACIL: 'Fácil', MEDIO: 'Médio', DIFICIL: 'Difícil' };
 
 type Cfg = {
   tempoFacil: number;
@@ -67,14 +100,12 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   conectado,
   onIniciar,
   onProxima,
-  onResponder,
   initialGameConfig,
+  meuLogin,
 }) => {
   // ─── Estado local do componente ───────────────────────────────────────────
   const [cfg, setCfg] = useState<Cfg>(initialGameConfig ?? DEFAULT_CFG);
 
-  const [resposta, setResposta] = useState('');
-  const [jaRespondeu, setJaRespondeu] = useState(false);
   const [falando, setFalando] = useState(false);
   const [tempoRestante, setTempoRestante] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -84,10 +115,60 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   // Vinheta de suspense com o pódio, exibida uma única vez quando a partida encerra
   const [vinhetaFimConcluida, setVinhetaFimConcluida] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  // Relatório da partida vindo do servidor: uma entrada por palavra já jogada,
+  // com as respostas digitadas. Alimenta o painel de palavras durante o jogo e
+  // o relatório completo na tela de encerramento.
+  const [relatorio, setRelatorio] = useState<RelatorioPalavra[]>([]);
+
+  // Fechamento definitivo da sala ao fim da partida (botão "Encerrar e fechar"):
+  // true enquanto o PATCH está em andamento — trava o botão contra clique duplo
+  const [fechandoSala, setFechandoSala] = useState(false);
+  const [erroFecharSala, setErroFecharSala] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // Fecha a sala DE VEZ: marca ativo=false no banco via PATCH — o endpoint já é
+  // restrito ao professor dono (ou admin). Sala inativa sai das listagens e não
+  // recebe novas entradas. Com a sala fechada, o professor volta ao lobby;
+  // o relatório da partida continua disponível até ele sair da tela.
+  const fecharSala = async () => {
+    if (fechandoSala) return;
+    setFechandoSala(true);
+    setErroFecharSala(null);
+    try {
+      await axios.patch(`/api/salas/${codigoSala}`, { codigo: codigoSala, ativo: false });
+      navigate('/lobby');
+    } catch {
+      // Falhou (ex.: rede) — reabilita o botão e avisa; nada foi alterado no banco
+      setFechandoSala(false);
+      setErroFecharSala('Não foi possível fechar a sala. Tente novamente.');
+    }
+  };
+
   const rankingTriggeredRef = useRef(false);
   // Posições da rodada anterior no top 5 — usado pela animação de ultrapassagem
   const posRef = useRef<Map<string, number>>(new Map());
+
+  // Busca o relatório no endpoint restrito ao dono da sala. Chamado a cada troca
+  // de palavra e no encerramento — NÃO a cada resposta: o consolidado das rodadas
+  // anteriores não muda no meio de uma rodada, e os números ao vivo da rodada em
+  // curso são derivados do placar que o WebSocket já entrega de graça.
+  const carregarRelatorio = useCallback(() => {
+    axios
+      .get<RelatorioPalavra[]>(`/api/salas/${codigoSala}/relatorio`)
+      .then(res => setRelatorio(res.data))
+      .catch(() => {
+        // Sem relatório (ex.: servidor reiniciou no meio) — o painel segue com o que tem
+      });
+  }, [codigoSala]);
+
+  useEffect(() => {
+    if (!estado) return;
+    // INICIADA/NOVA_PALAVRA: nova rodada entrou no relatório; ENCERRADA: consolida
+    // a última rodada para a tela final
+    if (estado.tipo === 'INICIADA' || estado.tipo === 'NOVA_PALAVRA' || estado.tipo === 'ENCERRADA') {
+      carregarRelatorio();
+    }
+  }, [estado?.indiceAtual, estado?.tipo, carregarRelatorio]);
 
   // Incrementa/decrementa a quantidade de palavras de uma dificuldade, entre 0 e 30
   const adj = (campo: keyof Cfg, delta: number) => setCfg(prev => ({ ...prev, [campo]: Math.max(0, Math.min(30, prev[campo] + delta)) }));
@@ -108,18 +189,9 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     falarPalavra(estado.palavraAtual.texto, { onEnd: () => setFalando(false) });
   };
 
-  // Envia a resposta do professor (ele também pode jogar junto com os alunos)
-  const handleEnviar = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resposta.trim() || jaRespondeu) return;
-    onResponder(resposta.trim());
-    setJaRespondeu(true);
-  };
-
-  // Reseta o estado de resposta e fala a palavra automaticamente ao mudar de palavra
+  // Fala a palavra automaticamente ao mudar de rodada (o professor dita para a
+  // turma pela caixa de som da sala; cada aluno também tem o botão no aparelho)
   useEffect(() => {
-    setResposta('');
-    setJaRespondeu(false);
     setFalando(false);
     setShowRanking(false);
     rankingTriggeredRef.current = false;
@@ -128,7 +200,6 @@ export const SalaJogoProfessor: React.FC<Props> = ({
       setFalando(true);
       falarPalavra(estado.palavraAtual.texto, { rate: 0.5, onEnd: () => setFalando(false) });
     }
-    setTimeout(() => inputRef.current?.focus(), 100);
   }, [estado?.palavraAtual?.id]);
 
   // Conta o tempo restante da rodada — recalcula a cada 500ms a partir do timestampInicio
@@ -280,31 +351,95 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     );
   }
 
+  // Placar sem o próprio professor: ele comanda a partida, não compete — não deve
+  // aparecer no pódio nem no ranking que os alunos disputam
+  const placarAlunos = estado.placar.filter(p => p.login !== meuLogin);
+
   /* ── ENCERRADA ───────────────────────────────────────────── */
   if (estado.tipo === 'ENCERRADA') {
     // Antes do placar final, roda a vinheta de suspense revelando o pódio
     if (!vinhetaFimConcluida) {
-      return <VinhetaPodio placar={estado.placar} onFim={() => setVinhetaFimConcluida(true)} />;
+      return <VinhetaPodio placar={placarAlunos} onFim={() => setVinhetaFimConcluida(true)} />;
     }
     return (
       <div className="sj-ended">
         <h2 className="sj-ended-title">Atividade encerrada!</h2>
-        <div className="sj-final-placar">
-          {estado.placar.map((p, i) => (
-            <div key={p.login} className="sj-final-row">
-              <span className="sj-final-rank">{i + 1}º</span>
-              <span className="sj-final-nome">
-                {p.nome || p.login}
-                {p.alertas > 0 && (
-                  <span className="sj-alerta-burla" title={`${p.alertas} resposta(s) suspeita(s) de colar/corretor nesta partida`}>
-                    ⚠ {p.alertas}
-                  </span>
-                )}
-              </span>
-              <span className="sj-final-pts">{p.pontos} pts</span>
-            </div>
-          ))}
-        </div>
+
+        {/* ── Ranking completo da partida ── */}
+        <h3 className="sj-rel-secao">🏆 Ranking da partida</h3>
+        {placarAlunos.length === 0 ? (
+          <p className="sj-no-alunos">Nenhum aluno participou desta partida.</p>
+        ) : (
+          <div className="sj-final-placar">
+            {placarAlunos.map((p, i) => (
+              <div key={p.login} className="sj-final-row">
+                <span className="sj-final-rank">{i + 1}º</span>
+                <span className="sj-final-nome">
+                  {p.nome || p.login}
+                  {p.alertas > 0 && (
+                    <span className="sj-alerta-burla" title={`${p.alertas} resposta(s) suspeita(s) de colar/corretor nesta partida`}>
+                      ⚠ {p.alertas}
+                    </span>
+                  )}
+                </span>
+                <span className="sj-final-pts">{p.pontos} pts</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Relatório da partida: cada palavra com quem escreveu o quê ──
+            Os dados vêm do endpoint restrito ao dono da sala (carregados no
+            useEffect quando o estado vira ENCERRADA) */}
+        <h3 className="sj-rel-secao">📋 Relatório por palavra</h3>
+        {relatorio.length === 0 ? (
+          <p className="sj-no-alunos">Sem respostas registradas nesta partida.</p>
+        ) : (
+          <div className="sj-rel-lista">
+            {relatorio.map(r => {
+              const pctAcerto = r.totalRespostas > 0 ? Math.round((r.totalAcertos / r.totalRespostas) * 100) : 0;
+              return (
+                <div key={r.indice} className="sj-rel-card">
+                  <div className="sj-rel-header">
+                    <span className="sj-rel-num">{r.indice + 1}</span>
+                    <span className="sj-rel-palavra">{r.texto}</span>
+                    {r.dificuldade && (
+                      <span className="sj-rel-dif" style={{ color: COR_DIFICULDADE[r.dificuldade] }}>
+                        {LABEL_DIFICULDADE[r.dificuldade] ?? r.dificuldade}
+                      </span>
+                    )}
+                    <span className="sj-rel-stats">
+                      {r.totalRespostas} resposta{r.totalRespostas === 1 ? '' : 's'} · {pctAcerto}% de acerto
+                    </span>
+                  </div>
+                  {r.respostas.length === 0 ? (
+                    <p className="sj-rel-vazio">Ninguém respondeu esta palavra.</p>
+                  ) : (
+                    <ul className="sj-rel-respostas">
+                      {/* Cada linha: quem respondeu e o texto LITERAL que digitou */}
+                      {r.respostas.map(resp => (
+                        <li key={resp.login} className={`sj-rel-resp${resp.correta ? ' sj-rel-resp--certa' : ' sj-rel-resp--errada'}`}>
+                          <span className="sj-rel-resp-icone">{resp.correta ? '✓' : '✗'}</span>
+                          <span className="sj-rel-resp-nome">{resp.nome || resp.login}</span>
+                          <span className="sj-rel-resp-texto">&ldquo;{resp.texto}&rdquo;</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Encerrar e fechar a sala ──
+            Fecha a sala em definitivo (ativo=false no banco): ela some das
+            listagens e não aceita novas entradas. Ação exclusiva do professor,
+            disponível só aqui — depois que a partida terminou. */}
+        {erroFecharSala && <div className="sj-fechar-erro">{erroFecharSala}</div>}
+        <button type="button" className="sj-fechar-sala-btn" onClick={() => void fecharSala()} disabled={fechandoSala}>
+          {fechandoSala ? 'Fechando sala...' : '🔒 Encerrar e fechar sala'}
+        </button>
       </div>
     );
   }
@@ -337,16 +472,29 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           </div>
         </div>
 
-        {estado.placar.length === 0 ? (
+        {placarAlunos.length === 0 ? (
           <p className="sj-no-alunos">Nenhum participante no placar ainda.</p>
         ) : (
-          <RankingNuvem placar={estado.placar} posRef={posRef} />
+          <RankingNuvem placar={placarAlunos} posRef={posRef} />
         )}
       </div>
     );
   }
 
-  /* ── EM JOGO ─────────────────────────────────────────────── */
+  /* ── EM JOGO — painel do professor ───────────────────────────
+     O professor não digita respostas: ele acompanha a rodada. O painel mostra
+     a palavra atual (só ele vê o texto — os alunos recebem apenas o áudio nos
+     seus aparelhos), os números ao vivo da rodada e a lista de palavras já
+     jogadas com a taxa de acerto de cada uma. */
+
+  // Números AO VIVO da rodada atual, derivados do placar que o WebSocket
+  // broadcast a cada resposta (sem nenhuma requisição extra):
+  // status ACERTOU/ERROU = já respondeu; AGUARDANDO = ainda não.
+  const respondidas = placarAlunos.filter(p => p.statusAtual === 'ACERTOU' || p.statusAtual === 'ERROU').length;
+  const acertosAoVivo = placarAlunos.filter(p => p.statusAtual === 'ACERTOU').length;
+  const pctAoVivo = respondidas > 0 ? Math.round((acertosAoVivo / respondidas) * 100) : 0;
+  const totalAlunos = estado.alunosConectados.filter(a => a.login !== meuLogin).length;
+
   return (
     <div className="sj-game-centered">
       {/* Vinheta de 3s no início de cada rodada: relógio voando, ponteiros rápidos se o tempo for curto */}
@@ -354,16 +502,32 @@ export const SalaJogoProfessor: React.FC<Props> = ({
       <div className="sj-game-topbar">
         <div className="sj-sala-nome">{estado.nomeSala}</div>
         <div className="sj-topbar-right">
-          <span className="sj-conectados">{estado.alunosConectados.length} aluno(s)</span>
+          <span className="sj-conectados">{totalAlunos} aluno(s)</span>
           <span className="sj-codigo-pill">{codigoSala}</span>
         </div>
       </div>
 
-      <div className="sj-game-card">
+      <div className="sj-game-card sj-dash-card">
         <p className="sj-game-progress">
           palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
         </p>
 
+        {/* Palavra atual em destaque — visível apenas nesta tela do professor */}
+        {estado.palavraAtual && (
+          <div className="sj-dash-atual">
+            <span className="sj-dash-atual-label">Palavra atual</span>
+            <div className="sj-dash-atual-row">
+              <span className="sj-dash-atual-texto">{estado.palavraAtual.texto}</span>
+              {estado.palavraAtual.dificuldade && (
+                <span className="sj-dash-atual-dif" style={{ color: COR_DIFICULDADE[estado.palavraAtual.dificuldade] }}>
+                  {LABEL_DIFICULDADE[estado.palavraAtual.dificuldade] ?? estado.palavraAtual.dificuldade}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Botão de ditado: o professor repete o áudio para a turma quando quiser */}
         <div className="sj-audio-section">
           <button
             type="button"
@@ -372,25 +536,28 @@ export const SalaJogoProfessor: React.FC<Props> = ({
             disabled={!ativo || !estado.palavraAtual}
             aria-label="Ouvir palavra"
           >
-            <span className="sj-audio-icon">{falando ? '🔊' : '🔉'}</span>
-            <span className="sj-audio-label-text">{falando ? 'Reproduzindo...' : 'Ouvir palavra'}</span>
+            <IconeAudio tocando={falando} className="sj-audio-svg" />
+            <span className="sj-audio-label-text">{falando ? 'Reproduzindo...' : 'Repetir palavra'}</span>
           </button>
-          <span className="sj-audio-hint">pode ouvir quantas vezes quiser</span>
         </div>
 
-        <form className="sj-input-form" onSubmit={handleEnviar}>
-          <EntradaPalavra
-            inputRef={inputRef}
-            className="sj-word-input"
-            value={resposta}
-            onChange={setResposta}
-            placeholder="escreva a palavra ouvida..."
-            disabled={jaRespondeu || !ativo}
-          />
-          <button type="submit" className="sj-send-btn" disabled={!resposta.trim() || jaRespondeu || !ativo}>
-            {jaRespondeu ? 'Resposta enviada ✓' : 'Enviar resposta →'}
-          </button>
-        </form>
+        {/* Estatística ao vivo da rodada: alunos, quantos já responderam e % de acerto */}
+        <div className="sj-dash-tiles">
+          <div className="sj-dash-tile">
+            <strong>{totalAlunos}</strong>
+            <span>aluno{totalAlunos === 1 ? '' : 's'}</span>
+          </div>
+          <div className="sj-dash-tile">
+            <strong>
+              {respondidas}/{totalAlunos}
+            </strong>
+            <span>responderam</span>
+          </div>
+          <div className="sj-dash-tile">
+            <strong>{pctAoVivo}%</strong>
+            <span>de acerto</span>
+          </div>
+        </div>
 
         <div className="sj-timer-section">
           <div className="sj-timer-row">
@@ -401,6 +568,46 @@ export const SalaJogoProfessor: React.FC<Props> = ({
             <div className="sj-timer-bar-fill" style={{ width: `${pct}%`, background: timerDanger ? '#E24B4A' : '#1D9E75' }} />
           </div>
         </div>
+
+        {/* Palavras da partida: as já jogadas com % consolidado (do relatório) e a
+            atual com os números ao vivo (do placar) — nunca antecipa as próximas */}
+        {relatorio.length > 0 && (
+          <div className="sj-dash-list">
+            <span className="sj-dash-list-title">Palavras da partida</span>
+            {relatorio.map(r => {
+              const ehAtual = r.indice === estado.indiceAtual;
+              const respostas = ehAtual ? respondidas : r.totalRespostas;
+              const acertos = ehAtual ? acertosAoVivo : r.totalAcertos;
+              const pctPalavra = respostas > 0 ? Math.round((acertos / respostas) * 100) : 0;
+              return (
+                <div key={r.indice} className={`sj-dash-row${ehAtual ? ' sj-dash-row--atual' : ''}`}>
+                  <span className="sj-dash-num">{r.indice + 1}</span>
+                  <div className="sj-dash-info">
+                    <div className="sj-dash-word-line">
+                      <span className="sj-dash-word">{r.texto}</span>
+                      {r.dificuldade && (
+                        <span className="sj-dash-dif" style={{ color: COR_DIFICULDADE[r.dificuldade] }}>
+                          {LABEL_DIFICULDADE[r.dificuldade] ?? r.dificuldade}
+                        </span>
+                      )}
+                      {ehAtual && <span className="sj-dash-agora">em andamento</span>}
+                    </div>
+                    {/* Barra de acerto: verde proporcional ao % de quem acertou */}
+                    <div className="sj-dash-bar-bg">
+                      <div className="sj-dash-bar" style={{ width: `${pctPalavra}%` }} />
+                    </div>
+                  </div>
+                  <div className="sj-dash-nums">
+                    <strong>{pctPalavra}%</strong>
+                    <span>
+                      {respostas} resposta{respostas === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

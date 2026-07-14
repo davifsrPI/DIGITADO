@@ -270,6 +270,31 @@ public class SalaResource {
         return ResponseUtil.wrapOrNotFound(sala);
     }
 
+    /**
+     * Relatório da partida da sala: cada palavra JÁ JOGADA com as respostas
+     * digitadas de cada jogador (quem escreveu o quê, acertou ou não, ordem de
+     * chegada) e os totais por palavra.
+     *
+     * Usado pela tela do professor em dois momentos:
+     * - DURANTE a partida: alimenta o painel de palavras (quantos responderam
+     *   e % de acerto por palavra);
+     * - AO FINAL: vira o relatório completo, junto com o ranking.
+     *
+     * Restrito ao professor dono da sala (ou admin): o relatório expõe o texto
+     * das palavras e as respostas individuais dos alunos — nenhum aluno pode
+     * consultar este endpoint para colar ou espiar os colegas.
+     */
+    @GetMapping("/{codigo}/relatorio")
+    public ResponseEntity<List<JogoSalaService.RelatorioPalavra>> getRelatorio(@PathVariable("codigo") String codigo) {
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
+        }
+        if (!isOwnerOrAdmin(codigo)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        return ResponseEntity.ok(jogoSalaService.gerarRelatorio(codigo));
+    }
+
     // O papel de professor vive no estado de navegação do front e se perde ao
     // recarregar a página da sala — este endpoint permite à tela redescobrir se o
     // usuário logado é o dono (ou admin) e renderizar a visão de professor de novo.

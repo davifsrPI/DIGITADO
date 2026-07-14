@@ -970,9 +970,10 @@ body.sala-jogo-page .view-container {
   }
 }
 
-.sj-audio-icon {
-  font-size: 22px;
-  line-height: 1;
+/* Ícone SVG do alto-falante dentro dos botões de áudio (aluno e professor) */
+.sj-audio-svg {
+  width: 26px;
+  height: 26px;
 }
 
 .sj-audio-label-text {
@@ -983,6 +984,350 @@ body.sala-jogo-page .view-container {
 .sj-audio-hint {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.3);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PAINEL DO PROFESSOR (durante a partida)
+   O professor não digita respostas: acompanha a rodada num painel com a
+   palavra atual, números ao vivo e a lista de palavras já jogadas com % de
+   acerto. Estas classes complementam o .sj-game-card padrão.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Card um pouco mais largo que o de jogo: precisa acomodar a lista de palavras */
+.sj-dash-card {
+  max-width: 720px;
+  width: 100%;
+}
+
+/* ── Palavra atual em destaque (só o professor vê o texto) ── */
+.sj-dash-atual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.sj-dash-atual-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.sj-dash-atual-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.sj-dash-atual-texto {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+
+.sj-dash-atual-dif {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── Estatística ao vivo da rodada: 3 blocos (alunos / responderam / % acerto) ── */
+.sj-dash-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.sj-dash-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 8px;
+
+  strong {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+  }
+
+  span {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+}
+
+/* ── Lista de palavras da partida (jogadas + a atual em andamento) ── */
+.sj-dash-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 14px;
+}
+
+.sj-dash-list-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 2px;
+}
+
+.sj-dash-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 10px 14px;
+
+  /* Rodada em curso ganha destaque índigo */
+  &--atual {
+    border-color: rgba(99, 102, 241, 0.45);
+    background: rgba(99, 102, 241, 0.08);
+  }
+}
+
+/* Número de ordem da palavra na partida */
+.sj-dash-num {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sj-dash-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sj-dash-word-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sj-dash-word {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.sj-dash-dif {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Selo "em andamento" da rodada atual */
+.sj-dash-agora {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.18);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+
+/* Barra de acerto da palavra: preenchimento proporcional ao % que acertou */
+.sj-dash-bar-bg {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.sj-dash-bar {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #34d399, #10b981);
+  transition: width 0.4s ease;
+}
+
+/* Coluna da direita: % grande + contagem de respostas */
+.sj-dash-nums {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+
+  strong {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  span {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RELATÓRIO DE FIM DE PARTIDA (tela do professor)
+   Depois do ranking completo, um card por palavra mostrando quem escreveu o
+   quê — a resposta literal digitada, com acerto/erro colorido.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Título das seções da tela final (ranking / relatório) */
+.sj-rel-secao {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 28px 0 12px;
+  text-align: center;
+}
+
+.sj-rel-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.sj-rel-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+
+/* Cabeçalho do card: nº + palavra + dificuldade + totais */
+.sj-rel-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.sj-rel-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+}
+
+.sj-rel-palavra {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.sj-rel-dif {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Totais alinhados à direita do cabeçalho */
+.sj-rel-stats {
+  margin-left: auto;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.sj-rel-vazio {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.35);
+  margin: 0;
+}
+
+.sj-rel-respostas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Linha de resposta: ícone ✓/✗, nome do aluno e o texto literal digitado */
+.sj-rel-resp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 13.5px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.sj-rel-resp-icone {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Verde para acerto, vermelho para erro — no ícone e no texto digitado */
+.sj-rel-resp--certa .sj-rel-resp-icone {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.sj-rel-resp--errada .sj-rel-resp-icone {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.sj-rel-resp-nome {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+}
+
+.sj-rel-resp-texto {
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
+}
+
+.sj-rel-resp--errada .sj-rel-resp-texto {
+  color: #fca5a5;
 }
 
 /* ── input form ── */
@@ -2325,4 +2670,60 @@ body.sala-jogo-page .view-container {
   50% {
     filter: brightness(1.45);
   }
+}
+
+/* ── Responsivo: painel e relatório em telas estreitas (celular) ── */
+@media (max-width: 640px) {
+  .sj-dash-atual-texto {
+    font-size: 24px;
+  }
+
+  .sj-dash-tile strong {
+    font-size: 18px;
+  }
+
+  .sj-rel-stats {
+    /* Em telas estreitas os totais quebram para a linha de baixo */
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* ── Botão "Encerrar e fechar sala" (tela final do professor) ──
+   Fecha a sala em definitivo (ativo=false no banco). Tom vermelho para
+   sinalizar ação irreversível na sala — não é o encerrar da rodada. */
+.sj-fechar-sala-btn {
+  margin-top: 8px;
+  padding: 14px 34px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: 14px;
+  color: #fca5a5;
+  font-family: 'Poppins', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.15s;
+
+  &:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.22);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* Erro ao fechar a sala (ex.: falha de rede) — exibido acima do botão */
+.sj-fechar-erro {
+  font-size: 13px;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  padding: 8px 14px;
 }
