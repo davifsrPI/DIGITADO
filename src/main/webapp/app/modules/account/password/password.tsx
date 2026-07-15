@@ -9,6 +9,7 @@ import { getSession } from 'app/shared/reducers/authentication';
 import PasswordStrengthBar from 'app/shared/layout/password/password-strength-bar';
 import { validarSenhaForte } from 'app/shared/util/senha-utils';
 import { reset, savePassword } from './password.reducer';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 // Tela de troca de senha — mesmo tema escuro e mesma estrutura visual das
 // Configurações da conta (reusa as classes st-* de settings.scss)
@@ -26,10 +27,7 @@ export const PasswordPage = () => {
 
   // Classe no body: remove a moldura branca do card padrão do JHipster (jh-card)
   // e aplica o tema escuro — o estilo mora em settings.scss (body.settings-page)
-  useEffect(() => {
-    document.body.classList.add('settings-page');
-    return () => document.body.classList.remove('settings-page');
-  }, []);
+  useBodyClass('settings-page');
 
   const handleValidSubmit = ({ currentPassword, newPassword }) => {
     dispatch(savePassword({ currentPassword, newPassword }));

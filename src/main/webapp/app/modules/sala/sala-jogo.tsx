@@ -8,6 +8,7 @@ import { useAppSelector } from 'app/config/store';
 import { ErroWS, EstadoJogo, FeedbackAluno, useSalaWebSocket } from './hooks/useSalaWebSocket';
 import { SalaJogoAluno } from './sala-jogo-aluno';
 import { SalaJogoProfessor } from './sala-jogo-professor';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 // Página principal do jogo — decide se renderiza a visão do professor ou do aluno
 // com base no estado de navegação passado pela tela de criação/entrada na sala
@@ -53,10 +54,7 @@ export const SalaJogo: React.FC = () => {
   const verificandoPapel = papelDesconhecido && souProfessorServidor === null;
 
   // Remove o card branco padrão do layout (jh-card) — a página tem fundo escuro próprio
-  useEffect(() => {
-    document.body.classList.add('sala-jogo-page');
-    return () => document.body.classList.remove('sala-jogo-page');
-  }, []);
+  useBodyClass('sala-jogo-page');
 
   // Nome de exibição: apelido público primeiro; sem apelido, primeiro nome; por fim o login.
   // O servidor revalida na entrada (o apelido do banco vence o que o cliente enviar).

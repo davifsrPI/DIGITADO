@@ -1,9 +1,10 @@
 import './lobby.scss';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 // Os códigos de sala têm sempre 6 caracteres (ver generateCode em criar-sala)
 const CODE_LEN = 6;
@@ -15,12 +16,7 @@ export const Lobby = () => {
   const codeInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    document.body.classList.add('lobby-page');
-    return () => {
-      document.body.classList.remove('lobby-page');
-    };
-  }, []);
+  useBodyClass('lobby-page');
 
   const handleEnterRoom = (e: React.FormEvent) => {
     e.preventDefault();

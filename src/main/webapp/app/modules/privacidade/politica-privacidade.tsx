@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 import { abrirGerenciadorCookies } from 'app/shared/cookies/cookie-consent';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 /**
  * Política de Privacidade (LGPD art. 9º — transparência).
@@ -14,10 +15,7 @@ import { abrirGerenciadorCookies } from 'app/shared/cookies/cookie-consent';
  * antes de publicar — não invente esses dados.
  */
 export const PoliticaPrivacidade = () => {
-  useEffect(() => {
-    document.body.classList.add('pp-page');
-    return () => document.body.classList.remove('pp-page');
-  }, []);
+  useBodyClass('pp-page');
 
   return (
     <div className="pp-wrapper">

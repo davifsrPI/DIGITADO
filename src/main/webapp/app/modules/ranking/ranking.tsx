@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 import { useAppSelector } from 'app/config/store';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 interface RankingEntry {
   posicao: number;
@@ -36,10 +37,7 @@ export const Ranking = () => {
   const [pagina, setPagina] = useState(0);
   const [carregandoMais, setCarregandoMais] = useState(false);
 
-  useEffect(() => {
-    document.body.classList.add('ranking-page');
-    return () => document.body.classList.remove('ranking-page');
-  }, []);
+  useBodyClass('ranking-page');
 
   useEffect(() => {
     axios

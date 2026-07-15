@@ -94,17 +94,35 @@ public class JogoSalaService {
     public ResultadoDesconexao aoDesconectar(String login) {
         List<String> salasComSaida = new ArrayList<>();
         List<String> salasEncerradasVazias = new ArrayList<>();
+        // Salas que nunca saíram do lobby (AGUARDANDO) e ficaram sem ninguém: não há
+        // partida nem placar a preservar — descartar evita que o mapa de jogos cresça
+        // para sempre com salas criadas e abandonadas (quem voltar recria o estado
+        // vazio no próximo "entrar", sem perder nada)
+        List<String> salasAguardandoVazias = new ArrayList<>();
         jogos.forEach((codigo, jogo) -> {
             if (jogo.getAlunosConectados().containsKey(login)) {
                 jogo.removerAluno(login);
                 salasComSaida.add(codigo);
             }
-            if ("ENCERRADA".equals(jogo.getTipo()) && jogo.totalConectados() == 0) {
-                salasEncerradasVazias.add(codigo);
+            if (jogo.totalConectados() == 0) {
+                if ("ENCERRADA".equals(jogo.getTipo())) {
+                    salasEncerradasVazias.add(codigo);
+                } else if ("AGUARDANDO".equals(jogo.getTipo())) {
+                    salasAguardandoVazias.add(codigo);
+                }
             }
         });
         salasEncerradasVazias.forEach(jogos::remove);
+        salasAguardandoVazias.forEach(jogos::remove);
         return new ResultadoDesconexao(salasComSaida, salasEncerradasVazias);
+    }
+
+    // Descarta o estado em memória de uma sala fechada/excluída em definitivo
+    // (botão "Encerrar e fechar sala" ou DELETE do professor). Sem isto, o
+    // EstadoJogo — palavras, placar e histórico de respostas — ficaria retido
+    // no mapa de jogos até o próximo restart do servidor.
+    public void descartarSala(String codigoSala) {
+        jogos.remove(codigoSala);
     }
 
     // Inicia o jogo: sorteia as palavras conforme a configuração escolhida pelo professor,

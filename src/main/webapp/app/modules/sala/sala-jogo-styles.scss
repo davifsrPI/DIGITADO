@@ -2693,6 +2693,10 @@ body.sala-jogo-page .view-container {
    Fecha a sala em definitivo (ativo=false no banco). Tom vermelho para
    sinalizar ação irreversível na sala — não é o encerrar da rodada. */
 .sj-fechar-sala-btn {
+  /* inline-flex alinha o cadeado SVG com o texto do botão */
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   margin-top: 8px;
   padding: 14px 34px;
   background: rgba(239, 68, 68, 0.12);
@@ -2726,4 +2730,138 @@ body.sala-jogo-page .view-container {
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 10px;
   padding: 8px 14px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   POLIMENTO DA TELA FINAL DO PROFESSOR — animações discretas, sem emoji
+   Movimento sutil de entrada (fade + deslize de poucos px) e microinterações
+   de hover. Nada chamativo: durações curtas, easing suave e um só keyframe
+   reaproveitado. Quem prefere menos movimento tem tudo desligado no bloco
+   prefers-reduced-motion ao final.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Entrada em cascata das seções da tela final (título, ranking, relatório,
+   botão): cada bloco surge de baixo com um pequeno atraso em relação ao
+   anterior — dá ritmo à revelação sem virar espetáculo */
+.sj-ended > * {
+  animation: sj-surgir 0.45s ease-out both;
+}
+
+.sj-ended > :nth-child(2) {
+  animation-delay: 0.07s;
+}
+.sj-ended > :nth-child(3) {
+  animation-delay: 0.14s;
+}
+.sj-ended > :nth-child(4) {
+  animation-delay: 0.21s;
+}
+.sj-ended > :nth-child(5) {
+  animation-delay: 0.28s;
+}
+.sj-ended > :nth-child(n + 6) {
+  animation-delay: 0.35s;
+}
+
+@keyframes sj-surgir {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Título de seção com filete gradiente centralizado no lugar do emoji */
+.sj-rel-secao {
+  position: relative;
+  padding-bottom: 10px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 46px;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #6366f1, #a855f7);
+  }
+}
+
+/* Pódio no ranking: 1º/2º/3º ganham cor no número (ouro, prata, bronze) —
+   destaque tipográfico discreto, sem medalhas de emoji */
+.sj-final-row:nth-child(1) .sj-final-rank {
+  color: #fbbf24;
+}
+.sj-final-row:nth-child(2) .sj-final-rank {
+  color: #cbd5e1;
+}
+.sj-final-row:nth-child(3) .sj-final-rank {
+  color: #d97706;
+}
+
+/* Linhas do ranking entram em sequência dentro da própria seção */
+@for $i from 1 through 10 {
+  .sj-final-row:nth-child(#{$i}) {
+    animation: sj-surgir 0.35s ease-out both;
+    animation-delay: #{0.15 + $i * 0.05}s;
+  }
+}
+
+/* Cards do relatório: entrada em cascata + leve elevação no hover para
+   convidar a leitura palavra a palavra */
+@for $i from 1 through 12 {
+  .sj-rel-card:nth-child(#{$i}) {
+    animation: sj-surgir 0.4s ease-out both;
+    animation-delay: #{0.2 + $i * 0.06}s;
+  }
+}
+
+.sj-rel-card {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+}
+
+/* Selo "em andamento" do painel: respiração suave de opacidade enquanto a
+   rodada corre — indica vida sem piscar na tela */
+.sj-dash-agora {
+  animation: sj-respirar 2s ease-in-out infinite;
+}
+
+@keyframes sj-respirar {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Cadeado em SVG dentro do botão de fechar a sala */
+.sj-fechar-icone {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+/* Acessibilidade: quem pediu menos movimento no sistema recebe a tela
+   pronta, sem nenhuma animação de entrada ou respiração */
+@media (prefers-reduced-motion: reduce) {
+  .sj-ended > *,
+  .sj-final-row,
+  .sj-rel-card,
+  .sj-dash-agora {
+    animation: none;
+  }
 }

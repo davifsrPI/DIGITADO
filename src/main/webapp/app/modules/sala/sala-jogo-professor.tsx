@@ -7,6 +7,7 @@ import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
 import { VinhetaPodio } from './vinheta-podio';
 import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
+import { CORES_DIFICULDADE, LABELS_DIFICULDADE } from 'app/shared/util/dificuldade-constants';
 
 // Configuração do jogo escolhida pelo professor: quantidade de palavras e
 // TEMPO por dificuldade (fácil/médio/difícil)
@@ -62,9 +63,10 @@ interface RelatorioPalavra {
   respostas: RespostaDetalhe[];
 }
 
-// Cores/rótulos por dificuldade — mesma paleta usada no restante das telas da sala
-const COR_DIFICULDADE: Record<string, string> = { FACIL: '#4ade80', MEDIO: '#fbbf24', DIFICIL: '#f87171' };
-const LABEL_DIFICULDADE: Record<string, string> = { FACIL: 'Fácil', MEDIO: 'Médio', DIFICIL: 'Difícil' };
+// Cores/rótulos por dificuldade — paleta compartilhada de todas as telas
+// (COR_/LABEL_ mantêm os nomes usados no JSX; a fonte é dificuldade-constants)
+const COR_DIFICULDADE: Record<string, string> = CORES_DIFICULDADE;
+const LABEL_DIFICULDADE: Record<string, string> = LABELS_DIFICULDADE;
 
 type Cfg = {
   tempoFacil: number;
@@ -77,16 +79,16 @@ type Cfg = {
 
 // Quantidade de palavras por dificuldade (steppers)
 const DIFICULDADES: Array<{ key: 'qtdFacil' | 'qtdMedio' | 'qtdDificil'; label: string; cor: string }> = [
-  { key: 'qtdFacil', label: 'Fáceis', cor: '#4ade80' },
-  { key: 'qtdMedio', label: 'Médias', cor: '#fbbf24' },
-  { key: 'qtdDificil', label: 'Difíceis', cor: '#f87171' },
+  { key: 'qtdFacil', label: 'Fáceis', cor: CORES_DIFICULDADE.FACIL },
+  { key: 'qtdMedio', label: 'Médias', cor: CORES_DIFICULDADE.MEDIO },
+  { key: 'qtdDificil', label: 'Difíceis', cor: CORES_DIFICULDADE.DIFICIL },
 ];
 
 // Tempo de rodada por dificuldade (sliders)
 const TEMPOS: Array<{ key: 'tempoFacil' | 'tempoMedio' | 'tempoDificil'; label: string; cor: string }> = [
-  { key: 'tempoFacil', label: 'Fácil', cor: '#4ade80' },
-  { key: 'tempoMedio', label: 'Médio', cor: '#fbbf24' },
-  { key: 'tempoDificil', label: 'Difícil', cor: '#f87171' },
+  { key: 'tempoFacil', label: 'Fácil', cor: CORES_DIFICULDADE.FACIL },
+  { key: 'tempoMedio', label: 'Médio', cor: CORES_DIFICULDADE.MEDIO },
+  { key: 'tempoDificil', label: 'Difícil', cor: CORES_DIFICULDADE.DIFICIL },
 ];
 
 const DEFAULT_CFG: Cfg = { tempoFacil: 20, tempoMedio: 30, tempoDificil: 45, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
@@ -366,7 +368,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
         <h2 className="sj-ended-title">Atividade encerrada!</h2>
 
         {/* ── Ranking completo da partida ── */}
-        <h3 className="sj-rel-secao">🏆 Ranking da partida</h3>
+        <h3 className="sj-rel-secao">Ranking da partida</h3>
         {placarAlunos.length === 0 ? (
           <p className="sj-no-alunos">Nenhum aluno participou desta partida.</p>
         ) : (
@@ -391,7 +393,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
         {/* ── Relatório da partida: cada palavra com quem escreveu o quê ──
             Os dados vêm do endpoint restrito ao dono da sala (carregados no
             useEffect quando o estado vira ENCERRADA) */}
-        <h3 className="sj-rel-secao">📋 Relatório por palavra</h3>
+        <h3 className="sj-rel-secao">Relatório por palavra</h3>
         {relatorio.length === 0 ? (
           <p className="sj-no-alunos">Sem respostas registradas nesta partida.</p>
         ) : (
@@ -438,7 +440,19 @@ export const SalaJogoProfessor: React.FC<Props> = ({
             disponível só aqui — depois que a partida terminou. */}
         {erroFecharSala && <div className="sj-fechar-erro">{erroFecharSala}</div>}
         <button type="button" className="sj-fechar-sala-btn" onClick={() => void fecharSala()} disabled={fechandoSala}>
-          {fechandoSala ? 'Fechando sala...' : '🔒 Encerrar e fechar sala'}
+          {fechandoSala ? (
+            'Fechando sala...'
+          ) : (
+            <>
+              {/* Cadeado em SVG (nada de emoji — mesma decisão do ícone de áudio):
+                  herda a cor do botão e escala nítido em qualquer tela */}
+              <svg className="sj-fechar-icone" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="5" y="10.5" width="14" height="9" rx="2.2" fill="currentColor" />
+                <path d="M8.5 10V8a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              Encerrar e fechar sala
+            </>
+          )}
         </button>
       </div>
     );

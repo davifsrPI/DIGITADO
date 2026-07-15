@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert } from 'reactstrap';
 import './login-page.scss';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 interface ILoginPageProps {
   handleLogin: (username: string, password: string, rememberMe: boolean) => void;
@@ -13,12 +14,7 @@ const LoginPage = ({ handleLogin, loginError }: ILoginPageProps) => {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
-  useEffect(() => {
-    document.body.classList.add('login-page');
-    return () => {
-      document.body.classList.remove('login-page');
-    };
-  }, []);
+  useBodyClass('login-page');
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

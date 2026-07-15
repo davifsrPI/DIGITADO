@@ -20,21 +20,28 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     // Retorna até 5 palavras ativas cujo texto contenha o trecho digitado — usada no autocomplete
     List<Palavra> findTop5ByTextoContainingIgnoreCaseAndAtivaTrue(String texto);
 
-    // Sorteia N palavras ativas de uma determinada dificuldade usando ORDER BY RAND().
-    // Regra da dificuldade (mesma do getter Palavra.getDificuldade(), mantenha as
-    // duas em sincronia — o limiar 15 é Palavra.MIN_TENTATIVAS_PARA_METRICA):
-    // - >= 15 tentativas: CALCULADA pela taxa de acerto
-    //   (0–35% = DIFICIL, 36–65% = MEDIO, 66%+ = FACIL);
-    // - < 15 tentativas: vale a coluna dificuldade (cadastrada); se nula, a palavra
-    //   entra "aleatoriamente" numa das faixas via id % 3 (determinístico, estável)
-    @Query(
-        value = "SELECT * FROM palavra WHERE ativa = true AND " +
+    /**
+     * Classificação de dificuldade em SQL — mesma regra do getter
+     * Palavra.getDificuldade(), mantenha as duas em sincronia (o limiar 15 é
+     * Palavra.MIN_TENTATIVAS_PARA_METRICA):
+     * - >= 15 tentativas: CALCULADA pela taxa de acerto
+     *   (0–35% = DIFICIL, 36–65% = MEDIO, 66%+ = FACIL);
+     * - < 15 tentativas: vale a coluna dificuldade (cadastrada); se nula, a palavra
+     *   entra "aleatoriamente" numa das faixas via id % 3 (determinístico, estável).
+     *
+     * Constante de compilação de propósito: as duas queries de sorteio abaixo a
+     * concatenam dentro de @Query, garantindo que nunca divirjam entre si.
+     */
+    String CASE_DIFICULDADE_SQL =
         "(CASE WHEN total_tentativas < 15 THEN " +
         "COALESCE(dificuldade, CASE MOD(id, 3) WHEN 0 THEN 'FACIL' WHEN 1 THEN 'MEDIO' ELSE 'DIFICIL' END) " +
         "WHEN total_acertos * 100.0 / total_tentativas <= 35 THEN 'DIFICIL' " +
         "WHEN total_acertos * 100.0 / total_tentativas <= 65 THEN 'MEDIO' " +
-        "ELSE 'FACIL' END) = :dif " +
-        "ORDER BY RAND() LIMIT :n",
+        "ELSE 'FACIL' END)";
+
+    // Sorteia N palavras ativas de uma determinada dificuldade usando ORDER BY RAND()
+    @Query(
+        value = "SELECT * FROM palavra WHERE ativa = true AND " + CASE_DIFICULDADE_SQL + " = :dif ORDER BY RAND() LIMIT :n",
         nativeQuery = true
     )
     List<Palavra> findRandomByDificuldade(@Param("dif") String dif, @Param("n") int n);
@@ -43,12 +50,8 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     // duas partidas seguidas repitam as mesmas palavras. Mesma regra de dificuldade.
     @Query(
         value = "SELECT * FROM palavra WHERE ativa = true AND id NOT IN (:ids) AND " +
-        "(CASE WHEN total_tentativas < 15 THEN " +
-        "COALESCE(dificuldade, CASE MOD(id, 3) WHEN 0 THEN 'FACIL' WHEN 1 THEN 'MEDIO' ELSE 'DIFICIL' END) " +
-        "WHEN total_acertos * 100.0 / total_tentativas <= 35 THEN 'DIFICIL' " +
-        "WHEN total_acertos * 100.0 / total_tentativas <= 65 THEN 'MEDIO' " +
-        "ELSE 'FACIL' END) = :dif " +
-        "ORDER BY RAND() LIMIT :n",
+        CASE_DIFICULDADE_SQL +
+        " = :dif ORDER BY RAND() LIMIT :n",
         nativeQuery = true
     )
     List<Palavra> findRandomByDificuldadeExcluindo(@Param("dif") String dif, @Param("n") int n, @Param("ids") List<Long> ids);

@@ -3,6 +3,8 @@ import './criar-sala.scss';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
+import { useBodyClass } from 'app/shared/util/use-body-class';
+import { CORES_DIFICULDADE, LABELS_DIFICULDADE, DificuldadeKey } from 'app/shared/util/dificuldade-constants';
 
 // Gera um código de 6 caracteres aleatórios para a sala, excluindo letras/números confusos (O, I, 1, 0)
 const generateCode = () => {
@@ -10,7 +12,8 @@ const generateCode = () => {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 };
 
-type Dificuldade = 'FACIL' | 'MEDIO' | 'DIFICIL';
+// Alias local: mantém o nome curto usado em todo o componente
+type Dificuldade = DificuldadeKey;
 
 interface Palavra {
   id: number;
@@ -31,13 +34,14 @@ interface BuscaResult {
   similares?: Palavra[];
 }
 
+// Cores da paleta compartilhada; os rótulos aqui são no PLURAL (título das faixas)
 const DIFFS: Array<{ key: Dificuldade; color: string; label: string }> = [
-  { key: 'FACIL', color: '#4ade80', label: 'Fáceis' },
-  { key: 'MEDIO', color: '#fbbf24', label: 'Médias' },
-  { key: 'DIFICIL', color: '#f87171', label: 'Difíceis' },
+  { key: 'FACIL', color: CORES_DIFICULDADE.FACIL, label: 'Fáceis' },
+  { key: 'MEDIO', color: CORES_DIFICULDADE.MEDIO, label: 'Médias' },
+  { key: 'DIFICIL', color: CORES_DIFICULDADE.DIFICIL, label: 'Difíceis' },
 ];
 
-const DIFF_LABELS: Record<Dificuldade, string> = { FACIL: 'Fácil', MEDIO: 'Médio', DIFICIL: 'Difícil' };
+const DIFF_LABELS = LABELS_DIFICULDADE;
 
 export const CriarSala = () => {
   const navigate = useNavigate();
@@ -90,10 +94,7 @@ export const CriarSala = () => {
   extraWordsRef.current = extraWords;
 
   // Adiciona classe ao body para aplicar estilos de fundo específicos desta página
-  useEffect(() => {
-    document.body.classList.add('criar-sala-page');
-    return () => document.body.classList.remove('criar-sala-page');
-  }, []);
+  useBodyClass('criar-sala-page');
 
   // Incrementa/decrementa a quantidade de palavras de uma dificuldade, limitado entre 0 e 30
   const adj = (key: Dificuldade, delta: number) => {

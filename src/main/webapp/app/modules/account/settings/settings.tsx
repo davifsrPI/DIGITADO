@@ -10,6 +10,7 @@ import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { getSession } from 'app/shared/reducers/authentication';
 import { LoadingSpinner } from 'app/shared/layout/loading/loading-spinner';
 import { reset, saveAccountSettings } from './settings.reducer';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 export const SettingsPage = () => {
   const dispatch = useAppDispatch();
@@ -27,10 +28,7 @@ export const SettingsPage = () => {
 
   // Classe no body: remove a moldura branca do card padrão do JHipster (jh-card)
   // e aplica o tema escuro da página, como nas demais telas do jogo
-  useEffect(() => {
-    document.body.classList.add('settings-page');
-    return () => document.body.classList.remove('settings-page');
-  }, []);
+  useBodyClass('settings-page');
 
   useEffect(() => {
     if (successMessage) {

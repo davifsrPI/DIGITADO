@@ -3,6 +3,7 @@ import './conquistas.scss';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 // Uma conquista já com o estado do usuário logado, calculado pelo backend
 interface ConquistaUsuario {
@@ -43,10 +44,7 @@ export const Conquistas = () => {
   const [erro, setErro] = useState(false);
 
   // Aplica o fundo escuro específico desta página (mesmo padrão do lobby/minhas-salas)
-  useEffect(() => {
-    document.body.classList.add('conquistas-page');
-    return () => document.body.classList.remove('conquistas-page');
-  }, []);
+  useBodyClass('conquistas-page');
 
   // Busca as conquistas do usuário no backend — sem cache, sem localStorage
   useEffect(() => {

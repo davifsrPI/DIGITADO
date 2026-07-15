@@ -198,6 +198,11 @@ public class SalaResource {
                 }
                 if (sala.getAtivo() != null) {
                     existingSala.setAtivo(sala.getAtivo());
+                    // Sala fechada em definitivo (ativo=false): libera o estado do jogo
+                    // da memória — placar, palavras e relatório não serão mais consultados
+                    if (Boolean.FALSE.equals(sala.getAtivo())) {
+                        jogoSalaService.descartarSala(codigo);
+                    }
                 }
                 return existingSala;
             })
@@ -317,6 +322,8 @@ public class SalaResource {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         salaRepository.deleteById(codigo);
+        // Sala excluída do banco: o estado em memória do jogo também não tem mais dono
+        jogoSalaService.descartarSala(codigo);
         return ResponseEntity.noContent().headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, codigo)).build();
     }
 

@@ -3,6 +3,7 @@ import axios from 'axios';
 
 import { useAppSelector } from 'app/config/store';
 import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
+import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
 import { falarPalavra } from 'app/modules/sala/utils/falar-palavra';
 
 // Estado do desafio vindo do backend. O desafio é um DITADO: textoAudio serve
@@ -108,28 +109,9 @@ export const PalavraDoDia = () => {
               }}
               aria-label="Ouvir palavra"
             >
-              {/* Alto-falante em SVG (nítido em qualquer tela, herda a cor do botão);
-                  as ondas pulsam via CSS enquanto o áudio toca */}
-              <svg className="pdd-audio-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M4 9.5v5a1 1 0 0 0 1 1h2.6l4.1 3.3a1 1 0 0 0 1.6-.8V6a1 1 0 0 0-1.6-.8L7.6 8.5H5a1 1 0 0 0-1 1z"
-                  fill="currentColor"
-                />
-                <path
-                  className="pdd-wave pdd-wave--1"
-                  d="M16 9.4a3.8 3.8 0 0 1 0 5.2"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-                <path
-                  className="pdd-wave pdd-wave--2"
-                  d="M18.4 7a7.4 7.4 0 0 1 0 10"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              </svg>
+              {/* Alto-falante compartilhado (IconeAudio): mesmo SVG dos botões das
+                  telas de jogo — as ondas pulsam sozinhas enquanto o áudio toca */}
+              <IconeAudio tocando={falando} className="pdd-audio-svg" />
             </button>
             <span className="pdd-audio-hint">{falando ? 'Reproduzindo...' : 'Clique para ouvir · pode ouvir quantas vezes quiser'}</span>
           </div>

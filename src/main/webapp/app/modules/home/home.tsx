@@ -6,16 +6,12 @@ import { Link } from 'react-router-dom';
 import { useAppSelector } from 'app/config/store';
 import PalavraDoDia from 'app/modules/home/palavra-do-dia';
 import RankingTop5 from 'app/modules/home/ranking-top5';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 export const Home = () => {
   const account = useAppSelector(state => state.authentication.account);
 
-  useEffect(() => {
-    document.body.classList.add('home-page');
-    return () => {
-      document.body.classList.remove('home-page');
-    };
-  }, []);
+  useBodyClass('home-page');
 
   return (
     <div className="home-wrapper">

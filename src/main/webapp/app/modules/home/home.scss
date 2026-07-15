@@ -15,16 +15,6 @@ body.home-page {
   .view-container {
     padding: 0 !important;
   }
-
-  footer {
-    background: transparent !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
-    color: rgba(255, 255, 255, 0.4) !important;
-
-    a {
-      color: rgba(255, 255, 255, 0.5) !important;
-    }
-  }
 }
 
 .home-wrapper {
@@ -636,17 +626,9 @@ body.home-page {
   height: 44px;
 }
 
+// As ondas do alto-falante são animadas pelo próprio IconeAudio (ia-tocando)
 .pdd-audio-btn--playing {
   animation: pdd-pulse 1.2s ease-in-out infinite;
-
-  // As ondas do alto-falante pulsam alternadas enquanto o áudio toca
-  .pdd-wave--1 {
-    animation: pdd-wave-fade 1s ease-in-out infinite;
-  }
-
-  .pdd-wave--2 {
-    animation: pdd-wave-fade 1s ease-in-out infinite 0.25s;
-  }
 }
 
 @keyframes pdd-pulse {
@@ -660,16 +642,6 @@ body.home-page {
     box-shadow:
       0 10px 30px rgba(250, 204, 21, 0.35),
       0 0 0 14px rgba(250, 204, 21, 0);
-  }
-}
-
-@keyframes pdd-wave-fade {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 1;
   }
 }
 

@@ -3,6 +3,7 @@ import './minhas-salas.scss';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 type Filtro = 'todas' | 'abertas' | 'fechadas';
 
@@ -35,10 +36,7 @@ export const MinhasSalas = () => {
   const [filtro, setFiltro] = useState<Filtro>('todas');
 
   // Adiciona classe ao body para aplicar o fundo específico desta página
-  useEffect(() => {
-    document.body.classList.add('minhas-salas-page');
-    return () => document.body.classList.remove('minhas-salas-page');
-  }, []);
+  useBodyClass('minhas-salas-page');
 
   // Busca as salas do professor sempre que o filtro muda — passa o parâmetro ativo quando necessário
   useEffect(() => {

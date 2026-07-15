@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import TelaCarregamento from 'app/shared/layout/loading/tela-carregamento';
+import { useBodyClass } from 'app/shared/util/use-body-class';
 
 // Os códigos de sala têm sempre 6 caracteres (mesma regra de criar-sala)
 const CODE_LEN = 6;
@@ -32,10 +33,7 @@ export const Duelo = () => {
   const [erro, setErro] = useState<string | null>(null);
   const [codigoPrivado, setCodigoPrivado] = useState('');
 
-  useEffect(() => {
-    document.body.classList.add('duelo-page');
-    return () => document.body.classList.remove('duelo-page');
-  }, []);
+  useBodyClass('duelo-page');
 
   // Busca a lista de duelos públicos no backend; o polling de 10s mantém a lista viva
   // enquanto o jogador decide (duelos enchem e somem rápido)
