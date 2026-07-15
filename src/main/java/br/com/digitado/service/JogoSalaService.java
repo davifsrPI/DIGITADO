@@ -125,6 +125,25 @@ public class JogoSalaService {
         jogos.remove(codigoSala);
     }
 
+    /**
+     * Nome da sala com cache no EstadoJogo: o controller WebSocket precisa do nome
+     * em TODA mensagem (entrar, responder, próxima...) e fazia um SELECT na sala a
+     * cada uma — em plena rodada, isso era uma consulta por resposta de aluno.
+     * A primeira chamada resolve via banco (resolver) e guarda; as demais leem da
+     * memória. O cache vive e morre com o EstadoJogo, então sala fechada/descartada
+     * não deixa nome retido; renomear a sala no meio de uma partida (caso raríssimo)
+     * só reflete no placar na partida seguinte.
+     */
+    public String nomeSalaCacheado(String codigoSala, java.util.function.Supplier<String> resolver) {
+        EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
+        String nome = jogo.getNomeSala();
+        if (nome == null) {
+            nome = resolver.get();
+            jogo.setNomeSala(nome);
+        }
+        return nome;
+    }
+
     // Inicia o jogo: sorteia as palavras conforme a configuração escolhida pelo professor,
     // adiciona quaisquer palavras extras selecionadas manualmente e embaralha tudo
     public EstadoJogoDTO iniciar(String codigoSala, String nomeSala, IniciarPayload payload) {
@@ -538,6 +557,11 @@ public class JogoSalaService {
         // Sala de duelo 1v1: no máximo 2 jogadores e conquistas próprias no fim
         private volatile boolean modo1v1 = false;
 
+        // Nome da sala (cache): resolvido no banco uma única vez por sala — ver
+        // JogoSalaService.nomeSalaCacheado. volatile: escrito por uma mensagem
+        // WebSocket e lido pelas seguintes, possivelmente em threads diferentes.
+        private volatile String nomeSala;
+
         /**
          * Registro DETALHADO da partida para o relatório do professor:
          * índice da palavra (posição na lista embaralhada) → lista de respostas
@@ -717,6 +741,14 @@ public class JogoSalaService {
         // Quem respondeu ao menos uma vez na partida (define quem "participou")
         Set<String> getParticipantes() {
             return Set.copyOf(estatisticasPartida.keySet());
+        }
+
+        String getNomeSala() {
+            return nomeSala;
+        }
+
+        void setNomeSala(String nomeSala) {
+            this.nomeSala = nomeSala;
         }
 
         boolean isModo1v1() {

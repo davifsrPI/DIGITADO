@@ -57,7 +57,7 @@ public class PalavraResource {
     public ResponseEntity<Map<String, Object>> buscarPalavra(@RequestParam String texto) {
         String busca = texto.trim();
         Map<String, Object> response = new HashMap<>();
-        Optional<Palavra> exata = palavraRepository.findByTextoIgnoreCase(busca);
+        Optional<Palavra> exata = palavraRepository.findFirstByTextoIgnoreCaseOrderByIdAsc(busca);
         if (exata.isPresent()) {
             response.put("encontrada", true);
             response.put("exata", true);
@@ -89,7 +89,7 @@ public class PalavraResource {
         }
         // Já existe (mesmo inativa)? Devolve a existente — também cobre a corrida de
         // duas pessoas cadastrando a mesma palavra quase ao mesmo tempo
-        Optional<Palavra> existente = palavraRepository.findByTextoIgnoreCase(texto);
+        Optional<Palavra> existente = palavraRepository.findFirstByTextoIgnoreCaseOrderByIdAsc(texto);
         if (existente.isPresent()) {
             return ResponseEntity.ok(existente.orElseThrow());
         }

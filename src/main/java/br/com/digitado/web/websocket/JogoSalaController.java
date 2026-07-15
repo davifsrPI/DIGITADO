@@ -190,9 +190,11 @@ public class JogoSalaController {
         messaging.convertAndSend("/topic/sala/" + codigo, estado);
     }
 
-    // Busca o nome da sala pelo código; usa o código como fallback se não encontrar
+    // Nome da sala com cache em memória (EstadoJogo): o banco só é consultado na
+    // primeira mensagem de cada sala — antes era um SELECT por mensagem WebSocket,
+    // inclusive um por resposta de aluno durante a rodada. Fallback: o próprio código.
     private String getNomeSala(String codigo) {
-        return salaRepository.findByCodigo(codigo).map(s -> s.getNome()).orElse(codigo);
+        return jogoService.nomeSalaCacheado(codigo, () -> salaRepository.findByCodigo(codigo).map(s -> s.getNome()).orElse(codigo));
     }
 
     // Verifica se o usuário conectado tem permissão para controlar esta sala.

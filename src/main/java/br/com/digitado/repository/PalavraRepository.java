@@ -14,8 +14,12 @@ import org.springframework.stereotype.Repository;
 @SuppressWarnings("unused")
 @Repository
 public interface PalavraRepository extends JpaRepository<Palavra, Long> {
-    // Busca exata pelo texto, ignorando maiúsculas/minúsculas (usada para evitar duplicatas)
-    Optional<Palavra> findByTextoIgnoreCase(String texto);
+    // Busca exata pelo texto, ignorando maiúsculas/minúsculas (usada para evitar
+    // duplicatas na busca e no cadastro rápido). findFIRST + ordem por id de
+    // propósito: se o banco já tiver o mesmo texto duplicado (importações antigas),
+    // devolve sempre o registro mais antigo em vez de estourar
+    // IncorrectResultSizeDataAccessException — que derrubava /buscar e /sugerir.
+    Optional<Palavra> findFirstByTextoIgnoreCaseOrderByIdAsc(String texto);
 
     // Retorna até 5 palavras ativas cujo texto contenha o trecho digitado — usada no autocomplete
     List<Palavra> findTop5ByTextoContainingIgnoreCaseAndAtivaTrue(String texto);

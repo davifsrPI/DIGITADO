@@ -55,15 +55,37 @@ public class PalavraDoDiaService {
         return LocalDate.now(FUSO);
     }
 
+    /**
+     * Cache da palavra do dia: a resposta é a MESMA durante o dia inteiro, mas o
+     * endpoint é público e chamado em toda visita à home — sem cache eram duas
+     * consultas (COUNT + SELECT paginado) por visita. A chave é a própria data:
+     * na virada do dia (fuso de Brasília) o cache expira sozinho; reiniciar o
+     * servidor apenas o recomputa. Bônus de estabilidade: ativar/desativar
+     * palavras no meio do dia não troca a palavra que todos já estão jogando.
+     * volatile: escrito por uma requisição e lido pelas demais threads.
+     */
+    private volatile CachePalavraDoDia cache;
+
+    private record CachePalavraDoDia(LocalDate dia, Optional<Palavra> palavra) {}
+
     // Sorteio determinístico: índice = dia-da-época % total de palavras ativas.
     // Ordenação estável por id garante a mesma palavra em todas as chamadas do dia.
     public Optional<Palavra> palavraDeHoje() {
-        long total = palavraRepository.countByAtivaTrue();
-        if (total == 0) {
-            return Optional.empty();
+        LocalDate hoje = hoje();
+        CachePalavraDoDia atual = cache;
+        if (atual != null && atual.dia().equals(hoje)) {
+            return atual.palavra();
         }
-        int indice = (int) (hoje().toEpochDay() % total);
-        return palavraRepository.findByAtivaTrue(PageRequest.of(indice, 1, Sort.by("id"))).stream().findFirst();
+        long total = palavraRepository.countByAtivaTrue();
+        Optional<Palavra> palavra = Optional.empty();
+        if (total > 0) {
+            int indice = (int) (hoje.toEpochDay() % total);
+            palavra = palavraRepository.findByAtivaTrue(PageRequest.of(indice, 1, Sort.by("id"))).stream().findFirst();
+        }
+        // Sem palavras ativas o Optional vazio também é cacheado — evita marretar o
+        // banco em toda visita de um ambiente ainda sem acervo
+        cache = new CachePalavraDoDia(hoje, palavra);
+        return palavra;
     }
 
     // O usuário logado já usou a chance de hoje? (fonte da verdade: banco)
