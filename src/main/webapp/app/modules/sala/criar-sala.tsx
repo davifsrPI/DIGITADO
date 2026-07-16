@@ -262,23 +262,30 @@ export const CriarSala = () => {
           // O backend força privada=true para salas de turma; só o 1v1 escolhe
           privada: is1v1 ? privada : true,
         });
-        navigate(`/sala/${res.data.codigo}`, {
-          state: {
-            isProfessor: true,
-            gameConfig: {
-              tempoFacil: tempos.FACIL,
-              tempoMedio: tempos.MEDIO,
-              tempoDificil: tempos.DIFICIL,
-              qtdFacil: quantidades.FACIL,
-              qtdMedio: quantidades.MEDIO,
-              qtdDificil: quantidades.DIFICIL,
-              palavrasExtrasIds: extraWords.map(w => w.id),
-              // Palavras já sorteadas e conferidas nesta tela — a partida usa exatamente
-              // essas (vazio no 1v1, onde o sorteio continua acontecendo só ao iniciar)
-              palavrasIds: sorteadas.map(w => w.id),
-            },
-          },
-        });
+        const gameConfig = {
+          tempoFacil: tempos.FACIL,
+          tempoMedio: tempos.MEDIO,
+          tempoDificil: tempos.DIFICIL,
+          qtdFacil: quantidades.FACIL,
+          qtdMedio: quantidades.MEDIO,
+          qtdDificil: quantidades.DIFICIL,
+          palavrasExtrasIds: extraWords.map(w => w.id),
+          // Palavras já sorteadas e conferidas nesta tela — a partida usa exatamente
+          // essas (vazio no 1v1, onde o sorteio continua acontecendo só ao iniciar)
+          palavrasIds: sorteadas.map(w => w.id),
+        };
+        // No 1v1 a configuração também vai para o sessionStorage: o estado de navegação
+        // se perde se o criador recarregar a página ou entrar de novo pela lista de
+        // duelos — sem isso, a partida começava com a configuração PADRÃO em vez da
+        // escolhida aqui (tempos e quantidades ignorados).
+        if (is1v1) {
+          try {
+            sessionStorage.setItem(`duelo-cfg-${res.data.codigo}`, JSON.stringify(gameConfig));
+          } catch {
+            // sessionStorage indisponível (modo privado restrito) — segue só com o state
+          }
+        }
+        navigate(`/sala/${res.data.codigo}`, { state: { isProfessor: true, gameConfig } });
         return;
       } catch (err: any) {
         if (err?.response?.data?.errorKey === 'codigoexists') {

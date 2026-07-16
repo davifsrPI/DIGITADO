@@ -81,6 +81,26 @@
         <springdoc-openapi-starter-webmvc-api.version>2.8.8</springdoc-openapi-starter-webmvc-api.version>
     </properties>
 
+    <!-- Convergência de versões transitivas: o enforcer (dependencyConvergence)
+         avisava em todo build porque dois caminhos puxavam versões diferentes
+         destes artefatos. Fixamos a mais nova de cada conflito. -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- jackson-module-jaxb-annotations traz 2.2.12; liquibase-core traz 2.3.1 -->
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+            <!-- opencsv (via liquibase) traz 1.11.0; o próprio liquibase-core traz 1.12.0 -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.12.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>tech.jhipster</groupId>

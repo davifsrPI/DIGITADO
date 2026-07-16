@@ -1027,6 +1027,10 @@ body.sala-jogo-page .view-container {
   font-weight: 800;
   letter-spacing: 0.02em;
   color: #fff;
+  /* Palavras longas não vazam do painel do professor */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .sj-dash-atual-dif {
@@ -1555,6 +1559,11 @@ body.sala-jogo-page .view-container {
   color: #4ade80;
   letter-spacing: 0.02em;
   line-height: 1.1;
+  /* Palavras longas: nunca estourar a caixa — quebra onde precisar, centralizada */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: center;
 }
 
 /* Similaridade — visível apenas na tela do aluno */
@@ -2676,6 +2685,15 @@ body.sala-jogo-page .view-container {
 @media (max-width: 640px) {
   .sj-dash-atual-texto {
     font-size: 24px;
+  }
+
+  /* Palavra correta do ranking: menor no celular para caber inteira na caixa */
+  .sj-palavra-correta-val {
+    font-size: 24px;
+  }
+
+  .sj-palavra-correta {
+    padding: 14px 16px;
   }
 
   .sj-dash-tile strong {

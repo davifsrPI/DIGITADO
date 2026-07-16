@@ -41,6 +41,10 @@ interface Props {
   meuLogin: string;
   onResponder: (resposta: string, tentativasBurla?: number) => void;
   conectado: boolean;
+  // Sala em modo duelo 1v1 (vale para os DOIS jogadores): quando todos os
+  // conectados já responderam, a tela de correção da palavra aparece na hora,
+  // sem esperar o tempo da rodada esgotar
+  duelo1v1?: boolean;
   // ─── Modo CRIADOR do duelo 1v1 ───
   // APENAS no 1v1 quem criou a sala joga junto: além de digitar como qualquer
   // jogador, ele inicia o duelo e seu cliente avança as rodadas automaticamente
@@ -52,6 +56,55 @@ interface Props {
   initialGameConfig?: GameConfig;
 }
 
+// Tela de espera do CRIADOR do duelo 1v1 (componente próprio para não inflar a
+// função principal): compartilha o código, mostra a configuração que valerá na
+// partida, vê o oponente chegar e inicia o duelo — jogando junto
+const EsperaCriadorDuelo: React.FC<{
+  estado: EstadoJogo | null;
+  conectado: boolean;
+  codigoSala?: string;
+  cfg: GameConfig;
+  onIniciar?: (cfg: GameConfig) => void;
+}> = ({ estado, conectado, codigoSala, cfg, onIniciar }) => {
+  // "✓ Copiado!" temporário ao clicar no código do duelo
+  const [copied, setCopied] = useState(false);
+  const jogadores = estado?.alunosConectados?.length ?? 0;
+  const temOponente = jogadores >= 2;
+  const totalPalavras = cfg.qtdFacil + cfg.qtdMedio + cfg.qtdDificil + (cfg.palavrasExtrasIds?.length ?? 0);
+
+  const copiarCodigo = () => {
+    if (!codigoSala) return;
+    navigator.clipboard.writeText(codigoSala).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="sj-waiting">
+      <div className="sj-waiting-icon">
+        <AmpulhetaAnimada />
+      </div>
+      <h2>{temOponente ? 'Oponente na sala!' : 'Aguardando um oponente...'}</h2>
+      <p className="sj-waiting-sub">{conectado ? `${jogadores}/2 jogadores conectados` : 'Conectando...'}</p>
+      {codigoSala && (
+        <button type="button" className="sj-codigo-block" onClick={copiarCodigo} title="Clique para copiar">
+          <span className="sj-codigo-label">CÓDIGO DO DUELO</span>
+          <span className="sj-codigo-val">{codigoSala}</span>
+          <span className="sj-codigo-copy">{copied ? '✓ Copiado!' : 'clique para copiar'}</span>
+        </button>
+      )}
+      <p className="sj-waiting-sub">
+        {totalPalavras} palavra{totalPalavras === 1 ? '' : 's'} · tempo {cfg.tempoFacil}s / {cfg.tempoMedio}s / {cfg.tempoDificil}s
+      </p>
+      <button type="button" className="sj-iniciar-btn" disabled={!conectado || !temOponente} onClick={() => onIniciar?.(cfg)}>
+        {!conectado ? 'Conectando...' : temOponente ? '⚔ Iniciar duelo' : 'Aguardando oponente para iniciar...'}
+      </button>
+      <p className="sj-waiting-sub">Você também joga: ao iniciar, ouça as palavras e digite mais rápido que o oponente!</p>
+    </div>
+  );
+};
+
 // Tela do aluno durante a partida: aguarda o professor iniciar, recebe a palavra via áudio,
 // digita a resposta e vê o feedback individual e o placar ao vivo dos colegas
 export const SalaJogoAluno: React.FC<Props> = ({
@@ -60,6 +113,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
   meuLogin,
   onResponder,
   conectado,
+  duelo1v1,
   criadorDuelo,
   codigoSala,
   onIniciar,
@@ -76,8 +130,6 @@ export const SalaJogoAluno: React.FC<Props> = ({
   // Contagem regressiva do ranking — usada SÓ pelo criador do duelo, cujo cliente
   // avança para a próxima palavra (nas salas de turma quem avança é o professor)
   const [rankingTimer, setRankingTimer] = useState(0);
-  // "✓ Copiado!" temporário ao clicar no código do duelo (tela de espera do criador)
-  const [copied, setCopied] = useState(false);
   // Pontuação/posição "congeladas" no início da rodada — só atualizam quando o tempo acaba,
   // para o aluno não descobrir o resultado dos colegas pelo placar enquanto digita
   const [scoreCongelado, setScoreCongelado] = useState<{ pontos: number; posicao: number }>({ pontos: 0, posicao: -1 });
@@ -171,6 +223,25 @@ export const SalaJogoAluno: React.FC<Props> = ({
     }
   }, [tempoRestante, ativo, estado]);
 
+  // APENAS no duelo 1v1: se TODOS os conectados já responderam a palavra, vai
+  // direto para a tela de correção — não faz sentido os dois ficarem olhando o
+  // relógio depois de já terem digitado. Nas salas de turma o comportamento não
+  // muda (a rodada corre até o fim para quem ainda está digitando).
+  useEffect(() => {
+    if (!duelo1v1 || !ativo || !estado?.palavraAtual || rankingTriggeredRef.current) return;
+    const jogadores = estado.alunosConectados;
+    if (jogadores.length < 2) return;
+    const todosResponderam = jogadores.every(j => {
+      const p = estado.placar.find(pl => pl.login === j.login);
+      return p && (p.statusAtual === 'ACERTOU' || p.statusAtual === 'ERROU');
+    });
+    if (todosResponderam) {
+      rankingTriggeredRef.current = true;
+      setShowRanking(true);
+      if (criadorDuelo) setRankingTimer(RANKING_DURACAO);
+    }
+  }, [duelo1v1, ativo, estado, criadorDuelo]);
+
   // Avanço automático do duelo: o cliente do CRIADOR conta os segundos do ranking
   // e pede a próxima palavra ao servidor — o oponente só recebe o broadcast
   useEffect(() => {
@@ -184,42 +255,15 @@ export const SalaJogoAluno: React.FC<Props> = ({
   }, [criadorDuelo, showRanking, rankingTimer]);
 
   if (!estado || estado.tipo === 'AGUARDANDO') {
-    // Tela de espera do CRIADOR do duelo 1v1: ele compartilha o código, vê o
-    // oponente chegar e inicia o duelo — jogando junto, como qualquer jogador
     if (criadorDuelo) {
-      const jogadores = estado?.alunosConectados?.length ?? 0;
-      const temOponente = jogadores >= 2;
-      const copiarCodigo = () => {
-        if (!codigoSala) return;
-        navigator.clipboard.writeText(codigoSala).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        });
-      };
       return (
-        <div className="sj-waiting">
-          <div className="sj-waiting-icon">
-            <AmpulhetaAnimada />
-          </div>
-          <h2>{temOponente ? 'Oponente na sala!' : 'Aguardando um oponente...'}</h2>
-          <p className="sj-waiting-sub">{conectado ? `${jogadores}/2 jogadores conectados` : 'Conectando...'}</p>
-          {codigoSala && (
-            <button type="button" className="sj-codigo-block" onClick={copiarCodigo} title="Clique para copiar">
-              <span className="sj-codigo-label">CÓDIGO DO DUELO</span>
-              <span className="sj-codigo-val">{codigoSala}</span>
-              <span className="sj-codigo-copy">{copied ? '✓ Copiado!' : 'clique para copiar'}</span>
-            </button>
-          )}
-          <button
-            type="button"
-            className="sj-iniciar-btn"
-            disabled={!conectado || !temOponente}
-            onClick={() => onIniciar?.(initialGameConfig ?? DUELO_CFG_PADRAO)}
-          >
-            {!conectado ? 'Conectando...' : temOponente ? '⚔ Iniciar duelo' : 'Aguardando oponente para iniciar...'}
-          </button>
-          <p className="sj-waiting-sub">Você também joga: ao iniciar, ouça as palavras e digite mais rápido que o oponente!</p>
-        </div>
+        <EsperaCriadorDuelo
+          estado={estado}
+          conectado={conectado}
+          codigoSala={codigoSala}
+          cfg={initialGameConfig ?? DUELO_CFG_PADRAO}
+          onIniciar={onIniciar}
+        />
       );
     }
     return (

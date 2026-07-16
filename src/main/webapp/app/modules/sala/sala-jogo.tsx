@@ -32,7 +32,18 @@ export const SalaJogo: React.FC = () => {
       palavrasIds?: number[];
     };
   } | null;
-  const gameConfig = locationState?.gameConfig;
+  // Configuração escolhida na criação: vem pelo estado de navegação; se ele se
+  // perdeu (reload, entrada pela lista de duelos), recupera a cópia gravada no
+  // sessionStorage pela tela de criação (só existe para duelos 1v1)
+  const gameConfig = React.useMemo(() => {
+    if (locationState?.gameConfig) return locationState.gameConfig;
+    try {
+      const salvo = sessionStorage.getItem(`duelo-cfg-${codigo}`);
+      return salvo ? (JSON.parse(salvo) as NonNullable<typeof locationState>['gameConfig']) : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [locationState, codigo]);
 
   // O papel de professor chega pelo estado de navegação, mas ele se perde ao
   // RECARREGAR a página — sem esta recuperação, o professor caía para sempre na
@@ -135,6 +146,7 @@ export const SalaJogo: React.FC = () => {
             meuLogin={login}
             onResponder={responder}
             conectado={conectado}
+            duelo1v1
             criadorDuelo
             codigoSala={codigo}
             onIniciar={iniciar}
@@ -156,7 +168,16 @@ export const SalaJogo: React.FC = () => {
             meuLogin={login}
           />
         ) : (
-          <SalaJogoAluno estado={estado} feedback={feedback} meuLogin={login} onResponder={responder} conectado={conectado} />
+          // duelo1v1 também para o OPONENTE: no duelo, quando os dois respondem, a
+          // tela de correção aparece na hora — sem esperar o tempo esgotar
+          <SalaJogoAluno
+            estado={estado}
+            feedback={feedback}
+            meuLogin={login}
+            onResponder={responder}
+            conectado={conectado}
+            duelo1v1={modo1v1 === true}
+          />
         )}
       </div>
     </div>
