@@ -153,15 +153,49 @@ body.duelo-page {
 }
 
 .duelo-refresh {
-  background: none;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 6px 12px;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 16px;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  opacity: 0.85;
+  transition:
+    opacity 0.2s,
+    background 0.2s;
 
-  &:hover {
+  &:hover:not(:disabled) {
     opacity: 1;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.duelo-refresh-icone {
+  display: inline-block;
+  font-size: 14px;
+  line-height: 1;
+
+  &--girando {
+    animation: duelo-refresh-spin 0.9s linear infinite;
+  }
+}
+
+@keyframes duelo-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 

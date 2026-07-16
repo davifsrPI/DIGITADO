@@ -49,9 +49,21 @@ export const SalaJogo: React.FC = () => {
   }, [codigo, papelDesconhecido]);
 
   const isProfessor = locationState?.isProfessor === true || souProfessorServidor === true;
-  // Ainda não sabemos o papel (reload + resposta do servidor pendente): segura a
-  // renderização para não mostrar a visão de aluno ao professor por um instante
-  const verificandoPapel = papelDesconhecido && souProfessorServidor === null;
+
+  // Modo da sala: em duelos 1v1 o CRIADOR também joga (recebe a visão de jogador
+  // com o botão de iniciar), em vez do painel de professor. Buscado no servidor —
+  // o tipo é a fonte da verdade e sobrevive ao reload da página.
+  const [modo1v1, setModo1v1] = useState<boolean | null>(null);
+  useEffect(() => {
+    axios
+      .get<{ tipo?: string }>(`/api/salas/${codigo}`)
+      .then(res => setModo1v1(res.data?.tipo === 'UM_V_UM'))
+      .catch(() => setModo1v1(false));
+  }, [codigo]);
+
+  // Ainda não sabemos o papel (reload + resposta do servidor pendente) ou o modo da
+  // sala: segura a renderização para não mostrar a visão errada por um instante
+  const verificandoPapel = (papelDesconhecido && souProfessorServidor === null) || (isProfessor && modo1v1 === null);
 
   // Remove o card branco padrão do layout (jh-card) — a página tem fundo escuro próprio
   useBodyClass('sala-jogo-page');
@@ -113,6 +125,22 @@ export const SalaJogo: React.FC = () => {
 
         {verificandoPapel ? (
           <div style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', padding: '60px 0', fontSize: 15 }}>Carregando sala...</div>
+        ) : isProfessor && modo1v1 ? (
+          // APENAS no duelo 1v1 o criador joga junto: recebe a mesma tela do
+          // jogador (áudio + digitação), acrescida do botão de iniciar o duelo
+          // e do avanço automático das rodadas (papéis que seriam do professor)
+          <SalaJogoAluno
+            estado={estado}
+            feedback={feedback}
+            meuLogin={login}
+            onResponder={responder}
+            conectado={conectado}
+            criadorDuelo
+            codigoSala={codigo}
+            onIniciar={iniciar}
+            onProxima={proxima}
+            initialGameConfig={gameConfig}
+          />
         ) : isProfessor ? (
           <SalaJogoProfessor
             estado={estado}

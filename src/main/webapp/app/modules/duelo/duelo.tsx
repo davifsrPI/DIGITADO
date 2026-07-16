@@ -30,6 +30,9 @@ export const Duelo = () => {
   const navigate = useNavigate();
   const [duelos, setDuelos] = useState<DueloPublico[]>([]);
   const [carregando, setCarregando] = useState(true);
+  // true enquanto uma atualização MANUAL (botão) está em andamento — a lista atual
+  // continua na tela; só o botão muda para "Atualizando..."
+  const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [codigoPrivado, setCodigoPrivado] = useState('');
 
@@ -37,7 +40,8 @@ export const Duelo = () => {
 
   // Busca a lista de duelos públicos no backend; o polling de 10s mantém a lista viva
   // enquanto o jogador decide (duelos enchem e somem rápido)
-  const carregarDuelos = async () => {
+  const carregarDuelos = async (manual = false) => {
+    if (manual) setAtualizando(true);
     try {
       const { data } = await axios.get<DueloPublico[]>('/api/salas/1v1/publicas');
       setDuelos(data);
@@ -46,6 +50,7 @@ export const Duelo = () => {
       setErro('Não foi possível carregar os duelos. Tente novamente.');
     } finally {
       setCarregando(false);
+      if (manual) setAtualizando(false);
     }
   };
 
@@ -89,8 +94,19 @@ export const Duelo = () => {
           <div className="duelo-card">
             <div className="duelo-card-head">
               <h2>🌎 Duelos públicos</h2>
-              <button className="duelo-refresh" onClick={carregarDuelos} aria-label="Atualizar lista">
-                🔄
+              {/* Recarrega SOMENTE a lista de duelos (nada de reload da página):
+                  refaz o GET e troca o estado; o resto da tela permanece intacto */}
+              <button
+                type="button"
+                className="duelo-refresh"
+                onClick={() => void carregarDuelos(true)}
+                disabled={atualizando}
+                aria-label="Atualizar lista de duelos"
+              >
+                <span className={`duelo-refresh-icone${atualizando ? ' duelo-refresh-icone--girando' : ''}`} aria-hidden="true">
+                  🔄
+                </span>
+                {atualizando ? 'Atualizando...' : 'Atualizar'}
               </button>
             </div>
             <p className="duelo-card-sub">Qualquer jogador pode entrar — clique e boa sorte!</p>

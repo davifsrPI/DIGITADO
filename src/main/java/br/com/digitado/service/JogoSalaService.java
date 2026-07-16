@@ -237,7 +237,8 @@ public class JogoSalaService {
     // Quem estava conectado e NÃO respondeu a palavra da rodada conta como
     // tentativa errada nas estatísticas — mas só quando o tempo realmente esgotou
     // (protege contra avanço duplo/precoce contaminar os números). O professor
-    // que comanda a sala fica de fora: ele não é obrigado a jogar.
+    // que comanda a sala fica de fora: ele não é obrigado a jogar. No duelo 1v1
+    // não há isenção: o criador joga como qualquer participante.
     private void contabilizarSilenciosos(EstadoJogo jogo, String loginProfessor) {
         Palavra atual = jogo.getPalavraAtual();
         if (atual == null || !"NOVA_PALAVRA".equals(jogo.getTipo())) {
@@ -248,7 +249,8 @@ public class JogoSalaService {
             return;
         }
         for (String login : jogo.getAlunosConectados().keySet()) {
-            if (!login.equals(loginProfessor) && !jogo.jaRespondeu(login)) {
+            boolean isento = !jogo.isModo1v1() && login.equals(loginProfessor);
+            if (!isento && !jogo.jaRespondeu(login)) {
                 palavraEstatisticaService.registrarTentativa(atual.getId(), false);
             }
         }

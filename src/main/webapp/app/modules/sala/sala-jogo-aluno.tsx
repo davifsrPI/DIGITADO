@@ -9,17 +9,63 @@ import { AmpulhetaAnimada } from './ampulheta-animada';
 import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
 import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
 
+// Configuração enviada ao iniciar a partida — mesmo shape usado pela tela do professor
+interface GameConfig {
+  tempoFacil: number;
+  tempoMedio: number;
+  tempoDificil: number;
+  qtdFacil: number;
+  qtdMedio: number;
+  qtdDificil: number;
+  palavrasExtrasIds: number[];
+  palavrasIds?: number[];
+}
+
+// Config padrão do duelo quando a da tela de criação se perdeu (reload da página)
+const DUELO_CFG_PADRAO: GameConfig = {
+  tempoFacil: 20,
+  tempoMedio: 30,
+  tempoDificil: 45,
+  qtdFacil: 5,
+  qtdMedio: 5,
+  qtdDificil: 5,
+  palavrasExtrasIds: [],
+};
+
+// Tempo da tela de ranking entre palavras antes do avanço automático (só no duelo)
+const RANKING_DURACAO = 8;
+
 interface Props {
   estado: EstadoJogo | null;
   feedback: FeedbackAluno | null;
   meuLogin: string;
   onResponder: (resposta: string, tentativasBurla?: number) => void;
   conectado: boolean;
+  // ─── Modo CRIADOR do duelo 1v1 ───
+  // APENAS no 1v1 quem criou a sala joga junto: além de digitar como qualquer
+  // jogador, ele inicia o duelo e seu cliente avança as rodadas automaticamente
+  // (papéis que na sala de turma pertencem ao professor).
+  criadorDuelo?: boolean;
+  codigoSala?: string;
+  onIniciar?: (cfg: GameConfig) => void;
+  onProxima?: () => void;
+  initialGameConfig?: GameConfig;
 }
 
 // Tela do aluno durante a partida: aguarda o professor iniciar, recebe a palavra via áudio,
 // digita a resposta e vê o feedback individual e o placar ao vivo dos colegas
-export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onResponder, conectado }) => {
+export const SalaJogoAluno: React.FC<Props> = ({
+  estado,
+  feedback,
+  meuLogin,
+  onResponder,
+  conectado,
+  criadorDuelo,
+  codigoSala,
+  onIniciar,
+  onProxima,
+  initialGameConfig,
+}) => {
   const [resposta, setResposta] = useState('');
   const [falando, setFalando] = useState(false);
   const [jaRespondeu, setJaRespondeu] = useState(false);
@@ -27,6 +73,11 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
   const [validacaoLocal, setValidacaoLocal] = useState<ReturnType<typeof validarResposta> | null>(null);
   // Ranking exibido quando o tempo da rodada acaba (mesma tela que o professor vê)
   const [showRanking, setShowRanking] = useState(false);
+  // Contagem regressiva do ranking — usada SÓ pelo criador do duelo, cujo cliente
+  // avança para a próxima palavra (nas salas de turma quem avança é o professor)
+  const [rankingTimer, setRankingTimer] = useState(0);
+  // "✓ Copiado!" temporário ao clicar no código do duelo (tela de espera do criador)
+  const [copied, setCopied] = useState(false);
   // Pontuação/posição "congeladas" no início da rodada — só atualizam quando o tempo acaba,
   // para o aluno não descobrir o resultado dos colegas pelo placar enquanto digita
   const [scoreCongelado, setScoreCongelado] = useState<{ pontos: number; posicao: number }>({ pontos: 0, posicao: -1 });
@@ -115,11 +166,62 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
       if (tempoEsgotado) {
         rankingTriggeredRef.current = true;
         setShowRanking(true);
+        if (criadorDuelo) setRankingTimer(RANKING_DURACAO);
       }
     }
   }, [tempoRestante, ativo, estado]);
 
+  // Avanço automático do duelo: o cliente do CRIADOR conta os segundos do ranking
+  // e pede a próxima palavra ao servidor — o oponente só recebe o broadcast
+  useEffect(() => {
+    if (!criadorDuelo || !showRanking) return;
+    if (rankingTimer <= 0) {
+      onProxima?.();
+      return;
+    }
+    const id = setTimeout(() => setRankingTimer(t => t - 1), 1000);
+    return () => clearTimeout(id);
+  }, [criadorDuelo, showRanking, rankingTimer]);
+
   if (!estado || estado.tipo === 'AGUARDANDO') {
+    // Tela de espera do CRIADOR do duelo 1v1: ele compartilha o código, vê o
+    // oponente chegar e inicia o duelo — jogando junto, como qualquer jogador
+    if (criadorDuelo) {
+      const jogadores = estado?.alunosConectados?.length ?? 0;
+      const temOponente = jogadores >= 2;
+      const copiarCodigo = () => {
+        if (!codigoSala) return;
+        navigator.clipboard.writeText(codigoSala).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      };
+      return (
+        <div className="sj-waiting">
+          <div className="sj-waiting-icon">
+            <AmpulhetaAnimada />
+          </div>
+          <h2>{temOponente ? 'Oponente na sala!' : 'Aguardando um oponente...'}</h2>
+          <p className="sj-waiting-sub">{conectado ? `${jogadores}/2 jogadores conectados` : 'Conectando...'}</p>
+          {codigoSala && (
+            <button type="button" className="sj-codigo-block" onClick={copiarCodigo} title="Clique para copiar">
+              <span className="sj-codigo-label">CÓDIGO DO DUELO</span>
+              <span className="sj-codigo-val">{codigoSala}</span>
+              <span className="sj-codigo-copy">{copied ? '✓ Copiado!' : 'clique para copiar'}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="sj-iniciar-btn"
+            disabled={!conectado || !temOponente}
+            onClick={() => onIniciar?.(initialGameConfig ?? DUELO_CFG_PADRAO)}
+          >
+            {!conectado ? 'Conectando...' : temOponente ? '⚔ Iniciar duelo' : 'Aguardando oponente para iniciar...'}
+          </button>
+          <p className="sj-waiting-sub">Você também joga: ao iniciar, ouça as palavras e digite mais rápido que o oponente!</p>
+        </div>
+      );
+    }
     return (
       <div className="sj-waiting">
         <div className="sj-waiting-icon">
@@ -187,6 +289,14 @@ export const SalaJogoAluno: React.FC<Props> = ({ estado, feedback, meuLogin, onR
             ) : (
               <span className="sj-similaridade sj-similaridade--warn">Você não respondeu a tempo</span>
             )}
+          </div>
+        )}
+
+        {/* Só o criador do duelo vê a contagem — é o cliente dele que avança a rodada */}
+        {criadorDuelo && (
+          <div className="sj-ranking-countdown">
+            <span className="sj-ranking-next-label">Próxima palavra em</span>
+            <span className="sj-ranking-next-val">{rankingTimer}s</span>
           </div>
         )}
 
