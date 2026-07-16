@@ -45,6 +45,14 @@ module.exports = async options => {
         // 1. Set cache type to filesystem
         type: 'filesystem',
         cacheDirectory: path.resolve(__dirname, '../target/webpack'),
+        // Nome de cache SEPARADO por modo de execução: o dev server (npm start) e o
+        // build (npm run webapp:build, disparado pelo Maven) compartilhavam o mesmo
+        // cache em disco e, rodando em paralelo, o corrompiam — sintoma: o build
+        // falha com "Invalid value used as weak map key" apontando um scss novo
+        // perfeitamente válido. Com nomes distintos, cada processo tem o seu pacote
+        // de cache e nunca pisa no do outro. (WEBPACK_SERVE é definido pelo próprio
+        // webpack-dev-server; no build ele não existe.)
+        name: `${development ? 'dev' : 'prod'}-${process.env.WEBPACK_SERVE ? 'serve' : 'build'}`,
         buildDependencies: {
           // 2. Add your config as buildDependency to get cache invalidation on config change
           config: [
