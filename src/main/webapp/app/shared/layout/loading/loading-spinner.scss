@@ -47,11 +47,19 @@
 }
 
 .ls-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 22px;
   font-weight: 800;
   letter-spacing: 0.05em;
   color: white;
   opacity: 0.9;
+}
+
+.ls-logo-icon {
+  width: 24px;
+  height: 24px;
 }
 
 .ls-spinner {

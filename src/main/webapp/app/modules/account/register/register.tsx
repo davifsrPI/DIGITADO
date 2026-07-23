@@ -74,7 +74,7 @@ export const RegisterPage = () => {
 
       <div className="register-center">
         <div className="register-brand">
-          <span className="register-brand-icon">✦</span>
+          <img src="/content/images/digitado-icon.svg" alt="" className="register-brand-icon" />
           DIGITADO
         </div>
 

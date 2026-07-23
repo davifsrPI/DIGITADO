@@ -31,7 +31,7 @@ const LoginPage = ({ handleLogin, loginError }: ILoginPageProps) => {
 
       <div className="login-center">
         <div className="login-brand">
-          <span className="login-brand-icon">✦</span>
+          <img src="/content/images/digitado-icon.svg" alt="" className="login-brand-icon" />
           DIGITADO
         </div>
 

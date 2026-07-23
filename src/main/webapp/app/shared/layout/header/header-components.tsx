@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 export const Brand = () => (
   <NavbarBrand tag={Link} to="/" className="brand-logo">
+    <img src="/content/images/digitado-icon.svg" alt="" width={26} height={26} className="brand-icon" />
     <span className="brand-title">
       <Translate contentKey="global.title">DIGITADO</Translate>
     </span>

@@ -8,7 +8,10 @@ export const LoadingSpinner = () => (
       <div className="ls-shape two" />
     </div>
     <div className="ls-content">
-      <div className="ls-logo">✦ DIGITADO</div>
+      <div className="ls-logo">
+        <img src="/content/images/digitado-icon.svg" alt="" className="ls-logo-icon" />
+        DIGITADO
+      </div>
       <div className="ls-spinner">
         <span />
         <span />

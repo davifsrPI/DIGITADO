@@ -102,7 +102,7 @@ module.exports = async options =>
       ),
       new WebpackNotifierPlugin({
         title: 'DIGITADO',
-        contentImage: path.join(__dirname, 'logo-jhipster.png'),
+        contentImage: path.join(__dirname, 'digitado-icon.png'),
       }),
     ].filter(Boolean),
   });
