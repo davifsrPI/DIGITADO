@@ -17,7 +17,7 @@ export const AmpulhetaAnimada: React.FC = () => (
         <stop offset="0%" stopColor="#b45309" />
         <stop offset="100%" stopColor="#78350f" />
       </linearGradient>
-      {/* Recortes dos bulbos (curvas suaves até o gargalo) — a areia só aparece dentro deles */}
+      {/* Recortes dos bulbos (curvas suaves até o gargalo) - a areia só aparece dentro deles */}
       <clipPath id="amp-clip-topo">
         <path d="M30,20 H90 C90,48 66,62 63,74 L63,80 H57 L57,74 C54,62 30,48 30,20 Z" />
       </clipPath>
@@ -30,7 +30,7 @@ export const AmpulhetaAnimada: React.FC = () => (
     <rect x="20" y="14" width="7" height="132" rx="3.5" fill="url(#amp-grad-madeira)" />
     <rect x="93" y="14" width="7" height="132" rx="3.5" fill="url(#amp-grad-madeira)" />
 
-    {/* Areia de cima — o nível desce (com uma leve depressão no centro) até esvaziar */}
+    {/* Areia de cima - o nível desce (com uma leve depressão no centro) até esvaziar */}
     <g clipPath="url(#amp-clip-topo)">
       <path className="amp-areia-topo" d="M28,22 q32,12 64,0 v62 h-64 z" fill="url(#amp-grad-areia)" />
     </g>
@@ -45,12 +45,12 @@ export const AmpulhetaAnimada: React.FC = () => (
       <circle className="amp-grao amp-grao-4" cx="60" cy="80" r="1.3" />
     </g>
 
-    {/* Areia de baixo — monte arredondado que cresce até encher */}
+    {/* Areia de baixo - monte arredondado que cresce até encher */}
     <g clipPath="url(#amp-clip-base)">
       <path className="amp-areia-base" d="M28,88 q32,-16 64,0 v60 h-64 z" fill="url(#amp-grad-areia)" />
     </g>
 
-    {/* Vidro por cima da areia — translúcido com contorno */}
+    {/* Vidro por cima da areia - translúcido com contorno */}
     <path className="amp-vidro" d="M30,20 H90 C90,48 66,62 63,74 L63,80 H57 L57,74 C54,62 30,48 30,20 Z" />
     <path className="amp-vidro" d="M57,80 H63 L63,86 C66,98 90,112 90,140 H30 C30,112 54,98 57,86 Z" />
 

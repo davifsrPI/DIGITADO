@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
@@ -138,7 +139,12 @@ public class SalaResource {
             .body(vm);
     }
 
-    // Atualiza os dados de uma sala — apenas o dono ou admin podem fazer isso
+    // Atualiza a sala COMPLETA (PUT) — exclusivo do CRUD administrativo: o corpo
+    // substitui a entidade inteira (inclusive professor, tipo e dataCriacao), o
+    // que não pode ficar nas mãos do dono comum (ele poderia, por exemplo,
+    // transferir a sala de professor pelo payload). O caminho do professor é o
+    // PATCH abaixo, que copia somente os campos editáveis sobre o registro do banco.
+    @Secured(AuthoritiesConstants.ADMIN)
     @PutMapping("/{codigo}")
     public ResponseEntity<Sala> updateSala(
         @PathVariable(value = "codigo", required = false) final String codigo,
@@ -153,9 +159,6 @@ public class SalaResource {
         }
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
-        }
-        if (!isOwnerOrAdmin(codigo)) {
-            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         // Reembrulha a descrição em JSON com o modo do tipo enviado (default TURMA)
         sala.setDescricao(montarDescricaoJson(sala.getDescricao(), sala.getTipo()));
@@ -215,28 +218,32 @@ public class SalaResource {
     }
 
     // Listagem de salas com controle de visibilidade:
-    // admin vê todas; professores e alunos veem apenas as salas que lhes pertencem
+    // admin vê todas (entidade completa, para as telas CRUD); professores e
+    // alunos veem apenas as salas que lhes pertencem, já convertidas no VM
+    // público — a entidade crua carrega o vínculo com o professor e, se algum
+    // dia for serializada inicializada, vazaria o e-mail dele
     @GetMapping("")
-    public List<Sala> getAllSalas(@RequestParam(required = false) Boolean ativo) {
+    public ResponseEntity<List<?>> getAllSalas(@RequestParam(required = false) Boolean ativo) {
         LOG.debug("REST request to get all Salas");
         boolean isAdmin = SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN);
         if (isAdmin) {
-            if (ativo != null) return salaRepository.findByAtivo(ativo);
-            return salaRepository.findAll();
+            if (ativo != null) return ResponseEntity.ok(salaRepository.findByAtivo(ativo));
+            return ResponseEntity.ok(salaRepository.findAll());
         }
         // Para usuários comuns: une as salas onde é professor com as salas onde é aluno
-        return SecurityUtils.getCurrentUserLogin()
+        List<SalaResponseVM> salas = SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
             .map(usuario -> {
-                List<Sala> salas = new java.util.ArrayList<>(usuario.getSalas());
-                salas.addAll(usuario.getSalasAlunos());
+                List<Sala> minhas = new java.util.ArrayList<>(usuario.getSalas());
+                minhas.addAll(usuario.getSalasAlunos());
                 if (ativo != null) {
-                    salas.removeIf(s -> !ativo.equals(s.getAtivo()));
+                    minhas.removeIf(s -> !ativo.equals(s.getAtivo()));
                 }
-                return salas;
+                return minhas.stream().map(this::toVM).toList();
             })
             .orElse(List.of());
+        return ResponseEntity.ok(salas);
     }
 
     // Lista global de duelos 1v1 PÚBLICOS abertos — qualquer usuário autenticado pode ver
@@ -267,12 +274,17 @@ public class SalaResource {
         );
     }
 
-    // Busca uma sala pelo código — sem restrição de acesso (código é público para quem tiver o link)
+    // Busca uma sala pelo código — sem restrição de acesso (código é público para
+    // quem tiver o link). Não-admin recebe o VM público; a entidade completa
+    // (com vínculos de professor/alunos) fica restrita às telas CRUD do admin.
     @GetMapping("/{codigo}")
-    public ResponseEntity<Sala> getSala(@PathVariable("codigo") String codigo) {
+    public ResponseEntity<?> getSala(@PathVariable("codigo") String codigo) {
         LOG.debug("REST request to get Sala : {}", codigo);
         Optional<Sala> sala = salaRepository.findById(codigo);
-        return ResponseUtil.wrapOrNotFound(sala);
+        if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
+            return ResponseUtil.wrapOrNotFound(sala);
+        }
+        return ResponseUtil.wrapOrNotFound(sala.map(this::toVM));
     }
 
     /**

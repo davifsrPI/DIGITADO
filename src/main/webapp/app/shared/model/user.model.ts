@@ -3,7 +3,7 @@ export interface IUser {
   login?: string;
   firstName?: string;
   lastName?: string;
-  // Apelido público do jogador — o que aparece no ranking, placar e cabeçalho
+  // Apelido público do jogador - o que aparece no ranking, placar e cabeçalho
   apelido?: string;
   email?: string;
   activated?: boolean;

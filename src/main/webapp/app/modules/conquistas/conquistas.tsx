@@ -24,7 +24,7 @@ interface MinhasConquistas {
   conquistas: ConquistaUsuario[];
 }
 
-// Ícones decorativos das conquistas — escolhidos de forma determinística pelo id,
+// Ícones decorativos das conquistas - escolhidos de forma determinística pelo id,
 // apenas visual (nenhum dado é guardado ou calculado no front)
 const ICONES = ['🏆', '⭐', '🚀', '🔥', '⚡', '🎯', '🧠', '📚', '⌨️', '💎', '🥇', '🎖️'];
 const iconeDaConquista = (id: number) => ICONES[Math.abs(id) % ICONES.length];
@@ -35,7 +35,7 @@ const formatarData = (iso?: string) => {
 };
 
 // Tela "Minhas Conquistas" (estilo Steam): o front apenas exibe o que o backend retorna.
-// A busca em /api/conquistas/minhas não envia parâmetro algum — o usuário é identificado
+// A busca em /api/conquistas/minhas não envia parâmetro algum - o usuário é identificado
 // exclusivamente pelo token no backend, e a consulta ao banco é feita lá.
 export const Conquistas = () => {
   const navigate = useNavigate();
@@ -46,7 +46,7 @@ export const Conquistas = () => {
   // Aplica o fundo escuro específico desta página (mesmo padrão do lobby/minhas-salas)
   useBodyClass('conquistas-page');
 
-  // Busca as conquistas do usuário no backend — sem cache, sem localStorage
+  // Busca as conquistas do usuário no backend - sem cache, sem localStorage
   useEffect(() => {
     setLoading(true);
     axios

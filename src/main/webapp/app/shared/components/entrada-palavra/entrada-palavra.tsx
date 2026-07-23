@@ -17,7 +17,7 @@ interface Props {
   disabled?: boolean;
   maxLength?: number;
   placeholder?: string;
-  // Classes visuais do input — cada tela mantém o próprio estilo de campo
+  // Classes visuais do input - cada tela mantém o próprio estilo de campo
   className?: string;
   ariaLabel?: string;
   inputRef?: React.MutableRefObject<HTMLInputElement | null>;

@@ -126,7 +126,7 @@ export const UsuarioUpdate = () => {
                 }}
               />
               {/* Senha só na CRIAÇÃO. Na edição o campo não existe: o backend preserva
-                  a senha atual do banco (ela é imutável via PUT/PATCH) — o admin pode
+                  a senha atual do banco (ela é imutável via PUT/PATCH) - o admin pode
                   ativar/editar uma conta sem tocar na senha do usuário. */}
               {isNew && (
                 <ValidatedField

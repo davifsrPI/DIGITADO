@@ -1,6 +1,9 @@
 import React from 'react';
 import MenuItem from 'app/shared/layout/menus/menu-item';
-import { Translate, translate } from 'react-jhipster';
+import { Translate } from 'react-jhipster';
+import { NavItem, NavLink } from 'reactstrap';
+import { NavLink as Link } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { NavDropdown } from './menu-components';
 
 const accountMenuItemsAuthenticated = () => (
@@ -23,40 +26,32 @@ const accountMenuItemsAuthenticated = () => (
   </>
 );
 
-const accountMenuItems = () => (
-  <>
-    <MenuItem id="login-item" icon="sign-in-alt" to="/login" data-cy="login">
-      <Translate contentKey="global.menu.account.login">Sign in</Translate>
-    </MenuItem>
-    <MenuItem icon="user-plus" to="/account/register" data-cy="register">
-      <Translate contentKey="global.menu.account.register">Register</Translate>
-    </MenuItem>
-  </>
-);
-
-// Rótulo do menu: nome do usuário logado (em vez de "Conta") e, se ele acertou a
+// Rótulo do menu do usuário logado: nome público e, se ele acertou a
 // palavra do dia de hoje (informação vinda do backend), uma chama animada 🔥
-const rotuloDoMenu = (isAuthenticated: boolean, displayName?: string, acertouPalavraDoDia?: boolean) => {
-  if (!isAuthenticated || !displayName) {
-    return translate('global.menu.account.main');
-  }
-  return (
-    <span className="account-menu-nome">
-      {displayName}
-      {acertouPalavraDoDia && (
-        <span className="pdd-fogo" title="Acertou a palavra do dia! 🔥">
-          <span className="pdd-fogo-chama">🔥</span>
-        </span>
-      )}
-    </span>
-  );
-};
-
-export const AccountMenu = ({ isAuthenticated = false, displayName = undefined as string | undefined, acertouPalavraDoDia = false }) => (
-  <NavDropdown icon="user" name={rotuloDoMenu(isAuthenticated, displayName, acertouPalavraDoDia)} id="account-menu" data-cy="accountMenu">
-    {isAuthenticated && accountMenuItemsAuthenticated()}
-    {!isAuthenticated && accountMenuItems()}
-  </NavDropdown>
+const rotuloDoMenu = (displayName?: string, acertouPalavraDoDia?: boolean) => (
+  <span className="account-menu-nome">
+    {displayName}
+    {acertouPalavraDoDia && (
+      <span className="pdd-fogo" title="Acertou a palavra do dia! 🔥">
+        <span className="pdd-fogo-chama">🔥</span>
+      </span>
+    )}
+  </span>
 );
+
+// Logado: menu suspenso de perfil. Visitante: botão "Entrar" direto para o login.
+export const AccountMenu = ({ isAuthenticated = false, displayName = undefined as string | undefined, acertouPalavraDoDia = false }) =>
+  isAuthenticated ? (
+    <NavDropdown icon="user" name={rotuloDoMenu(displayName, acertouPalavraDoDia)} id="account-menu" data-cy="accountMenu">
+      {accountMenuItemsAuthenticated()}
+    </NavDropdown>
+  ) : (
+    <NavItem id="login-item">
+      <NavLink tag={Link} to="/login" className="d-flex align-items-center" data-cy="login">
+        <FontAwesomeIcon icon="sign-in-alt" />
+        <span>Entrar</span>
+      </NavLink>
+    </NavItem>
+  );
 
 export default AccountMenu;

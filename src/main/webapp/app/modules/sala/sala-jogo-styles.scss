@@ -2,7 +2,7 @@
    WRAPPER / BACKGROUND
 ═══════════════════════════════════════════════════════════ */
 
-/* Remove o card branco padrão do layout — a página tem fundo escuro próprio
+/* Remove o card branco padrão do layout - a página tem fundo escuro próprio
    (mesmo padrão de criar-sala, lobby, minhas-salas etc.) */
 body.sala-jogo-page .jh-card {
   background: transparent !important;
@@ -135,7 +135,7 @@ body.sala-jogo-page .view-container {
   max-width: 380px;
 }
 
-/* code block — clickable to copy */
+/* code block - clickable to copy */
 .sj-codigo-block {
   background: rgba(99, 102, 241, 0.08);
   border: 2px dashed rgba(99, 102, 241, 0.4);
@@ -454,7 +454,7 @@ body.sala-jogo-page .view-container {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   EM JOGO — topbar + layout
+   EM JOGO - topbar + layout
 ═══════════════════════════════════════════════════════════ */
 
 .sj-prof-game {
@@ -855,7 +855,7 @@ body.sala-jogo-page .view-container {
   color: #a5b4fc;
 }
 
-/* Indicador de respostas suspeitas de burla — só na tela do professor */
+/* Indicador de respostas suspeitas de burla - só na tela do professor */
 .sj-alerta-burla {
   margin-left: 8px;
   padding: 2px 8px;
@@ -868,7 +868,7 @@ body.sala-jogo-page .view-container {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   JOGO — tela centrada (professor como jogador)
+   JOGO - tela centrada (professor como jogador)
 ═══════════════════════════════════════════════════════════ */
 
 .sj-game-centered {
@@ -1197,7 +1197,7 @@ body.sala-jogo-page .view-container {
 /* ══════════════════════════════════════════════════════════════════════════
    RELATÓRIO DE FIM DE PARTIDA (tela do professor)
    Depois do ranking completo, um card por palavra mostrando quem escreveu o
-   quê — a resposta literal digitada, com acerto/erro colorido.
+   quê - a resposta literal digitada, com acerto/erro colorido.
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* Título das seções da tela final (ranking / relatório) */
@@ -1309,7 +1309,7 @@ body.sala-jogo-page .view-container {
   justify-content: center;
 }
 
-/* Verde para acerto, vermelho para erro — no ícone e no texto digitado */
+/* Verde para acerto, vermelho para erro - no ícone e no texto digitado */
 .sj-rel-resp--certa .sj-rel-resp-icone {
   background: rgba(34, 197, 94, 0.15);
   color: #4ade80;
@@ -1559,14 +1559,14 @@ body.sala-jogo-page .view-container {
   color: #4ade80;
   letter-spacing: 0.02em;
   line-height: 1.1;
-  /* Palavras longas: nunca estourar a caixa — quebra onde precisar, centralizada */
+  /* Palavras longas: nunca estourar a caixa - quebra onde precisar, centralizada */
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
   text-align: center;
 }
 
-/* Similaridade — visível apenas na tela do aluno */
+/* Similaridade - visível apenas na tela do aluno */
 .sj-similaridade {
   margin-top: 4px;
   font-size: 14px;
@@ -1791,7 +1791,7 @@ body.sala-jogo-page .view-container {
 }
 
 /* Comemoração dos vencedores: salto de um lado para o outro descrevendo uma
-   parábola — o X varre linearmente enquanto o Y sobe e desce em arco
+   parábola - o X varre linearmente enquanto o Y sobe e desce em arco
    (pontos intermediários seguem y = -h·(1 − (x/A)²), com timing linear) */
 .vp-jogador--saltando {
   animation: vp-salto-parabola 1.9s linear infinite;
@@ -2037,7 +2037,7 @@ body.sala-jogo-page .view-container {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   ALUNO — tela de jogo
+   ALUNO - tela de jogo
 ═══════════════════════════════════════════════════════════ */
 
 .sj-waiting {
@@ -2057,7 +2057,7 @@ body.sala-jogo-page .view-container {
 
 /* ── Ampulheta animada da tela de espera ──
    Ciclo de 4s: a areia escoa (0–68%), a ampulheta pula e gira 180° (68–92%)
-   e o loop recomeça — como pós-giro o bulbo cheio fica em cima, o reinício
+   e o loop recomeça - como pós-giro o bulbo cheio fica em cima, o reinício
    do ciclo é visualmente contínuo. */
 
 .amp-svg {
@@ -2092,7 +2092,7 @@ body.sala-jogo-page .view-container {
     animation-timing-function: ease-out;
   }
   96% {
-    /* quique leve de acomodação — a areia já recomeça a cair no pouso */
+    /* quique leve de acomodação - a areia já recomeça a cair no pouso */
     transform: translateY(-4px) rotate(180deg) scale(0.99, 1.02);
     animation-timing-function: ease-in;
   }
@@ -2156,7 +2156,7 @@ body.sala-jogo-page .view-container {
   animation: amp-fio-vis 4s linear infinite;
 }
 
-/* Jato contínuo de areia — afunilado, sem tracejado */
+/* Jato contínuo de areia - afunilado, sem tracejado */
 .amp-fio {
   opacity: 0.9;
 }
@@ -2651,7 +2651,7 @@ body.sala-jogo-page .view-container {
 /* ============ BARRA DE TEMPO EM RODADA CURTA ============ */
 
 /* Quando o tempo por palavra é curto (<= 20s), a barra pulsa em tom de alerta
-   o tempo inteiro — reforçando que a rodada é acelerada */
+   o tempo inteiro - reforçando que a rodada é acelerada */
 .sj-timer-bar--curto {
   animation: sj-barra-alerta 0.9s ease-in-out infinite;
   outline: 1px solid rgba(239, 68, 68, 0.5);
@@ -2709,7 +2709,7 @@ body.sala-jogo-page .view-container {
 
 /* ── Botão "Encerrar e fechar sala" (tela final do professor) ──
    Fecha a sala em definitivo (ativo=false no banco). Tom vermelho para
-   sinalizar ação irreversível na sala — não é o encerrar da rodada. */
+   sinalizar ação irreversível na sala - não é o encerrar da rodada. */
 .sj-fechar-sala-btn {
   /* inline-flex alinha o cadeado SVG com o texto do botão */
   display: inline-flex;
@@ -2740,7 +2740,7 @@ body.sala-jogo-page .view-container {
   }
 }
 
-/* Erro ao fechar a sala (ex.: falha de rede) — exibido acima do botão */
+/* Erro ao fechar a sala (ex.: falha de rede) - exibido acima do botão */
 .sj-fechar-erro {
   font-size: 13px;
   color: #fca5a5;
@@ -2751,7 +2751,7 @@ body.sala-jogo-page .view-container {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   POLIMENTO DA TELA FINAL DO PROFESSOR — animações discretas, sem emoji
+   POLIMENTO DA TELA FINAL DO PROFESSOR - animações discretas, sem emoji
    Movimento sutil de entrada (fade + deslize de poucos px) e microinterações
    de hover. Nada chamativo: durações curtas, easing suave e um só keyframe
    reaproveitado. Quem prefere menos movimento tem tudo desligado no bloco
@@ -2760,7 +2760,7 @@ body.sala-jogo-page .view-container {
 
 /* Entrada em cascata das seções da tela final (título, ranking, relatório,
    botão): cada bloco surge de baixo com um pequeno atraso em relação ao
-   anterior — dá ritmo à revelação sem virar espetáculo */
+   anterior - dá ritmo à revelação sem virar espetáculo */
 .sj-ended > * {
   animation: sj-surgir 0.45s ease-out both;
 }
@@ -2810,7 +2810,7 @@ body.sala-jogo-page .view-container {
   }
 }
 
-/* Pódio no ranking: 1º/2º/3º ganham cor no número (ouro, prata, bronze) —
+/* Pódio no ranking: 1º/2º/3º ganham cor no número (ouro, prata, bronze) -
    destaque tipográfico discreto, sem medalhas de emoji */
 .sj-final-row:nth-child(1) .sj-final-rank {
   color: #fbbf24;
@@ -2851,7 +2851,7 @@ body.sala-jogo-page .view-container {
 }
 
 /* Selo "em andamento" do painel: respiração suave de opacidade enquanto a
-   rodada corre — indica vida sem piscar na tela */
+   rodada corre - indica vida sem piscar na tela */
 .sj-dash-agora {
   animation: sj-respirar 2s ease-in-out infinite;
 }

@@ -7,12 +7,12 @@ import { abrirGerenciadorCookies } from 'app/shared/cookies/cookie-consent';
 import { useBodyClass } from 'app/shared/util/use-body-class';
 
 /**
- * Política de Privacidade (LGPD art. 9º — transparência).
+ * Política de Privacidade (LGPD art. 9º - transparência).
  * Página PÚBLICA: acessível sem login, linkada no rodapé, no banner de cookies
  * e no formulário de cadastro.
  *
  * Os trechos entre [COLCHETES] devem ser preenchidos pelo responsável legal
- * antes de publicar — não invente esses dados.
+ * antes de publicar - não invente esses dados.
  */
 export const PoliticaPrivacidade = () => {
   useBodyClass('pp-page');
@@ -32,19 +32,19 @@ export const PoliticaPrivacidade = () => {
         <h2>2. Quais dados coletamos e para quê</h2>
         <ul>
           <li>
-            <strong>Cadastro</strong> — nome, sobrenome, e-mail, login e senha (guardada apenas como hash criptográfico, nunca em texto):
+            <strong>Cadastro</strong> - nome, sobrenome, e-mail, login e senha (guardada apenas como hash criptográfico, nunca em texto):
             usados exclusivamente para criar e autenticar a sua conta.
           </li>
           <li>
-            <strong>Desempenho no jogo</strong> — respostas digitadas, acertos, erros ortográficos, pontuação, ranking e conquistas: usados
+            <strong>Desempenho no jogo</strong> - respostas digitadas, acertos, erros ortográficos, pontuação, ranking e conquistas: usados
             para as funcionalidades pedagógicas da plataforma (placar, evolução, conquistas).
           </li>
           <li>
-            <strong>Palavra do dia</strong> — registro diário de tentativa (acertou/errou) vinculado ao seu login por até 30 dias; depois
+            <strong>Palavra do dia</strong> - registro diário de tentativa (acertou/errou) vinculado ao seu login por até 30 dias; depois
             disso o vínculo é anonimizado automaticamente e resta apenas a estatística agregada.
           </li>
           <li>
-            <strong>Endereço IP</strong> — usado somente para segurança (limite de requisições contra ataques), com base no legítimo
+            <strong>Endereço IP</strong> - usado somente para segurança (limite de requisições contra ataques), com base no legítimo
             interesse (art. 7º, IX).
           </li>
         </ul>
@@ -75,20 +75,20 @@ export const PoliticaPrivacidade = () => {
         <h2>6. Seus direitos (art. 18)</h2>
         <ul>
           <li>
-            <strong>Acesso e correção</strong> — na tela <Link to="/account/settings">Configurações</Link>;
+            <strong>Acesso e correção</strong> - na tela <Link to="/account/settings">Configurações</Link>;
           </li>
           <li>
-            <strong>Portabilidade</strong> — baixe todos os seus dados em &quot;Configurações → Meus dados (LGPD) → Baixar meus dados&quot;;
+            <strong>Portabilidade</strong> - baixe todos os seus dados em &quot;Configurações → Meus dados (LGPD) → Baixar meus dados&quot;;
           </li>
           <li>
-            <strong>Exclusão</strong> — apague sua conta e todos os dados pessoais em &quot;Configurações → Meus dados (LGPD) → Excluir
+            <strong>Exclusão</strong> - apague sua conta e todos os dados pessoais em &quot;Configurações → Meus dados (LGPD) → Excluir
             minha conta&quot; (irreversível; exige sua senha);
           </li>
           <li>
-            <strong>Revogação do consentimento de cookies</strong> — em &quot;Gerenciar Cookies&quot;, no rodapé;
+            <strong>Revogação do consentimento de cookies</strong> - em &quot;Gerenciar Cookies&quot;, no rodapé;
           </li>
           <li>
-            <strong>Demais direitos</strong> (informação, oposição, reclamação à ANPD) — contate o encarregado: [E-MAIL DO ENCARREGADO].
+            <strong>Demais direitos</strong> (informação, oposição, reclamação à ANPD) - contate o encarregado: [E-MAIL DO ENCARREGADO].
           </li>
         </ul>
 

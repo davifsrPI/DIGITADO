@@ -1,5 +1,5 @@
 /**
- * Núcleo do consentimento de cookies (LGPD) — sem dependência de React.
+ * Núcleo do consentimento de cookies (LGPD) - sem dependência de React.
  *
  * Responsabilidades:
  * 1. Guardar/ler a decisão do usuário (localStorage, com versão e data);
@@ -8,7 +8,7 @@
  * 3. Emitir eventos para a UI reagir (banner some, modal abre de qualquer tela).
  *
  * Por que localStorage e não backend? O consentimento precisa existir ANTES de
- * qualquer chamada identificável e vale para visitantes anônimos — é uma
+ * qualquer chamada identificável e vale para visitantes anônimos - é uma
  * preferência do dispositivo, exatamente o caso de uso previsto pela LGPD para
  * armazenamento local. Guardar só isso no navegador não conflita com a regra
  * do projeto de validar dados de negócio no backend.
@@ -18,7 +18,7 @@ export type CategoriaOpcional = 'preferencias' | 'analiticos' | 'marketing';
 
 export interface CategoriasConsentimento {
   // Essenciais (sessão, segurança, o próprio registro do consentimento):
-  // sempre ativos — o site não funciona sem eles e a LGPD os dispensa de opt-in
+  // sempre ativos - o site não funciona sem eles e a LGPD os dispensa de opt-in
   essenciais: true;
   preferencias: boolean;
   analiticos: boolean;
@@ -70,7 +70,7 @@ export const obterConsentimento = (): ConsentimentoCookies | null => {
 
 /**
  * Salva a decisão, avisa a aplicação e aplica o portão de scripts.
- * Se o usuário REDUZIU permissões que já estavam em uso, recarrega a página —
+ * Se o usuário REDUZIU permissões que já estavam em uso, recarrega a página -
  * é a única forma garantida de interromper rastreadores já carregados.
  */
 export const salvarConsentimento = (categorias: Omit<CategoriasConsentimento, 'essenciais'>): ConsentimentoCookies => {
@@ -138,11 +138,11 @@ export const aplicarConsentimento = (consentimento: ConsentimentoCookies | null)
     carregarScriptsMarketing();
   }
   // "preferencias" não injeta script externo: autoriza cookies/localStorage de
-  // conveniência (ex.: lembrar volume do áudio, tema) — consulte antes de gravar:
+  // conveniência (ex.: lembrar volume do áudio, tema) - consulte antes de gravar:
   //   obterConsentimento()?.categorias.preferencias
 };
 
-/** Google Analytics 4 (exemplo) — descomente e informe seu ID quando contratar. */
+/** Google Analytics 4 (exemplo) - descomente e informe seu ID quando contratar. */
 const carregarScriptsAnaliticos = () => {
   // carregarScript('ga4', 'https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX', () => {
   //   (window as any).dataLayer = (window as any).dataLayer || [];
@@ -152,7 +152,7 @@ const carregarScriptsAnaliticos = () => {
   // });
 };
 
-/** Meta Pixel (exemplo) — descomente e informe seu ID quando contratar. */
+/** Meta Pixel (exemplo) - descomente e informe seu ID quando contratar. */
 const carregarScriptsMarketing = () => {
   // carregarScript('meta-pixel', 'https://connect.facebook.net/en_US/fbevents.js', () => {
   //   (window as any).fbq?.('init', 'SEU_PIXEL_ID');

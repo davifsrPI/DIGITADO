@@ -34,21 +34,17 @@ public class PublicUserResource {
         this.usuarioRepository = usuarioRepository;
     }
 
+    /**
+     * Usado pela tela de registro para avisar "este e-mail já tem cadastro".
+     * SEGURANÇA/LGPD: responde APENAS o booleano — nunca nome ou qualquer outro
+     * dado do titular (endpoint é público; devolver o nome permitiria colher
+     * dados pessoais a partir de uma lista de e-mails). Também está na lista de
+     * endpoints sensíveis do RateLimitFilter para frear enumeração em massa.
+     */
     @GetMapping("/public/verificar-email")
     public ResponseEntity<Map<String, Object>> verificarEmail(@RequestParam String email) {
-        return usuarioRepository
-            .findByEmail(email.trim().toLowerCase())
-            .map(u -> {
-                Map<String, Object> resp = new HashMap<>();
-                resp.put("encontrado", true);
-                resp.put("nome", u.getNome() + " " + u.getSobrenome());
-                return ResponseEntity.ok(resp);
-            })
-            .orElseGet(() -> {
-                Map<String, Object> resp = new HashMap<>();
-                resp.put("encontrado", false);
-                return ResponseEntity.ok(resp);
-            });
+        boolean encontrado = usuarioRepository.findByEmail(email.trim().toLowerCase()).isPresent();
+        return ResponseEntity.ok(Map.of("encontrado", encontrado));
     }
 
     /**

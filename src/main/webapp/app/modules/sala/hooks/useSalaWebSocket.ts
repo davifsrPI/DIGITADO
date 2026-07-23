@@ -71,7 +71,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
   const clientRef = useRef<Client | null>(null);
   const [conectado, setConectado] = useState(false);
 
-  // Refs para os callbacks — evitam que o useEffect de conexão precise ser recriado
+  // Refs para os callbacks - evitam que o useEffect de conexão precise ser recriado
   // quando os callbacks mudam (problema clássico de closure em hooks com dependências instáveis)
   const onEstadoRef = useRef(onEstado);
   const onFeedbackRef = useRef(onFeedback);
@@ -95,12 +95,12 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
       reconnectDelay: 3000,
       onConnect() {
         setConectado(true);
-        // Inscreve no tópico público da sala — recebe o estado do jogo para todos
+        // Inscreve no tópico público da sala - recebe o estado do jogo para todos
         client.subscribe(`/topic/sala/${codigoSala}`, (msg: IMessage) => {
           const estado: EstadoJogo = JSON.parse(msg.body);
           onEstadoRef.current?.(estado);
         });
-        // Inscreve no canal privado de feedback — só este usuário recebe
+        // Inscreve no canal privado de feedback - só este usuário recebe
         client.subscribe(`/user/queue/sala/${codigoSala}/feedback`, (msg: IMessage) => {
           const feedback: FeedbackAluno = JSON.parse(msg.body);
           onFeedbackRef.current?.(feedback);
@@ -151,7 +151,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     proxima: () => publicar('proxima'),
     pausar: () => publicar('pausar'),
     encerrar: () => publicar('encerrar'),
-    // tentativasBurla: nº de inserções bloqueadas (colar, corretor) durante a rodada —
+    // tentativasBurla: nº de inserções bloqueadas (colar, corretor) durante a rodada -
     // vai junto para o servidor marcar a resposta como suspeita
     responder: (respostaDigitada: string, tentativasBurla = 0) => publicar('responder', { respostaDigitada, tentativasBurla }),
   };

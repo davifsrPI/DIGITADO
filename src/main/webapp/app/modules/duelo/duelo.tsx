@@ -15,7 +15,7 @@ interface DescricaoSala {
   modo?: '1v1' | 'normal';
 }
 
-// Duelo público retornado pelo backend — apenas campos públicos, sem dados do criador
+// Duelo público retornado pelo backend - apenas campos públicos, sem dados do criador
 interface DueloPublico {
   codigo: string;
   nome: string;
@@ -30,7 +30,7 @@ export const Duelo = () => {
   const navigate = useNavigate();
   const [duelos, setDuelos] = useState<DueloPublico[]>([]);
   const [carregando, setCarregando] = useState(true);
-  // true enquanto uma atualização MANUAL (botão) está em andamento — a lista atual
+  // true enquanto uma atualização MANUAL (botão) está em andamento - a lista atual
   // continua na tela; só o botão muda para "Atualizando..."
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export const Duelo = () => {
           <h1>
             ⚔️ Duelo <span className="duelo-accent">1v1</span>
           </h1>
-          <p>Desafie outro jogador em uma partida direta — quem digitar melhor vence</p>
+          <p>Desafie outro jogador em uma partida direta - quem digitar melhor vence</p>
         </div>
 
         <Link to="/sala/new?modo=1v1" className="duelo-create-btn">
@@ -109,7 +109,7 @@ export const Duelo = () => {
                 {atualizando ? 'Atualizando...' : 'Atualizar'}
               </button>
             </div>
-            <p className="duelo-card-sub">Qualquer jogador pode entrar — clique e boa sorte!</p>
+            <p className="duelo-card-sub">Qualquer jogador pode entrar - clique e boa sorte!</p>
 
             {erro && <div className="duelo-erro">{erro}</div>}
             {carregando && <TelaCarregamento embutido mensagem="Buscando duelos abertos..." />}
@@ -171,7 +171,7 @@ export const Duelo = () => {
         </div>
 
         <div className="duelo-conquistas-hint">
-          🏅 Duelos 1v1 valem conquistas exclusivas — incluindo <strong>“Vença de um Desenvolvedor”</strong> (+1000 XP)!
+          🏅 Duelos 1v1 valem conquistas exclusivas - incluindo <strong>“Vença de um Desenvolvedor”</strong> (+1000 XP)!
         </div>
       </div>
     </div>

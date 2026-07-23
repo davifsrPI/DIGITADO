@@ -15,6 +15,8 @@ public class ApplicationProperties {
 
     private final RateLimit rateLimit = new RateLimit();
 
+    private final Websocket websocket = new Websocket();
+
     // jhipster-needle-application-properties-property
 
     public Liquibase getLiquibase() {
@@ -23,6 +25,10 @@ public class ApplicationProperties {
 
     public RateLimit getRateLimit() {
         return rateLimit;
+    }
+
+    public Websocket getWebsocket() {
+        return websocket;
     }
 
     // jhipster-needle-application-properties-property-getter
@@ -91,6 +97,32 @@ public class ApplicationProperties {
 
         public void setConfiarXForwardedFor(boolean confiarXForwardedFor) {
             this.confiarXForwardedFor = confiarXForwardedFor;
+        }
+    }
+
+    /**
+     * Configuração do endpoint WebSocket (application.websocket em application*.yml).
+     */
+    public static class Websocket {
+
+        /**
+         * Origens aceitas no handshake, separadas por vírgula.
+         * - "*": qualquer origem (conveniência de DEV — o front roda em localhost:9000
+         *   e o backend em localhost:8080; a autenticação real continua sendo o JWT);
+         * - vazio/em branco: NENHUM padrão é registrado e vale o default do Spring,
+         *   que só aceita handshake da MESMA origem — é o valor de PRODUÇÃO, já que
+         *   front e backend são servidos pelo mesmo domínio;
+         * - lista explícita (ex.: "https://app.exemplo.com.br"): para front hospedado
+         *   em domínio separado.
+         */
+        private String allowedOrigins = "*";
+
+        public String getAllowedOrigins() {
+            return allowedOrigins;
+        }
+
+        public void setAllowedOrigins(String allowedOrigins) {
+            this.allowedOrigins = allowedOrigins;
         }
     }
     // jhipster-needle-application-properties-property-class

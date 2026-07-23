@@ -1,5 +1,5 @@
 /* Sem isto, o card branco padrão do JHipster (jh-card) aparece como uma
-   moldura clara em volta da tela escura — mesmo padrão das outras páginas */
+   moldura clara em volta da tela escura - mesmo padrão das outras páginas */
 body.settings-page {
   background: #0f172a !important;
 
@@ -177,7 +177,7 @@ body.settings-page {
   transform: translateY(0);
 }
 
-/* Barra de força da senha (página Alterar senha) — texto legível no tema escuro */
+/* Barra de força da senha (página Alterar senha) - texto legível no tema escuro */
 .st-card #strength {
   color: rgba(255, 255, 255, 0.55);
   font-size: 13px;

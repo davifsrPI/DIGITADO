@@ -3,12 +3,12 @@ import './icone-audio.scss';
 import React from 'react';
 
 interface Props {
-  // true enquanto a síntese de voz está reproduzindo — anima as ondas
+  // true enquanto a síntese de voz está reproduzindo - anima as ondas
   tocando?: boolean;
   className?: string;
 }
 
-// Alto-falante em SVG — substitui os emojis 🔉/🔊 dos botões de áudio, que são
+// Alto-falante em SVG - substitui os emojis 🔉/🔊 dos botões de áudio, que são
 // renderizados pela fonte do sistema e ficam serrilhados/desalinhados no celular.
 // Herda a cor do texto do botão (currentColor) e escala nítido em qualquer tela.
 export const IconeAudio = ({ tocando = false, className = '' }: Props) => (

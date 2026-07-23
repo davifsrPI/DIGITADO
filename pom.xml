@@ -12,7 +12,9 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.5</version>
+        <!-- Último patch da série 3.4 — inclui correções de segurança do Spring
+             Security e do Tomcat embarcado posteriores ao 3.4.5 -->
+        <version>3.4.7</version>
         <relativePath/>
         <!-- lookup parent from repository -->
     </parent>
@@ -26,7 +28,7 @@
         <java.version>17</java.version>
         <node.version>v22.15.0</node.version>
         <npm.version>11.3.0</npm.version>
-        <!-- Sobrescreve o 1.20.6 gerenciado pelo Spring Boot 3.4.5: versões antigas do
+        <!-- Sobrescreve o 1.20.x gerenciado pelo Spring Boot 3.4: versões antigas do
              docker-java falham com HTTP 400 no named pipe do Docker Desktop 28+ -->
         <testcontainers.version>1.21.3</testcontainers.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

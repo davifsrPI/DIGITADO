@@ -3,14 +3,14 @@ import { PlacarEntry } from './hooks/useSalaWebSocket';
 
 interface Props {
   placar: PlacarEntry[];
-  // Login do usuário atual — destaca a caixa dele; omitido na visão do professor
+  // Login do usuário atual - destaca a caixa dele; omitido na visão do professor
   meuLogin?: string;
   // Posições da rodada anterior (login -> índice), mantidas pelo componente pai
   // para que a animação de ultrapassagem funcione mesmo entre rodadas.
   posRef: MutableRefObject<Map<string, number>>;
 }
 
-// Altura de cada caixa + espaçamento — deve casar com o CSS (.rn-nuvem)
+// Altura de cada caixa + espaçamento - deve casar com o CSS (.rn-nuvem)
 const ROW_H = 74;
 
 /**

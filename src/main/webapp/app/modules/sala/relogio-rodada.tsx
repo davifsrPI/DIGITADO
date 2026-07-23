@@ -9,7 +9,7 @@ interface Props {
 export const RODADA_RAPIDA_LIMITE = 20;
 
 // Vinheta de início de rodada: um relógio voa pela tela com os ponteiros girando
-// por 3 segundos — girando MUITO rápido quando o tempo da rodada é curto, para
+// por 3 segundos - girando MUITO rápido quando o tempo da rodada é curto, para
 // avisar os jogadores de que precisam se apressar. Some sozinha e não bloqueia
 // cliques (pointer-events: none no CSS).
 export const RelogioRodada: React.FC<Props> = ({ tempoLimite, palavraId }) => {
@@ -34,7 +34,7 @@ export const RelogioRodada: React.FC<Props> = ({ tempoLimite, palavraId }) => {
         <div className="rr-hand rr-hand--hr" />
         <div className="rr-dot" />
       </div>
-      <div className="rr-label">{rapida ? `⚡ Rodada rápida — ${tempoLimite}s!` : `🕒 ${tempoLimite} segundos por palavra`}</div>
+      <div className="rr-label">{rapida ? `⚡ Rodada rápida - ${tempoLimite}s!` : `🕒 ${tempoLimite} segundos por palavra`}</div>
     </div>
   );
 };

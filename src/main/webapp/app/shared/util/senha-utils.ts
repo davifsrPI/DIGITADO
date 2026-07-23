@@ -1,4 +1,4 @@
-// Política de senha do DIGITADO — mesma regra imposta pelo backend (AccountResource):
+// Política de senha do DIGITADO - mesma regra imposta pelo backend (AccountResource):
 // mínimo 8 caracteres com pelo menos 1 maiúscula, 1 minúscula, 1 número e 1 especial.
 // A validação aqui é só UX (feedback imediato); a palavra final é do servidor.
 export const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;

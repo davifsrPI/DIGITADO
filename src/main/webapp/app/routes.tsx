@@ -118,7 +118,7 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
-        {/* Telas CRUD de entidades (JHipster) — restritas ao admin; usuários comuns
+        {/* Telas CRUD de entidades (JHipster) - restritas ao admin; usuários comuns
             usam apenas as telas do jogo (lobby, salas, ranking, conquistas) */}
         <Route
           path="*"

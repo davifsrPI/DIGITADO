@@ -1,5 +1,5 @@
 /* ==========================================================================
-Development Ribbon — chip discreto no canto inferior esquerdo
+Development Ribbon - chip discreto no canto inferior esquerdo
 (mantém a classe .ribbon usada pelo header.spec.tsx, mas sem a faixa
 diagonal que cruzava o logo)
 ========================================================================== */
@@ -50,7 +50,7 @@ Navbar
   padding: 0.5em 1.4em;
 
   /* A pílula central é absoluta (fora do fluxo), então ela não "estica" mais a
-     navbar — sem uma altura mínima, a barra encolhe para a altura da logo, a
+     navbar - sem uma altura mínima, a barra encolhe para a altura da logo, a
      pílula transborda e sobra uma fresta clara entre a navbar e o conteúdo
      (o app-container reserva 60px de paddingTop). */
   @media (min-width: 768px) {
@@ -82,7 +82,7 @@ Navbar
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      /* Em telas médias a pílula pode encostar na logo — ela fica por cima e clicável */
+      /* Em telas médias a pílula pode encostar na logo - ela fica por cima e clicável */
       z-index: 2;
     }
   }
@@ -341,7 +341,7 @@ Nome do usuário + chama da palavra do dia
   white-space: nowrap;
 }
 
-/* Chama de quem acertou a palavra do dia — SEM fundo/camada borrada:
+/* Chama de quem acertou a palavra do dia - SEM fundo/camada borrada:
    uma única chama "ardendo" (squash & stretch ancorado na base, como fogo real)
    e duas faíscas que sobem e somem. Só transform/opacity: leve e suave. */
 .pdd-fogo {

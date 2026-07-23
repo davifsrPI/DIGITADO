@@ -55,7 +55,7 @@ export const PalavraUpdate = () => {
     const entity = {
       ...palavraEntity,
       ...values,
-      // select vazio envia '' — o backend espera enum ou null
+      // select vazio envia '' - o backend espera enum ou null
       dificuldadeCadastrada: values.dificuldadeCadastrada || null,
       criador: usuarios.find(it => it.id.toString() === values.criador?.toString()),
       listas: mapIdList(values.listas),

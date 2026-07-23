@@ -22,7 +22,7 @@ const LETRAS = ['D', 'I', 'G', 'I', 'T', 'A', 'D', 'O'];
 
 export const TelaCarregamento = ({ mensagem = 'Carregando...', embutido = false }: TelaCarregamentoProps) => (
   <div className={`tc-wrapper${embutido ? ' tc-wrapper--embutido' : ''}`} role="status" aria-live="polite">
-    {/* Shapes de fundo só na versão tela cheia — embutido herda o fundo de quem o contém */}
+    {/* Shapes de fundo só na versão tela cheia - embutido herda o fundo de quem o contém */}
     {!embutido && (
       <div className="tc-bg">
         <div className="tc-shape one" />

@@ -107,9 +107,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     // Endpoints não autenticados que são alvo típico de força bruta/flood:
-    // login (senha), registro em massa de contas e disparo de e-mails de reset
+    // login (senha), registro em massa de contas, disparo de e-mails de reset
+    // e a checagem de e-mail do cadastro (enumeração de contas existentes)
     private boolean isEndpointSensivel(String uri) {
-        return uri.startsWith("/api/authenticate") || uri.startsWith("/api/register") || uri.startsWith("/api/account/reset-password");
+        return (
+            uri.startsWith("/api/authenticate") ||
+            uri.startsWith("/api/register") ||
+            uri.startsWith("/api/account/reset-password") ||
+            uri.startsWith("/api/public/verificar-email")
+        );
     }
 
     // Usuário logado conta pelo login (o limite segue a conta); anônimo, pelo IP

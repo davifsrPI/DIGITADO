@@ -3,6 +3,8 @@ import './ranking.scss';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMedal, faRocket } from '@fortawesome/free-solid-svg-icons';
 
 import { useAppSelector } from 'app/config/store';
 import { useBodyClass } from 'app/shared/util/use-body-class';
@@ -23,12 +25,14 @@ interface RankingMundial {
   temMais: boolean;
 }
 
-const MEDALHAS = ['🥇', '🥈', '🥉'];
+// Medalhas de ouro, prata e bronze do pódio (ícone único com cores distintas)
+const CORES_MEDALHAS = ['#fbbf24', '#94a3b8', '#b45309'];
+const MEDALHAS = CORES_MEDALHAS.map((cor, i) => <FontAwesomeIcon key={i} icon={faMedal} style={{ color: cor }} />);
 
 // Ranking Mundial: classificação de todos os usuários pelo XP acumulado
-// (hoje alimentado pelos acertos na Palavra do Dia — 300 XP cada)
+// (hoje alimentado pelos acertos na Palavra do Dia - 300 XP cada)
 export const Ranking = () => {
-  // A página é PÚBLICA (visitante sem conta pode ver o ranking) — o login só
+  // A página é PÚBLICA (visitante sem conta pode ver o ranking) - o login só
   // muda o destino do botão de voltar e o destaque da própria posição
   const account = useAppSelector(state => state.authentication.account);
   const logado = Boolean(account?.login);
@@ -46,7 +50,7 @@ export const Ranking = () => {
       .catch(() => setErro(true));
   }, []);
 
-  // Busca a próxima página do backend e ANEXA as posições às já exibidas —
+  // Busca a próxima página do backend e ANEXA as posições às já exibidas -
   // assim dá para navegar até o fim e ver todas as pessoas do ranking
   const carregarMais = () => {
     if (carregandoMais || !dados?.temMais) return;
@@ -134,7 +138,11 @@ export const Ranking = () => {
               </div>
             )}
 
-            {dados.top.length === 0 && <p className="rk-vazio">Ninguém pontuou ainda — acerte a palavra do dia e seja o primeiro! 🚀</p>}
+            {dados.top.length === 0 && (
+              <p className="rk-vazio">
+                Ninguém pontuou ainda - acerte a palavra do dia e seja o primeiro! <FontAwesomeIcon icon={faRocket} />
+              </p>
+            )}
 
             {/* Ranking completo: mostra quantos aparecem e busca as próximas páginas até o fim */}
             {dados.top.length > 0 && (

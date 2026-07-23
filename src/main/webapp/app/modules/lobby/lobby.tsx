@@ -45,7 +45,7 @@ export const Lobby = () => {
         </div>
 
         <div className="enter-room-box">
-          {/* Ícone de "entrar" desenhado em SVG — emoji renderiza feio e diferente em cada sistema */}
+          {/* Ícone de "entrar" desenhado em SVG - emoji renderiza feio e diferente em cada sistema */}
           <div className="enter-room-icon">
             <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" aria-hidden="true">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -105,7 +105,7 @@ export const Lobby = () => {
 
         <Link to="/duelo" className="create-room-link">
           <span className="create-room-link-icon">⚔️</span>
-          Duelo 1v1 — desafie alguém
+          Duelo 1v1 - desafie alguém
           <span className="create-room-link-arrow">→</span>
         </Link>
 

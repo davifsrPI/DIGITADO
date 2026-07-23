@@ -10,7 +10,7 @@ import { SalaJogoAluno } from './sala-jogo-aluno';
 import { SalaJogoProfessor } from './sala-jogo-professor';
 import { useBodyClass } from 'app/shared/util/use-body-class';
 
-// Página principal do jogo — decide se renderiza a visão do professor ou do aluno
+// Página principal do jogo - decide se renderiza a visão do professor ou do aluno
 // com base no estado de navegação passado pela tela de criação/entrada na sala
 export const SalaJogo: React.FC = () => {
   const { codigo } = useParams<{ codigo: string }>();
@@ -28,7 +28,7 @@ export const SalaJogo: React.FC = () => {
       qtdMedio: number;
       qtdDificil: number;
       palavrasExtrasIds: number[];
-      // Palavras já sorteadas na tela de criação — a 1ª partida usa exatamente essas
+      // Palavras já sorteadas na tela de criação - a 1ª partida usa exatamente essas
       palavrasIds?: number[];
     };
   } | null;
@@ -46,7 +46,7 @@ export const SalaJogo: React.FC = () => {
   }, [locationState, codigo]);
 
   // O papel de professor chega pelo estado de navegação, mas ele se perde ao
-  // RECARREGAR a página — sem esta recuperação, o professor caía para sempre na
+  // RECARREGAR a página - sem esta recuperação, o professor caía para sempre na
   // visão de aluno da própria sala. Quando o estado não veio, pergunta ao servidor
   // se o usuário logado é o dono (null = ainda verificando).
   const [souProfessorServidor, setSouProfessorServidor] = useState<boolean | null>(null);
@@ -62,7 +62,7 @@ export const SalaJogo: React.FC = () => {
   const isProfessor = locationState?.isProfessor === true || souProfessorServidor === true;
 
   // Modo da sala: em duelos 1v1 o CRIADOR também joga (recebe a visão de jogador
-  // com o botão de iniciar), em vez do painel de professor. Buscado no servidor —
+  // com o botão de iniciar), em vez do painel de professor. Buscado no servidor -
   // o tipo é a fonte da verdade e sobrevive ao reload da página.
   const [modo1v1, setModo1v1] = useState<boolean | null>(null);
   useEffect(() => {
@@ -76,7 +76,7 @@ export const SalaJogo: React.FC = () => {
   // sala: segura a renderização para não mostrar a visão errada por um instante
   const verificandoPapel = (papelDesconhecido && souProfessorServidor === null) || (isProfessor && modo1v1 === null);
 
-  // Remove o card branco padrão do layout (jh-card) — a página tem fundo escuro próprio
+  // Remove o card branco padrão do layout (jh-card) - a página tem fundo escuro próprio
   useBodyClass('sala-jogo-page');
 
   // Nome de exibição: apelido público primeiro; sem apelido, primeiro nome; por fim o login.
@@ -169,7 +169,7 @@ export const SalaJogo: React.FC = () => {
           />
         ) : (
           // duelo1v1 também para o OPONENTE: no duelo, quando os dois respondem, a
-          // tela de correção aparece na hora — sem esperar o tempo esgotar
+          // tela de correção aparece na hora - sem esperar o tempo esgotar
           <SalaJogoAluno
             estado={estado}
             feedback={feedback}

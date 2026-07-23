@@ -13,7 +13,7 @@ import {
   salvarConsentimento,
 } from './cookie-consent';
 
-// Descrições honestas de cada categoria — sem juridiquês e sem minimizar o rastreamento
+// Descrições honestas de cada categoria - sem juridiquês e sem minimizar o rastreamento
 const CATEGORIAS = [
   {
     id: 'essenciais' as const,

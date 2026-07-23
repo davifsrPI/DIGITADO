@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMedal } from '@fortawesome/free-solid-svg-icons';
 
 interface RankingEntry {
   posicao: number;
@@ -12,10 +14,12 @@ interface RankingMundial {
   top: RankingEntry[];
 }
 
-const MEDALHAS = ['🥇', '🥈', '🥉'];
+// Medalhas de ouro, prata e bronze do TOP 3 (ícone único com cores distintas)
+const CORES_MEDALHAS = ['#fbbf24', '#94a3b8', '#b45309'];
+const MEDALHAS = CORES_MEDALHAS.map((cor, i) => <FontAwesomeIcon key={i} icon={faMedal} style={{ color: cor }} />);
 
 // Seção "Ranking Mundial" da tela inicial: mostra o TOP 5 do ranking público
-// (endpoint aberto — visitante sem conta também vê) com link para o ranking
+// (endpoint aberto - visitante sem conta também vê) com link para o ranking
 // completo. Se o backend falhar ou ninguém tiver pontuado, a seção não aparece.
 export const RankingTop5 = () => {
   const [top5, setTop5] = useState<RankingEntry[]>([]);

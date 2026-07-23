@@ -3,6 +3,7 @@ package br.com.digitado.web.rest;
 import br.com.digitado.domain.User;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
+import br.com.digitado.security.PasswordPolicy;
 import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.service.MailService;
 import br.com.digitado.service.UserService;
@@ -13,7 +14,6 @@ import br.com.digitado.web.rest.vm.KeyAndPasswordVM;
 import br.com.digitado.web.rest.vm.ManagedUserVM;
 import jakarta.validation.Valid;
 import java.util.*;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -193,19 +193,10 @@ public class AccountResource {
         }
     }
 
-    // Política de senha: mínimo 8 caracteres com pelo menos 1 letra maiúscula,
-    // 1 minúscula, 1 número e 1 caractere especial. Validada aqui no servidor
-    // (registro, troca e redefinição) — o frontend replica a regra só como UX.
-    private static final java.util.regex.Pattern SENHA_FORTE = java.util.regex.Pattern.compile(
-        "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$"
-    );
-
+    // Política de senha centralizada em PasswordPolicy (mínimo 8 caracteres com
+    // maiúscula, minúscula, número e especial) — validada aqui no servidor para
+    // registro, troca e redefinição; o frontend replica a regra só como UX.
     private static boolean isPasswordInvalid(String password) {
-        return (
-            StringUtils.isEmpty(password) ||
-            password.length() < ManagedUserVM.PASSWORD_MIN_LENGTH ||
-            password.length() > ManagedUserVM.PASSWORD_MAX_LENGTH ||
-            !SENHA_FORTE.matcher(password).matches()
-        );
+        return PasswordPolicy.isInvalid(password);
     }
 }

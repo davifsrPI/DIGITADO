@@ -1,5 +1,5 @@
 /* ==========================================================================
-Tela de carregamento INICIAL — aparece antes do bundle React montar
+Tela de carregamento INICIAL - aparece antes do bundle React montar
 (npm start, refresh, logout). Mesmo molde do componente TelaCarregamento:
 fundo escuro, teclas de "DIGITADO" digitando e barra de progresso.
 Precisa ser CSS puro e autossuficiente: nada do app carregou ainda.

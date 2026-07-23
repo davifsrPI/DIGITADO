@@ -19,7 +19,7 @@ interface Palavra {
   id: number;
   texto: string;
   dificuldade: Dificuldade;
-  // false enquanto ninguém jogou a palavra — a dificuldade ainda é provisória
+  // false enquanto ninguém jogou a palavra - a dificuldade ainda é provisória
   temRegistros?: boolean;
   categoria?: string;
 }
@@ -45,7 +45,7 @@ const DIFF_LABELS = LABELS_DIFICULDADE;
 
 export const CriarSala = () => {
   const navigate = useNavigate();
-  // A mesma tela configura salas de turma e duelos 1v1 — o modo vem da URL (?modo=1v1)
+  // A mesma tela configura salas de turma e duelos 1v1 - o modo vem da URL (?modo=1v1)
   const [searchParams] = useSearchParams();
   const is1v1 = searchParams.get('modo') === '1v1';
 
@@ -53,7 +53,7 @@ export const CriarSala = () => {
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [codigo, setCodigo] = useState(generateCode());
-  // Visibilidade — escolha exclusiva do 1v1: pública entra na lista global de duelos;
+  // Visibilidade - escolha exclusiva do 1v1: pública entra na lista global de duelos;
   // privada só entra quem tiver o código
   const [privada, setPrivada] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -138,7 +138,7 @@ export const CriarSala = () => {
           if (seq !== sorteioSeqRef.current) return; // outra reconciliação já começou
           lista = [...lista, ...novas];
         } catch {
-          // backend indisponível (ex: reiniciando): mantém o que já tem e avisa —
+          // backend indisponível (ex: reiniciando): mantém o que já tem e avisa -
           // o professor pode tentar de novo; a partida completa o resto ao iniciar
           falhou = true;
         }
@@ -151,9 +151,9 @@ export const CriarSala = () => {
     }
   };
 
-  // Re-sorteia quando as quantidades mudam (com debounce — os cliques em +/− são rápidos).
+  // Re-sorteia quando as quantidades mudam (com debounce - os cliques em +/− são rápidos).
   // Só na sala de turma: no duelo 1v1 o criador também joga, então ver as palavras
-  // antes da partida seria vantagem injusta — lá o sorteio continua às cegas no início.
+  // antes da partida seria vantagem injusta - lá o sorteio continua às cegas no início.
   useEffect(() => {
     if (is1v1) return;
     if (sorteioDebounceRef.current) clearTimeout(sorteioDebounceRef.current);
@@ -198,7 +198,7 @@ export const CriarSala = () => {
     }
   };
 
-  // Busca palavras no banco com debounce de 500ms — evita requisição a cada tecla digitada
+  // Busca palavras no banco com debounce de 500ms - evita requisição a cada tecla digitada
   const handleWordSearch = (val: string) => {
     setWordSearch(val);
     // Mudou a busca: fecha a caixa de cadastro da palavra anterior
@@ -231,7 +231,7 @@ export const CriarSala = () => {
     }, 500);
   };
 
-  // Adiciona a palavra à lista de extras — evita duplicatas pelo ID
+  // Adiciona a palavra à lista de extras - evita duplicatas pelo ID
   const addWord = (palavra: Palavra) => {
     if (!extraWords.find(w => w.id === palavra.id)) {
       setExtraWords(prev => [...prev, palavra]);
@@ -242,9 +242,9 @@ export const CriarSala = () => {
 
   const removeWord = (id: number) => setExtraWords(prev => prev.filter(w => w.id !== id));
 
-  // Cria a sala via API — tenta até 5 vezes se o código já existir, gerando um novo a cada tentativa.
+  // Cria a sala via API - tenta até 5 vezes se o código já existir, gerando um novo a cada tentativa.
   // Ao criar com sucesso, navega para a tela de espera da sala: o professor vê quem
-  // está entrando e inicia quando quiser — inclusive com a sala vazia.
+  // está entrando e inicia quando quiser - inclusive com a sala vazia.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -270,19 +270,19 @@ export const CriarSala = () => {
           qtdMedio: quantidades.MEDIO,
           qtdDificil: quantidades.DIFICIL,
           palavrasExtrasIds: extraWords.map(w => w.id),
-          // Palavras já sorteadas e conferidas nesta tela — a partida usa exatamente
+          // Palavras já sorteadas e conferidas nesta tela - a partida usa exatamente
           // essas (vazio no 1v1, onde o sorteio continua acontecendo só ao iniciar)
           palavrasIds: sorteadas.map(w => w.id),
         };
         // No 1v1 a configuração também vai para o sessionStorage: o estado de navegação
         // se perde se o criador recarregar a página ou entrar de novo pela lista de
-        // duelos — sem isso, a partida começava com a configuração PADRÃO em vez da
+        // duelos - sem isso, a partida começava com a configuração PADRÃO em vez da
         // escolhida aqui (tempos e quantidades ignorados).
         if (is1v1) {
           try {
             sessionStorage.setItem(`duelo-cfg-${res.data.codigo}`, JSON.stringify(gameConfig));
           } catch {
-            // sessionStorage indisponível (modo privado restrito) — segue só com o state
+            // sessionStorage indisponível (modo privado restrito) - segue só com o state
           }
         }
         navigate(`/sala/${res.data.codigo}`, { state: { isProfessor: true, gameConfig } });
@@ -328,7 +328,7 @@ export const CriarSala = () => {
               {error && <div className="cs-error">{error}</div>}
 
               <form id="sala-form" onSubmit={handleSubmit} className="cs-form">
-                {/* Visibilidade — APENAS no duelo 1v1: pública aparece na lista global;
+                {/* Visibilidade - APENAS no duelo 1v1: pública aparece na lista global;
                     privada exige o código de acesso */}
                 {is1v1 && (
                   <div className="cs-field">
@@ -359,7 +359,7 @@ export const CriarSala = () => {
                   <input
                     id="cs-nome"
                     type="text"
-                    placeholder={is1v1 ? 'Ex: Duelo relâmpago ⚡' : 'Ex: Turma 3A — Aula de Ortografia'}
+                    placeholder={is1v1 ? 'Ex: Duelo relâmpago ⚡' : 'Ex: Turma 3A - Aula de Ortografia'}
                     value={nome}
                     onChange={e => setNome(e.target.value)}
                     required
@@ -381,12 +381,12 @@ export const CriarSala = () => {
                   />
                 </div>
 
-                {/* Tempo de rodada por dificuldade — um slider para cada nível */}
+                {/* Tempo de rodada por dificuldade - um slider para cada nível */}
                 {DIFFS.map(({ key, color, label }) => (
                   <div className="cs-field" key={key}>
                     <label>
                       <span className="cs-diff-dot" style={{ background: color, display: 'inline-block', marginRight: 6 }} />
-                      Tempo — {label}: <span className="cs-range-val">{tempos[key]}s</span>
+                      Tempo - {label}: <span className="cs-range-val">{tempos[key]}s</span>
                     </label>
                     <input
                       type="range"
@@ -402,7 +402,7 @@ export const CriarSala = () => {
               </form>
             </div>
 
-            {/* PASSO 2 — QUANTIDADES */}
+            {/* PASSO 2 - QUANTIDADES */}
             <div className="cs-card">
               <span className="cs-step-label">Passo 2</span>
               <h2 className="cs-step-title">Palavras por dificuldade</h2>
@@ -436,7 +436,7 @@ export const CriarSala = () => {
                 ))}
               </div>
 
-              {/* Palavras sorteadas para a partida — visíveis só na sala de turma
+              {/* Palavras sorteadas para a partida - visíveis só na sala de turma
                   (no 1v1 o criador joga, então ver as palavras seria vantagem) */}
               {!is1v1 && (
                 <div className="cs-sorteadas">
@@ -447,14 +447,14 @@ export const CriarSala = () => {
                   {sorteioAviso && <div className="cs-sorteio-aviso">{sorteioAviso}</div>}
                   {sorteioErro && (
                     <div className="cs-sorteio-aviso">
-                      Não foi possível sortear as palavras — o servidor pode estar reiniciando.{' '}
+                      Não foi possível sortear as palavras - o servidor pode estar reiniciando.{' '}
                       <button type="button" className="cs-sorteio-retry" onClick={() => void reconciliarSorteio(quantidades)}>
                         Tentar novamente
                       </button>
                     </div>
                   )}
                   {sorteadas.length === 0 && !sorteioLoading && !sorteioErro && (
-                    <p className="cs-sorteadas-vazio">Nenhuma palavra sorteada — aumente as quantidades acima.</p>
+                    <p className="cs-sorteadas-vazio">Nenhuma palavra sorteada - aumente as quantidades acima.</p>
                   )}
                   {DIFFS.map(({ key, color, label }) => {
                     const doNivel = sorteadas.filter(w => w.dificuldade === key);
@@ -492,11 +492,11 @@ export const CriarSala = () => {
               )}
             </div>
 
-            {/* PASSO 3 — BUSCA DE PALAVRAS */}
+            {/* PASSO 3 - BUSCA DE PALAVRAS */}
             <div className="cs-card">
               <span className="cs-step-label">Passo 3</span>
               <h2 className="cs-step-title">Adicionar palavras</h2>
-              <p className="cs-step-sub">Busca no banco de dados — adicione palavras extras à sala</p>
+              <p className="cs-step-sub">Busca no banco de dados - adicione palavras extras à sala</p>
 
               <div className="cs-word-search">
                 <input
@@ -568,7 +568,7 @@ export const CriarSala = () => {
                   {cadastro.aberto && (
                     <div className="cs-cadastro-box">
                       <p className="cs-cadastro-titulo">
-                        Cadastrar <strong>&ldquo;{wordSearch.trim().toLowerCase()}&rdquo;</strong> — marque a dificuldade:
+                        Cadastrar <strong>&ldquo;{wordSearch.trim().toLowerCase()}&rdquo;</strong> - marque a dificuldade:
                       </p>
                       <div className="cs-cadastro-difs">
                         {DIFFS.map(({ key, color }) => (
@@ -653,7 +653,7 @@ export const CriarSala = () => {
                 {is1v1 && (
                   <div className="cs-summary-row">
                     <span>Modo</span>
-                    <strong>Duelo 1v1 — {privada ? 'Privado 🔒' : 'Público 🌎'}</strong>
+                    <strong>Duelo 1v1 - {privada ? 'Privado 🔒' : 'Público 🌎'}</strong>
                   </div>
                 )}
                 <div className="cs-summary-row">

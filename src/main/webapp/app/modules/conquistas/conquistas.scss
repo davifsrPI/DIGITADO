@@ -1,4 +1,4 @@
-/* Fundo escuro da página de conquistas — mesmo padrão do lobby/minhas-salas */
+/* Fundo escuro da página de conquistas - mesmo padrão do lobby/minhas-salas */
 body.conquistas-page {
   background: #0f172a !important;
   color: white;
@@ -196,7 +196,7 @@ body.conquistas-page {
   }
 }
 
-/* Conquista bloqueada: apagada, em tons de cinza — como na Steam */
+/* Conquista bloqueada: apagada, em tons de cinza - como na Steam */
 .cq-item--locked {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.08);

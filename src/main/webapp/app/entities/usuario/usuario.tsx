@@ -53,7 +53,7 @@ export const Usuario = () => {
     sortEntities();
   };
 
-  // Aceitar/desativar conta com UM clique: PATCH só com {id, ativo} — a senha e o
+  // Aceitar/desativar conta com UM clique: PATCH só com {id, ativo} - a senha e o
   // restante do cadastro ficam intactos (o backend preserva a senha em updates)
   const toggleAtivo = usuario => async () => {
     await dispatch(partialUpdateEntity({ id: usuario.id, ativo: !usuario.ativo }));
@@ -135,7 +135,7 @@ export const Usuario = () => {
                     <Translate contentKey={`digitadoApp.TipoUsuario.${usuario.tipoUsuario}`} />
                   </td>
                   <td>
-                    {/* Clique alterna ativo/inativo — é assim que o admin aceita contas novas */}
+                    {/* Clique alterna ativo/inativo - é assim que o admin aceita contas novas */}
                     {usuario.ativo ? (
                       <Button color="success" size="sm" onClick={toggleAtivo(usuario)} title="Clique para desativar">
                         Ativo

@@ -7,7 +7,7 @@ import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
 import { falarPalavra } from 'app/modules/sala/utils/falar-palavra';
 
 // Estado do desafio vindo do backend. O desafio é um DITADO: textoAudio serve
-// só para a síntese de voz do navegador e nunca é exibido na tela — a validação
+// só para a síntese de voz do navegador e nunca é exibido na tela - a validação
 // da resposta e o controle de chance única continuam no servidor
 interface PalavraDoDia {
   disponivel: boolean;
@@ -16,7 +16,7 @@ interface PalavraDoDia {
   textoAudio?: string;
   dificuldade?: string;
   categoria?: string;
-  // Dica cadastrada no banco (coluna dica da tabela palavra) — pista para o jogador
+  // Dica cadastrada no banco (coluna dica da tabela palavra) - pista para o jogador
   dica?: string;
   jaTentou: boolean;
   resultado?: Resultado;
@@ -31,9 +31,9 @@ interface Resultado {
   xpGanho: number;
 }
 
-// Card "Palavra do Dia" da tela inicial — um ditado com chance única.
+// Card "Palavra do Dia" da tela inicial - um ditado com chance única.
 // A validação da resposta mora no backend; o front recebe o texto apenas para a
-// síntese de voz e nunca o exibe. O controle de "uma chance" é do servidor —
+// síntese de voz e nunca o exibe. O controle de "uma chance" é do servidor -
 // cookie httpOnly para visitantes e registro no banco para contas logadas.
 export const PalavraDoDia = () => {
   const account = useAppSelector(state => state.authentication.account);
@@ -87,7 +87,7 @@ export const PalavraDoDia = () => {
     <section className="pdd-section">
       <div className="section-label">Desafio diário</div>
       <h2 className="section-title">Palavra do Dia</h2>
-      <p className="pdd-sub">Ouça a palavra e escreva a grafia correta. Todo mundo pode jogar — mas só uma chance por dia!</p>
+      <p className="pdd-sub">Ouça a palavra e escreva a grafia correta. Todo mundo pode jogar - mas só uma chance por dia!</p>
 
       <div className="pdd-card">
         <div className="pdd-meta">
@@ -96,7 +96,7 @@ export const PalavraDoDia = () => {
           <span className="pdd-chip">{desafio.tamanho} letras</span>
         </div>
 
-        {/* Ditado: o jogador ouve a palavra via síntese de voz — nada dela aparece na tela */}
+        {/* Ditado: o jogador ouve a palavra via síntese de voz - nada dela aparece na tela */}
         {!desafio.jaTentou && !resultado && (
           <div className="pdd-audio">
             <button
@@ -110,14 +110,14 @@ export const PalavraDoDia = () => {
               aria-label="Ouvir palavra"
             >
               {/* Alto-falante compartilhado (IconeAudio): mesmo SVG dos botões das
-                  telas de jogo — as ondas pulsam sozinhas enquanto o áudio toca */}
+                  telas de jogo - as ondas pulsam sozinhas enquanto o áudio toca */}
               <IconeAudio tocando={falando} className="pdd-audio-svg" />
             </button>
             <span className="pdd-audio-hint">{falando ? 'Reproduzindo...' : 'Clique para ouvir · pode ouvir quantas vezes quiser'}</span>
           </div>
         )}
 
-        {/* Dica vinda do banco de dados — só aparece se a palavra tiver uma cadastrada */}
+        {/* Dica vinda do banco de dados - só aparece se a palavra tiver uma cadastrada */}
         {desafio.dica && (
           <div className="pdd-dica">
             <span className="pdd-dica-icone">💡</span>

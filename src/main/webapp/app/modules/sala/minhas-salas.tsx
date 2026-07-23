@@ -13,7 +13,7 @@ interface DescricaoSala {
   modo?: '1v1' | 'normal';
 }
 
-// O código de acesso identifica a sala — é a chave primária no banco
+// O código de acesso identifica a sala - é a chave primária no banco
 interface Sala {
   codigo: string;
   nome: string;
@@ -21,7 +21,7 @@ interface Sala {
   ativo: boolean;
 }
 
-// Texto exibível da descrição — tolera o formato antigo (string pura) e o novo (objeto)
+// Texto exibível da descrição - tolera o formato antigo (string pura) e o novo (objeto)
 const textoDescricao = (d: Sala['descricao']): string | null => (typeof d === 'string' ? d : (d?.descricao ?? null));
 
 // A sala é de duelo 1v1? (lido do JSON da descrição)
@@ -38,7 +38,7 @@ export const MinhasSalas = () => {
   // Adiciona classe ao body para aplicar o fundo específico desta página
   useBodyClass('minhas-salas-page');
 
-  // Busca as salas do professor sempre que o filtro muda — passa o parâmetro ativo quando necessário
+  // Busca as salas do professor sempre que o filtro muda - passa o parâmetro ativo quando necessário
   useEffect(() => {
     setLoading(true);
     const params: Record<string, string> = {};

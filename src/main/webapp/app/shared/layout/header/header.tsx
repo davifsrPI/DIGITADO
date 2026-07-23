@@ -27,7 +27,7 @@ const Header = (props: IHeaderProps) => {
 
   const dispatch = useAppDispatch();
 
-  // Consulta no BACKEND se o usuário logado já acertou a palavra do dia — a
+  // Consulta no BACKEND se o usuário logado já acertou a palavra do dia - a
   // resposta vem do banco (nada é guardado/decidido no front). Quem acertou
   // ganha a chama animada ao lado do nome no menu.
   useEffect(() => {
@@ -76,7 +76,7 @@ const Header = (props: IHeaderProps) => {
             <LocaleMenu currentLocale={props.currentLocale} onClick={handleLocaleChange} />
             <AccountMenu
               isAuthenticated={props.isAuthenticated}
-              // Apelido é o nome público do jogador — vence o primeiro nome
+              // Apelido é o nome público do jogador - vence o primeiro nome
               displayName={account?.apelido || account?.firstName || account?.login}
               acertouPalavraDoDia={acertouPalavraDoDia}
             />

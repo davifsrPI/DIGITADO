@@ -1,5 +1,5 @@
 /**
- * Paleta e rótulos OFICIAIS das dificuldades — fonte única para todas as telas
+ * Paleta e rótulos OFICIAIS das dificuldades - fonte única para todas as telas
  * (criação de sala, painel do professor, lobby do jogo...).
  *
  * Antes, o trio verde/âmbar/vermelho e os rótulos "Fácil/Médio/Difícil" estavam

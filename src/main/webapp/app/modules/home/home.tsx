@@ -62,7 +62,7 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* PALAVRA DO DIA — desafio público, uma chance por pessoa (controle no backend) */}
+      {/* PALAVRA DO DIA - desafio público, uma chance por pessoa (controle no backend) */}
       <PalavraDoDia />
 
       {/* COMO FUNCIONA */}
@@ -101,24 +101,8 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* RANKING MUNDIAL — top 5 público, com link para o ranking completo */}
+      {/* RANKING MUNDIAL - top 5 público, com link para o ranking completo */}
       <RankingTop5 />
-
-      {/* CTA */}
-      <section className="cta-section">
-        <div className="cta-card">
-          <h2>Pronto para competir?</h2>
-          <p>Crie sua conta gratuitamente e entre na sua primeira sala em menos de 1 minuto.</p>
-          <div className="cta-buttons">
-            <Link to="/account/register">
-              <button className="btn-primary large">Criar conta grátis</button>
-            </Link>
-            <Link to="/login">
-              <button className="btn-ghost large">Já tenho conta</button>
-            </Link>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

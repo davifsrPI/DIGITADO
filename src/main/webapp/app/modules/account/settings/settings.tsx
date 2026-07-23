@@ -45,7 +45,7 @@ export const SettingsPage = () => {
   const [senhaExclusao, setSenhaExclusao] = useState('');
   const [processando, setProcessando] = useState(false);
 
-  // Exclusão: exige a senha atual (validada no backend) — token roubado não basta.
+  // Exclusão: exige a senha atual (validada no backend) - token roubado não basta.
   // Após excluir, remove o token local e recarrega como visitante.
   const excluirConta = async () => {
     if (!senhaExclusao.trim() || processando) return;
@@ -111,7 +111,7 @@ export const SettingsPage = () => {
               />
             </div>
 
-            {/* Apelido: o nome público do jogador — é o que os outros veem no
+            {/* Apelido: o nome público do jogador - é o que os outros veem no
                 ranking, no placar das salas e no pódio */}
             <ValidatedField
               className="st-field"

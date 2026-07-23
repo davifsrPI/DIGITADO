@@ -59,7 +59,7 @@ export const App = () => {
           <Footer />
         </div>
         {/* Consentimento de cookies (LGPD): banner na primeira visita e modal
-            "Gerenciar Cookies" — nenhum rastreador carrega sem consentimento */}
+            "Gerenciar Cookies" - nenhum rastreador carrega sem consentimento */}
         <CookieConsentBanner />
       </div>
     </BrowserRouter>

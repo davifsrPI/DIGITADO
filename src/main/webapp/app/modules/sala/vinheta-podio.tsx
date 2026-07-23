@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faDrum, faFlagCheckered, faMedal, faTrophy } from '@fortawesome/free-solid-svg-icons';
 import { PlacarEntry } from './hooks/useSalaWebSocket';
 
 interface Props {
   placar: PlacarEntry[];
-  // Login do usuário atual — destaca a coluna dele no pódio; omitido na visão do professor
+  // Login do usuário atual - destaca a coluna dele no pódio; omitido na visão do professor
   meuLogin?: string;
-  // Chamado quando a vinheta termina — o pai então mostra o placar final completo
+  // Chamado quando a vinheta termina - o pai então mostra o placar final completo
   onFim: () => void;
 }
 
@@ -19,10 +21,10 @@ const FASE_RUFAR = 4;
 const FASE_PRIMEIRO = 5;
 
 // Colunas do pódio na ordem visual 2º-1º-3º (o campeão fica no centro, mais alto)
-const COLUNAS: Array<{ pos: number; classe: string; medalha: string; revelaFase: number }> = [
-  { pos: 1, classe: 'vp-col-2', medalha: '🥈', revelaFase: FASE_SEGUNDO },
-  { pos: 0, classe: 'vp-col-1', medalha: '🥇', revelaFase: FASE_PRIMEIRO },
-  { pos: 2, classe: 'vp-col-3', medalha: '🥉', revelaFase: FASE_TERCEIRO },
+const COLUNAS: Array<{ pos: number; classe: string; medalha: React.ReactNode; revelaFase: number }> = [
+  { pos: 1, classe: 'vp-col-2', medalha: <FontAwesomeIcon icon={faMedal} style={{ color: '#94a3b8' }} />, revelaFase: FASE_SEGUNDO },
+  { pos: 0, classe: 'vp-col-1', medalha: <FontAwesomeIcon icon={faMedal} style={{ color: '#fbbf24' }} />, revelaFase: FASE_PRIMEIRO },
+  { pos: 2, classe: 'vp-col-3', medalha: <FontAwesomeIcon icon={faMedal} style={{ color: '#b45309' }} />, revelaFase: FASE_TERCEIRO },
 ];
 
 const CORES_CONFETE = ['#fbbf24', '#6366f1', '#4ade80', '#f87171', '#38bdf8'];
@@ -36,7 +38,7 @@ const CORES_CONFETE = ['#fbbf24', '#6366f1', '#4ade80', '#f87171', '#38bdf8'];
 export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
   const top3 = placar.slice(0, 3);
   const [fase, setFase] = useState(FASE_SLAM);
-  // Ref para o callback — a linha do tempo é agendada uma única vez na montagem
+  // Ref para o callback - a linha do tempo é agendada uma única vez na montagem
   const onFimRef = useRef(onFim);
   onFimRef.current = onFim;
 
@@ -51,12 +53,12 @@ export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
   ).current;
 
   useEffect(() => {
-    // Sem ninguém no placar não há o que revelar — encerra logo após o "fim de jogo"
+    // Sem ninguém no placar não há o que revelar - encerra logo após o "fim de jogo"
     if (top3.length === 0) {
       const id = setTimeout(() => onFimRef.current(), 1400);
       return () => clearTimeout(id);
     }
-    // Linha do tempo da vinheta — pula a revelação de posições que não existem.
+    // Linha do tempo da vinheta - pula a revelação de posições que não existem.
     // Depois do campeão a vinheta fica em festa até o clique em "Continuar".
     const passos: Array<{ t: number; fase: number }> = [];
     let t = 1100;
@@ -79,7 +81,11 @@ export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
 
   return (
     <div className="vp-overlay">
-      {fase === FASE_SLAM && <div className="vp-slam">🏁 FIM DE JOGO!</div>}
+      {fase === FASE_SLAM && (
+        <div className="vp-slam">
+          <FontAwesomeIcon icon={faFlagCheckered} /> FIM DE JOGO!
+        </div>
+      )}
 
       {fase === FASE_SUSPENSE && (
         <div className="vp-suspense">
@@ -89,9 +95,12 @@ export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
 
       {fase >= FASE_TERCEIRO && (
         <div className="vp-podio-area">
-          <h2 className="vp-titulo">🏆 Pódio da partida</h2>
+          <h2 className="vp-titulo">
+            <FontAwesomeIcon icon={faTrophy} style={{ color: '#fbbf24' }} /> Pódio da partida
+          </h2>
           <div className={`vp-rufar${fase === FASE_RUFAR ? ' vp-rufar--on' : ''}`}>
-            {fase === FASE_RUFAR ? '🥁 E o grande campeão é...' : ' '}
+            {fase === FASE_RUFAR ? <FontAwesomeIcon icon={faDrum} /> : null}
+            {fase === FASE_RUFAR ? ' E o grande campeão é...' : ' '}
           </div>
           <div className="vp-podio">
             {COLUNAS.map(({ pos, classe, medalha, revelaFase }) => {

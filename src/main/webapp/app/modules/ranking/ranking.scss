@@ -1,4 +1,4 @@
-// Remove o card branco padrão do layout — a página tem fundo escuro próprio
+// Remove o card branco padrão do layout - a página tem fundo escuro próprio
 body.ranking-page .jh-card {
   background: transparent !important;
   box-shadow: none !important;
@@ -104,7 +104,7 @@ body.ranking-page .view-container {
 /* ─── Planeta girando (CSS puro, sem emoji) ───
    Uma esfera com os "continentes" deslizando em loop atrás da máscara circular.
    O mapa tem 200% de largura com o padrão duplicado na segunda metade: quando o
-   translateX chega em -50%, a imagem é idêntica ao início — loop perfeito e fluido. */
+   translateX chega em -50%, a imagem é idêntica ao início - loop perfeito e fluido. */
 .rk-planeta {
   position: relative;
   width: 62px;
@@ -140,7 +140,7 @@ body.ranking-page .view-container {
   will-change: transform;
 }
 
-/* Sombreamento de esfera: lado escuro + reflexo de luz — dá o volume 3D */
+/* Sombreamento de esfera: lado escuro + reflexo de luz - dá o volume 3D */
 .rk-planeta-luz {
   position: absolute;
   inset: 0;

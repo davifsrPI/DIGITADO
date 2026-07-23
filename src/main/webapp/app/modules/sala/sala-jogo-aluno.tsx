@@ -9,7 +9,7 @@ import { AmpulhetaAnimada } from './ampulheta-animada';
 import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
 import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
 
-// Configuração enviada ao iniciar a partida — mesmo shape usado pela tela do professor
+// Configuração enviada ao iniciar a partida - mesmo shape usado pela tela do professor
 interface GameConfig {
   tempoFacil: number;
   tempoMedio: number;
@@ -58,7 +58,7 @@ interface Props {
 
 // Tela de espera do CRIADOR do duelo 1v1 (componente próprio para não inflar a
 // função principal): compartilha o código, mostra a configuração que valerá na
-// partida, vê o oponente chegar e inicia o duelo — jogando junto
+// partida, vê o oponente chegar e inicia o duelo - jogando junto
 const EsperaCriadorDuelo: React.FC<{
   estado: EstadoJogo | null;
   conectado: boolean;
@@ -127,10 +127,10 @@ export const SalaJogoAluno: React.FC<Props> = ({
   const [validacaoLocal, setValidacaoLocal] = useState<ReturnType<typeof validarResposta> | null>(null);
   // Ranking exibido quando o tempo da rodada acaba (mesma tela que o professor vê)
   const [showRanking, setShowRanking] = useState(false);
-  // Contagem regressiva do ranking — usada SÓ pelo criador do duelo, cujo cliente
+  // Contagem regressiva do ranking - usada SÓ pelo criador do duelo, cujo cliente
   // avança para a próxima palavra (nas salas de turma quem avança é o professor)
   const [rankingTimer, setRankingTimer] = useState(0);
-  // Pontuação/posição "congeladas" no início da rodada — só atualizam quando o tempo acaba,
+  // Pontuação/posição "congeladas" no início da rodada - só atualizam quando o tempo acaba,
   // para o aluno não descobrir o resultado dos colegas pelo placar enquanto digita
   const [scoreCongelado, setScoreCongelado] = useState<{ pontos: number; posicao: number }>({ pontos: 0, posicao: -1 });
   // Vinheta de suspense com o pódio, exibida uma única vez quando a partida encerra
@@ -140,10 +140,10 @@ export const SalaJogoAluno: React.FC<Props> = ({
   const burlasRef = useRef(0);
   const palavraAtualId = useRef<number | null>(null);
   const rankingTriggeredRef = useRef(false);
-  // Posições da rodada anterior no top 5 — usado pela animação de ultrapassagem
+  // Posições da rodada anterior no top 5 - usado pela animação de ultrapassagem
   const posRef = useRef<Map<string, number>>(new Map());
 
-  // Detecta mudança de palavra e reseta o estado de resposta — fala a palavra automaticamente
+  // Detecta mudança de palavra e reseta o estado de resposta - fala a palavra automaticamente
   useEffect(() => {
     if (!estado) return;
     if (estado.tipo === 'NOVA_PALAVRA' || estado.tipo === 'INICIADA') {
@@ -224,7 +224,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
   }, [tempoRestante, ativo, estado]);
 
   // APENAS no duelo 1v1: se TODOS os conectados já responderam a palavra, vai
-  // direto para a tela de correção — não faz sentido os dois ficarem olhando o
+  // direto para a tela de correção - não faz sentido os dois ficarem olhando o
   // relógio depois de já terem digitado. Nas salas de turma o comportamento não
   // muda (a rodada corre até o fim para quem ainda está digitando).
   useEffect(() => {
@@ -243,7 +243,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
   }, [duelo1v1, ativo, estado, criadorDuelo]);
 
   // Avanço automático do duelo: o cliente do CRIADOR conta os segundos do ranking
-  // e pede a próxima palavra ao servidor — o oponente só recebe o broadcast
+  // e pede a próxima palavra ao servidor - o oponente só recebe o broadcast
   useEffect(() => {
     if (!criadorDuelo || !showRanking) return;
     if (rankingTimer <= 0) {
@@ -336,7 +336,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Só o criador do duelo vê a contagem — é o cliente dele que avança a rodada */}
+        {/* Só o criador do duelo vê a contagem - é o cliente dele que avança a rodada */}
         {criadorDuelo && (
           <div className="sj-ranking-countdown">
             <span className="sj-ranking-next-label">Próxima palavra em</span>
@@ -364,7 +364,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
             palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
           </div>
         </div>
-        {/* Pontuação congelada no início da rodada — só atualiza quando o tempo acaba */}
+        {/* Pontuação congelada no início da rodada - só atualiza quando o tempo acaba */}
         <div className="sj-score-block">
           <div className="sj-score-pts">{scoreCongelado.pontos} pts</div>
           {scoreCongelado.posicao >= 0 && <div className="sj-score-pos">{scoreCongelado.posicao + 1}º lugar</div>}

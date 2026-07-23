@@ -4,6 +4,7 @@ import br.com.digitado.domain.Usuario;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.AuthoritiesConstants;
+import br.com.digitado.security.PasswordPolicy;
 import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
@@ -221,8 +222,14 @@ public class UsuarioResource {
      */
     @PostMapping("/alterar-senha")
     public ResponseEntity<Void> alterarSenha(@RequestBody AlterarSenhaVM vm) {
-        if (vm == null || vm.novaSenha() == null || vm.novaSenha().length() < 4 || vm.novaSenha().length() > 100) {
-            throw new BadRequestAlertException("Nova senha inválida (de 4 a 100 caracteres)", ENTITY_NAME, "senhainvalida");
+        // Mesma política forte da conta principal (PasswordPolicy): esta senha
+        // também confirma a exclusão LGPD da conta — não pode ser mais fraca
+        if (vm == null || PasswordPolicy.isInvalid(vm.novaSenha())) {
+            throw new BadRequestAlertException(
+                "Nova senha inválida: mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial",
+                ENTITY_NAME,
+                "senhainvalida"
+            );
         }
         Usuario meu = SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)

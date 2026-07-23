@@ -21,7 +21,7 @@ interface Props {
 
 // Teclado na tela para o celular (só aparece em telas touch, via CSS pointer:coarse).
 // Como o teclado nativo fica suprimido pelo inputMode="none" do campo, este é o
-// único jeito de digitar no touch — sem corretor ortográfico no caminho.
+// único jeito de digitar no touch - sem corretor ortográfico no caminho.
 // As teclas ´ ` ^ ~ funcionam como teclas mortas do ABNT2: toca o acento
 // (fica marcado como pendente) e depois a vogal para compor á, ã, ê...
 export const TecladoVirtual: React.FC<Props> = ({ onLetra, onApagar, disabled }) => {
@@ -38,7 +38,7 @@ export const TecladoVirtual: React.FC<Props> = ({ onLetra, onApagar, disabled })
       const composto = COMPOR[acentoPendente]?.[letra];
       setAcentoPendente(null);
       // Acento + letra incompatível (ex: ~ + t): descarta o acento e insere a
-      // letra pura — mesmo comportamento tolerante do teclado físico
+      // letra pura - mesmo comportamento tolerante do teclado físico
       onLetra(composto ?? letra);
     } else {
       onLetra(letra);
