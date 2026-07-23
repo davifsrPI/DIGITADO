@@ -84,37 +84,29 @@ public class JogoSalaService {
 
     // Resultado do processamento de uma desconexão:
     // salasComSaida: salas de onde o jogador foi removido (quem ficou precisa ver o estado novo);
-    // salasEncerradasVazias: salas cuja partida JÁ TERMINOU e ficaram sem ninguém —
-    // o chamador deve fechá-las no banco (ativo = false).
-    public record ResultadoDesconexao(List<String> salasComSaida, List<String> salasEncerradasVazias) {}
+    // salasVazias: salas que ficaram SEM NENHUM participante após a saída — o chamador deve
+    // fechá-las no banco (ativo = false). Vale para qualquer estado: lobby, em jogo ou encerrada.
+    public record ResultadoDesconexao(List<String> salasComSaida, List<String> salasVazias) {}
 
     // Processa a desconexão de um usuário: remove-o de todas as salas em que estava
-    // conectado e identifica as salas encerradas que ficaram vazias. O estado em memória
-    // dessas salas é descartado — a partida acabou e não há mais ninguém nela.
+    // conectado e identifica as que ficaram vazias. Assim que sai o último participante,
+    // a sala é sinalizada para fechamento (ativo = false, feito pelo listener) e seu estado
+    // em memória é descartado — independentemente de estar no lobby, em jogo ou encerrada.
     public ResultadoDesconexao aoDesconectar(String login) {
         List<String> salasComSaida = new ArrayList<>();
-        List<String> salasEncerradasVazias = new ArrayList<>();
-        // Salas que nunca saíram do lobby (AGUARDANDO) e ficaram sem ninguém: não há
-        // partida nem placar a preservar — descartar evita que o mapa de jogos cresça
-        // para sempre com salas criadas e abandonadas (quem voltar recria o estado
-        // vazio no próximo "entrar", sem perder nada)
-        List<String> salasAguardandoVazias = new ArrayList<>();
+        List<String> salasVazias = new ArrayList<>();
         jogos.forEach((codigo, jogo) -> {
             if (jogo.getAlunosConectados().containsKey(login)) {
                 jogo.removerAluno(login);
                 salasComSaida.add(codigo);
-            }
-            if (jogo.totalConectados() == 0) {
-                if ("ENCERRADA".equals(jogo.getTipo())) {
-                    salasEncerradasVazias.add(codigo);
-                } else if ("AGUARDANDO".equals(jogo.getTipo())) {
-                    salasAguardandoVazias.add(codigo);
+                // Saiu o último → sala vazia: fecha no banco e descarta o estado em memória
+                if (jogo.totalConectados() == 0) {
+                    salasVazias.add(codigo);
                 }
             }
         });
-        salasEncerradasVazias.forEach(jogos::remove);
-        salasAguardandoVazias.forEach(jogos::remove);
-        return new ResultadoDesconexao(salasComSaida, salasEncerradasVazias);
+        salasVazias.forEach(jogos::remove);
+        return new ResultadoDesconexao(salasComSaida, salasVazias);
     }
 
     // Descarta o estado em memória de uma sala fechada/excluída em definitivo

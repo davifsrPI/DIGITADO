@@ -40,12 +40,12 @@ export const Home = () => {
 
         <div className="hero-actions">
           {account?.login ? (
-            // Logado: os dois botões levam direto para a criação de sala
+            // Logado: os dois botões levam para o lobby (lista de salas), não direto para a criação
             <>
-              <Link to="/sala/new">
+              <Link to="/lobby">
                 <button className="btn-primary">Começar agora</button>
               </Link>
-              <Link to="/sala/new">
+              <Link to="/lobby">
                 <button className="btn-ghost">Entrar</button>
               </Link>
             </>

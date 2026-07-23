@@ -156,7 +156,6 @@ export const SettingsPage = () => {
 
         {/* ── Meus dados (LGPD art. 18): exclusão da conta ── */}
         <div className="st-card st-lgpd">
-          <h3 className="st-lgpd-titulo">Meus dados (LGPD)</h3>
           <p className="st-lgpd-sub">Você pode excluir sua conta e todos os seus dados definitivamente.</p>
 
           {!confirmandoExclusao ? (
