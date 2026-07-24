@@ -1,8 +1,10 @@
 # This file is inspired by https://github.com/alexkaratarakis/gitattributes
 #
-# Auto detect text files and perform LF normalization
+# Auto detect text files e FORÇA LF no working tree em qualquer máquina/clone
+# (eol=lf sobrepõe o core.autocrlf local — o projeto usa prettier com endOfLine: lf,
+#  então CRLF quebraria o build; arquivos .bat/.cmd/.ps1 abaixo continuam CRLF).
 # http://davidlaing.com/2012/09/19/customise-your-gitattributes-to-become-a-git-ninja/
-* text=auto
+* text=auto eol=lf
 
 # The above will handle all files NOT found below
 # These files are text and should be normalized (Convert crlf => lf)
