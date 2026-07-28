@@ -1,6 +1,6 @@
 <div align="center">
 
-# ✍️ DIGITADO
+# DIGITADO
 
 **Plataforma gamificada de ditado ortográfico em tempo real.**
 Ouça a palavra, escreva a grafia correta, ganhe XP e suba no ranking — sozinho, em duelo 1v1 ou numa sala com a turma inteira.
@@ -15,28 +15,28 @@ Ouça a palavra, escreva a grafia correta, ganhe XP e suba no ranking — sozinh
 
 ---
 
-## 📖 Sobre o projeto
+## Sobre o projeto
 
 O **DIGITADO** é uma aplicação web full-stack pensada para o contexto escolar. Um professor cria salas de jogo, os alunos entram por um código e, em tempo real, disputam quem escreve as palavras ditadas de forma correta e mais rápida. Cada acerto rende pontos e XP, desbloqueia conquistas e movimenta o ranking mundial.
 
 O sistema nasceu de um modelo de domínio em [JDL](DIGITADO.jdl) e foi gerado com **JHipster**, combinando um backend **Spring Boot** com um frontend **React**. A comunicação das partidas acontece por **WebSocket (STOMP/SockJS)**, garantindo placar e feedback instantâneos.
 
-## ✨ Funcionalidades
+## Funcionalidades
 
-| Recurso                          | Descrição                                                                                                                                                                                    |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🏫 **Salas em tempo real**       | O professor cria uma sala, compartilha o código, e os alunos entram e jogam juntos. Palavras avançam automaticamente com tempo por dificuldade; placar e estatísticas ao vivo via WebSocket. |
-| ⚔️ **Duelo 1v1**                 | Desafio direto entre dois jogadores.                                                                                                                                                         |
-| 📅 **Palavra do Dia**            | Desafio público diário — uma chance por pessoa (controle no servidor por conta ou cookie). Acertar rende XP.                                                                                 |
-| 🏆 **Ranking mundial**           | Os melhores jogadores por XP acumulado, com destaque para o top 5 na home.                                                                                                                   |
-| 🏅 **Conquistas (estilo Steam)** | Medalhas desbloqueadas conforme o desempenho, com recompensa de XP.                                                                                                                          |
-| 🔊 **Ditado por áudio**          | A palavra é falada via síntese de voz do navegador — o texto nunca aparece na tela.                                                                                                          |
-| 🛡️ **Campo anti-cola**           | O input bloqueia colar, arrastar, autocompletar e correção ortográfica; só a digitação real (física ou teclado virtual) é aceita.                                                            |
-| 🔤 **Banco de palavras**         | Palavras por dificuldade, categoria e dica, com sugestões enviadas pelos jogadores.                                                                                                          |
-| 🔐 **LGPD**                      | O titular pode exportar e excluir seus dados; há rotina de retenção automática.                                                                                                              |
-| 📊 **Observabilidade**           | Métricas Prometheus, dashboards Grafana e alertas — ver [MONITORING.md](MONITORING.md).                                                                                                      |
+| Recurso                 | Descrição                                                                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Salas em tempo real** | O professor cria uma sala, compartilha o código, e os alunos entram e jogam juntos. Palavras avançam automaticamente com tempo por dificuldade; placar ao vivo. |
+| **Duelo 1v1**           | Desafio direto entre dois jogadores.                                                                                                                            |
+| **Palavra do Dia**      | Desafio público diário — uma chance por pessoa (controle no servidor por conta ou cookie). Acertar rende XP.                                                    |
+| **Ranking mundial**     | Os melhores jogadores por XP acumulado, com destaque para o top 5 na home.                                                                                      |
+| **Conquistas**          | Medalhas desbloqueadas conforme o desempenho, com recompensa de XP.                                                                                             |
+| **Ditado por áudio**    | A palavra é falada via síntese de voz do navegador — o texto nunca aparece na tela.                                                                             |
+| **Campo anti-cola**     | O input bloqueia colar, arrastar, autocompletar e correção ortográfica; só a digitação real (física ou teclado virtual) é aceita.                               |
+| **Banco de palavras**   | Palavras por dificuldade, categoria e dica, com sugestões enviadas pelos jogadores.                                                                             |
+| **LGPD**                | O titular pode exportar e excluir seus dados; há rotina de retenção automática.                                                                                 |
+| **Observabilidade**     | Métricas Prometheus, dashboards Grafana e alertas — ver [MONITORING.md](MONITORING.md).                                                                         |
 
-## 🧱 Stack tecnológica
+## Stack tecnológica
 
 **Backend**
 
@@ -56,7 +56,7 @@ O sistema nasceu de um modelo de domínio em [JDL](DIGITADO.jdl) e foi gerado co
 - Docker Compose (app + serviços) · Prometheus / Grafana / Alertmanager
 - SonarQube · ESLint · Prettier · Husky (pre-commit) · Jest · JUnit + Testcontainers
 
-## 🗺️ Modelo de domínio
+## Modelo de domínio
 
 ```mermaid
 erDiagram
@@ -79,7 +79,7 @@ erDiagram
 
 O modelo completo, incluindo enums (`Dificuldade`, `TipoUsuario`, `StatusAtividade`, `TipoErro`…), está em [`DIGITADO.jdl`](DIGITADO.jdl).
 
-## 🔐 Segurança
+## Segurança
 
 Autenticação por **JWT** (stateless), com autorização baseada em papéis: `ROLE_ADMIN`, `ROLE_USER` e `ROLE_ANONYMOUS`.
 
@@ -90,42 +90,172 @@ Autenticação por **JWT** (stateless), com autorização baseada em papéis: `R
 
 As regras ficam em [`SecurityConfiguration.java`](src/main/java/br/com/digitado/config/SecurityConfiguration.java).
 
-## 🚀 Começando
+---
 
-### Pré-requisitos
+## Guia passo a passo (do zero até rodar)
 
-- **JDK 17**
-- **MySQL** em execução (local na porta `3306`, ou via Docker — veja abaixo)
-- Node/npm são instalados automaticamente pelo build; use os wrappers `./mvnw` e `./npmw`.
+Este guia parte de uma máquina sem nada instalado e termina com o back-end e o front-end rodando. Os comandos são mostrados para **Windows (PowerShell)** e, quando diferentes, para **macOS/Linux**.
 
-### Ambiente de desenvolvimento
+### Passo 1 — Instalar as ferramentas de base
 
-O perfil `dev` aponta para um MySQL local e cria o schema `DIGITADO` automaticamente (config em [`application-dev.yml`](src/main/resources/config/application-dev.yml)). As credenciais padrão podem ser sobrescritas por variáveis de ambiente (`SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD`).
+Você precisa de quatro coisas: **Git**, **JDK 17**, **Node.js (que traz o npm)** e um **MySQL** (ou Docker).
 
-Suba **backend** e **frontend** em terminais separados:
+#### 1.1. Git
+
+- Windows: baixe em <https://git-scm.com/download/win> e instale (avance com "Next" e conclua com "Finish").
+- macOS: `brew install git` · Linux (Debian/Ubuntu): `sudo apt install git`
+
+Verifique:
 
 ```bash
-./mvnw
+git --version
 ```
+
+#### 1.2. JDK 17
+
+Baixe o **Java 17** (Temurin/Adoptium é uma boa opção): <https://adoptium.net/temurin/releases/?version=17>. Instale e confirme:
 
 ```bash
-./npmw start
+java -version
 ```
 
-- Backend (API): <http://localhost:8080>
-- Frontend com hot-reload: <http://localhost:9000>
+A saída deve mostrar `17.x`. Se mostrar outra versão, ajuste a variável `JAVA_HOME` para apontar para o JDK 17.
 
-Contas semeadas para desenvolvimento: **`admin` / `admin`** e **`user` / `user`**.
+#### 1.3. Node.js e npm
 
-> 💡 Sem MySQL instalado? Suba um container: `docker compose -f src/main/docker/mysql.yml up -d`
+O **npm** já vem junto com o Node.js — instalar o Node instala o npm. Use a versão **22 LTS** (a testada no projeto é a `v22.15.0`).
 
-### Build de produção
+- **Windows/macOS:** baixe o instalador LTS em <https://nodejs.org/> e execute.
+- **macOS (Homebrew):** `brew install node@22`
+- **Linux/macOS (recomendado, com nvm):**
+  ```bash
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+  nvm install 22
+  nvm use 22
+  ```
+
+Verifique as duas ferramentas:
+
+```bash
+node -v
+npm -v
+```
+
+> Observação: o projeto também traz o wrapper `npmw`, que baixa e fixa a versão correta do npm automaticamente. Ainda assim, ter o Node instalado globalmente torna o passo a passo mais simples.
+
+#### 1.4. MySQL (ou Docker)
+
+Você tem duas opções — escolha **uma**.
+
+- **Opção A (mais fácil): Docker.** Instale o [Docker Desktop](https://www.docker.com/products/docker-desktop/). Não precisa instalar MySQL à mão; um container é subido no Passo 4.
+- **Opção B: MySQL local.** Instale o **MySQL 8+** em <https://dev.mysql.com/downloads/installer/> e deixe o serviço rodando na porta padrão `3306`.
+
+### Passo 2 — Obter o código
+
+```bash
+git clone https://github.com/davifsrPI/DIGITADO.git
+cd DIGITADO
+```
+
+### Passo 3 — Instalar as dependências do frontend
+
+Na raiz do projeto, baixe as dependências do npm (só é necessário na primeira vez e sempre que o `package.json` mudar):
+
+```bash
+npm install
+```
+
+Alternativa com o wrapper (fixa a versão do npm):
+
+- Windows (PowerShell): `.\npmw.cmd install`
+- macOS/Linux: `./npmw install`
+
+### Passo 4 — Preparar o banco de dados
+
+**Se escolheu Docker (Opção A):** suba o MySQL em container:
+
+```bash
+docker compose -f src/main/docker/mysql.yml up -d
+```
+
+**Se escolheu MySQL local (Opção B):** o perfil de desenvolvimento cria o schema `DIGITADO` automaticamente e, por padrão, conecta com usuário `root` / senha `31415` (definido em [`application-dev.yml`](src/main/resources/config/application-dev.yml)). Para usar outras credenciais, defina variáveis de ambiente **antes** de subir o back-end:
+
+- Windows (PowerShell):
+  ```powershell
+  $env:SPRING_DATASOURCE_USERNAME = "root"
+  $env:SPRING_DATASOURCE_PASSWORD = "suaSenha"
+  ```
+- macOS/Linux:
+  ```bash
+  export SPRING_DATASOURCE_USERNAME=root
+  export SPRING_DATASOURCE_PASSWORD=suaSenha
+  ```
+
+### Passo 5 — Rodar o back-end (Spring Boot)
+
+Em um terminal, na raiz do projeto:
+
+- Windows (PowerShell): `.\mvnw.cmd`
+- macOS/Linux: `./mvnw`
+
+Na primeira execução o Maven baixa as dependências (pode levar alguns minutos). O back-end está pronto quando aparecer no log:
+
+```
+Application 'DIGITADO' is running! Access URLs:
+    Local:    http://localhost:8080/
+```
+
+Deixe **este terminal aberto** — ele mantém a API rodando na porta **8080**.
+
+### Passo 6 — Rodar o front-end (React)
+
+Abra um **segundo terminal** (sem fechar o do back-end), na raiz do projeto:
+
+- Windows (PowerShell): `.\npmw.cmd start`
+- macOS/Linux: `./npmw start` (ou simplesmente `npm start`)
+
+O webpack compila e abre o navegador em **<http://localhost:9000>**, com hot-reload (a página recarrega sozinha ao salvar arquivos). O front-end faz proxy das chamadas `/api` para o back-end na 8080.
+
+### Passo 7 — Acessar e entrar
+
+Abra <http://localhost:9000> e faça login com uma das contas de desenvolvimento já cadastradas:
+
+| Usuário | Senha   | Papel      |
+| ------- | ------- | ---------- |
+| `admin` | `admin` | ROLE_ADMIN |
+| `user`  | `user`  | ROLE_USER  |
+
+Pronto — você pode criar uma sala, jogar a Palavra do Dia e explorar o ranking.
+
+### Resumo dos comandos
+
+```bash
+# 1. clonar
+git clone https://github.com/davifsrPI/DIGITADO.git
+cd DIGITADO
+
+# 2. dependências do front
+npm install
+
+# 3. banco (via Docker)
+docker compose -f src/main/docker/mysql.yml up -d
+
+# 4. back-end (terminal 1)   ->  http://localhost:8080
+./mvnw            # Windows: .\mvnw.cmd
+
+# 5. front-end (terminal 2)  ->  http://localhost:9000
+npm start         # ou ./npmw start  (Windows: .\npmw.cmd start)
+```
+
+---
+
+## Build de produção
 
 ```bash
 ./mvnw -Pprod clean verify
 ```
 
-Gera um jar único (front minificado embutido). Para executar:
+Gera um jar único com o front-end minificado embutido. Para executar:
 
 ```bash
 java -jar target/*.jar
@@ -133,7 +263,7 @@ java -jar target/*.jar
 
 Acesse <http://localhost:8080>. Em produção, informe o segredo JWT e as credenciais do banco por variáveis de ambiente.
 
-## ✅ Testes
+## Testes
 
 ```bash
 # Testes de backend (JUnit + Testcontainers)
@@ -145,7 +275,7 @@ Acesse <http://localhost:8080>. Em produção, informe o segredo JWT e as creden
 ./npmw test
 ```
 
-## 📁 Estrutura do projeto
+## Estrutura do projeto
 
 ```
 DIGITADO/
@@ -165,7 +295,7 @@ DIGITADO/
 └── DIGITADO.jdl           # Modelo de domínio
 ```
 
-## 📈 Monitoramento
+## Monitoramento
 
 Stack de observabilidade com Prometheus, Grafana e Alertmanager. Consulte **[MONITORING.md](MONITORING.md)** para subir e configurar. Para iniciar os serviços:
 
@@ -173,11 +303,11 @@ Stack de observabilidade com Prometheus, Grafana e Alertmanager. Consulte **[MON
 docker compose -f src/main/docker/monitoring.yml up -d
 ```
 
-## 🛡️ LGPD
+## LGPD
 
 O DIGITADO trata dados pessoais conforme a LGPD: o titular pode **exportar** (`GET /api/account/export`) e **excluir** (`DELETE /api/account`) seus dados, e um job agendado **anonimiza automaticamente** as tentativas antigas (retenção mínima de dados).
 
-## 🤝 Contribuindo
+## Contribuindo
 
 Os hooks de pre-commit (Husky) rodam Prettier e lint automaticamente. Mantenha os testes verdes (`./mvnw verify` e `./npmw test`) antes de abrir um PR.
 
