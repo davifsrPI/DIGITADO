@@ -1,249 +1,188 @@
-<<<<<<< HEAD
+<div align="center">
 
-# DIGITADO
+# ✍️ DIGITADO
 
-This application was generated using JHipster 8.11.0, you can find documentation and help at [https://www.jhipster.tech/documentation-archive/v8.11.0](https://www.jhipster.tech/documentation-archive/v8.11.0).
+**Plataforma gamificada de ditado ortográfico em tempo real.**
+Ouça a palavra, escreva a grafia correta, ganhe XP e suba no ranking — sozinho, em duelo 1v1 ou numa sala com a turma inteira.
 
-## Project Structure
+[![Java](https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.7-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![JHipster](https://img.shields.io/badge/JHipster-8.11.0-3E8ACC?logo=jhipster&logoColor=white)](https://www.jhipster.tech/)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![MySQL](https://img.shields.io/badge/MySQL-9.2-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 
-Node is required for generation and recommended for development. `package.json` is always generated for a better development experience with prettier, commit hooks, scripts and so on.
+</div>
 
-In the project root, JHipster generates configuration files for tools like git, prettier, eslint, husky, and others that are well known and you can find references in the web.
+---
 
-`/src/*` structure follows default Java structure.
+## 📖 Sobre o projeto
 
-- `.yo-rc.json` - Yeoman configuration file
-  JHipster configuration is stored in this file at `generator-jhipster` key. You may find `generator-jhipster-*` for specific blueprints configuration.
-- `.yo-resolve` (optional) - Yeoman conflict resolver
-  Allows to use a specific action when conflicts are found skipping prompts for files that matches a pattern. Each line should match `[pattern] [action]` with pattern been a [Minimatch](https://github.com/isaacs/minimatch#minimatch) pattern and action been one of skip (default if omitted) or force. Lines starting with `#` are considered comments and are ignored.
-- `.jhipster/*.json` - JHipster entity configuration files
+O **DIGITADO** é uma aplicação web full-stack pensada para o contexto escolar. Um professor cria salas de jogo, os alunos entram por um código e, em tempo real, disputam quem escreve as palavras ditadas de forma correta e mais rápida. Cada acerto rende pontos e XP, desbloqueia conquistas e movimenta o ranking mundial.
 
-- `npmw` - wrapper to use locally installed npm.
-  JHipster installs Node and npm locally using the build tool by default. This wrapper makes sure npm is installed locally and uses it avoiding some differences different versions can cause. By using `./npmw` instead of the traditional `npm` you can configure a Node-less environment to develop or test your application.
-- `/src/main/docker` - Docker configurations for the application and services that the application depends on
+O sistema nasceu de um modelo de domínio em [JDL](DIGITADO.jdl) e foi gerado com **JHipster**, combinando um backend **Spring Boot** com um frontend **React**. A comunicação das partidas acontece por **WebSocket (STOMP/SockJS)**, garantindo placar e feedback instantâneos.
 
-## Development
+## ✨ Funcionalidades
 
-The build system will install automatically the recommended version of Node and npm.
+| Recurso                          | Descrição                                                                                                                                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🏫 **Salas em tempo real**       | O professor cria uma sala, compartilha o código, e os alunos entram e jogam juntos. Palavras avançam automaticamente com tempo por dificuldade; placar e estatísticas ao vivo via WebSocket. |
+| ⚔️ **Duelo 1v1**                 | Desafio direto entre dois jogadores.                                                                                                                                                         |
+| 📅 **Palavra do Dia**            | Desafio público diário — uma chance por pessoa (controle no servidor por conta ou cookie). Acertar rende XP.                                                                                 |
+| 🏆 **Ranking mundial**           | Os melhores jogadores por XP acumulado, com destaque para o top 5 na home.                                                                                                                   |
+| 🏅 **Conquistas (estilo Steam)** | Medalhas desbloqueadas conforme o desempenho, com recompensa de XP.                                                                                                                          |
+| 🔊 **Ditado por áudio**          | A palavra é falada via síntese de voz do navegador — o texto nunca aparece na tela.                                                                                                          |
+| 🛡️ **Campo anti-cola**           | O input bloqueia colar, arrastar, autocompletar e correção ortográfica; só a digitação real (física ou teclado virtual) é aceita.                                                            |
+| 🔤 **Banco de palavras**         | Palavras por dificuldade, categoria e dica, com sugestões enviadas pelos jogadores.                                                                                                          |
+| 🔐 **LGPD**                      | O titular pode exportar e excluir seus dados; há rotina de retenção automática.                                                                                                              |
+| 📊 **Observabilidade**           | Métricas Prometheus, dashboards Grafana e alertas — ver [MONITORING.md](MONITORING.md).                                                                                                      |
 
-We provide a wrapper to launch npm.
-You will only need to run this command when dependencies change in [package.json](package.json).
+## 🧱 Stack tecnológica
 
+**Backend**
+
+- Java 17 · Spring Boot 3.4.7 · Spring Security (JWT / OAuth2 Resource Server)
+- Spring WebSocket + STOMP (broker simples `/topic` e `/queue`)
+- Spring Data JPA · MySQL 9.2 · Liquibase (versionamento de schema)
+- Rate limiting e Request-ID por filtros próprios
+
+**Frontend**
+
+- React 18 · TypeScript · React Router 7 · Redux Toolkit
+- `@stomp/stompjs` + `sockjs-client` (tempo real) · Axios
+- Bootstrap 5 / Reactstrap · Webpack
+
+**Infra & Qualidade**
+
+- Docker Compose (app + serviços) · Prometheus / Grafana / Alertmanager
+- SonarQube · ESLint · Prettier · Husky (pre-commit) · Jest · JUnit + Testcontainers
+
+## 🗺️ Modelo de domínio
+
+```mermaid
+erDiagram
+    Usuario ||--o{ Sala : "cria (professor)"
+    Usuario ||--o{ ListaPalavras : "cria"
+    Usuario ||--o{ Palavra : "cadastra"
+    Usuario }o--o{ Sala : "participa (aluno)"
+    ListaPalavras }o--o{ Palavra : "contém"
+    Atividade }o--|| Sala : "pertence a"
+    Atividade }o--|| ListaPalavras : "usa"
+    Resposta }o--|| Atividade : "responde"
+    Resposta }o--|| Usuario : "de"
+    Resposta }o--|| Palavra : "sobre"
+    ErroOrtografico }o--|| Resposta : "detalha"
+    Ranking }o--|| Sala : "de"
+    Ranking }o--|| Usuario : "de"
+    UsuarioConquista }o--|| Usuario : "de"
+    UsuarioConquista }o--|| Conquista : "referencia"
 ```
-./npmw install
-```
 
-We use npm scripts and [Webpack][] as our build system.
+O modelo completo, incluindo enums (`Dificuldade`, `TipoUsuario`, `StatusAtividade`, `TipoErro`…), está em [`DIGITADO.jdl`](DIGITADO.jdl).
 
-Run the following commands in two separate terminals to create a blissful development experience where your browser
-auto-refreshes when files change on your hard drive.
+## 🔐 Segurança
 
-```
+Autenticação por **JWT** (stateless), com autorização baseada em papéis: `ROLE_ADMIN`, `ROLE_USER` e `ROLE_ANONYMOUS`.
+
+- **Manipulação do banco restrita ao ADMIN.** As escritas (`POST`/`PUT`/`PATCH`/`DELETE`) das entidades administrativas — `atividades`, `palavras`, `conquistas`, `rankings`, `respostas`, `lista-palavras`, `erro-ortograficos`, `usuarios` e `usuario-conquistas` — exigem `ROLE_ADMIN`.
+- **Endpoints de jogo** permanecem acessíveis a qualquer usuário autenticado: `palavras/sugerir`, `usuarios/alterar-senha`, `salas/**`, `conquistas/minhas`.
+- **Endpoints públicos:** `palavra-do-dia`, `ranking-mundial`, registro e recuperação de senha.
+- **Defesa em profundidade:** rate limiting configurável, `Request-Id` para rastreabilidade, validação server-side do ditado e das chances diárias, e handshake WebSocket autenticado por JWT.
+
+As regras ficam em [`SecurityConfiguration.java`](src/main/java/br/com/digitado/config/SecurityConfiguration.java).
+
+## 🚀 Começando
+
+### Pré-requisitos
+
+- **JDK 17**
+- **MySQL** em execução (local na porta `3306`, ou via Docker — veja abaixo)
+- Node/npm são instalados automaticamente pelo build; use os wrappers `./mvnw` e `./npmw`.
+
+### Ambiente de desenvolvimento
+
+O perfil `dev` aponta para um MySQL local e cria o schema `DIGITADO` automaticamente (config em [`application-dev.yml`](src/main/resources/config/application-dev.yml)). As credenciais padrão podem ser sobrescritas por variáveis de ambiente (`SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD`).
+
+Suba **backend** e **frontend** em terminais separados:
+
+```bash
 ./mvnw
+```
+
+```bash
 ./npmw start
 ```
 
-Npm is also used to manage CSS and JavaScript dependencies used in this application. You can upgrade dependencies by
-specifying a newer version in [package.json](package.json). You can also run `./npmw update` and `./npmw install` to manage dependencies.
-Add the `help` flag on any command to see how you can use it. For example, `./npmw help update`.
+- Backend (API): <http://localhost:8080>
+- Frontend com hot-reload: <http://localhost:9000>
 
-The `./npmw run` command will list all the scripts available to run for this project.
+Contas semeadas para desenvolvimento: **`admin` / `admin`** e **`user` / `user`**.
 
-### PWA Support
+> 💡 Sem MySQL instalado? Suba um container: `docker compose -f src/main/docker/mysql.yml up -d`
 
-JHipster ships with PWA (Progressive Web App) support, and it's turned off by default. One of the main components of a PWA is a service worker.
+### Build de produção
 
-The service worker initialization code is commented out by default. To enable it, uncomment the following code in `src/main/webapp/index.html`:
-
-```html
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').then(function () {
-      console.log('Service Worker Registered');
-    });
-  }
-</script>
-```
-
-Note: [Workbox](https://developers.google.com/web/tools/workbox/) powers JHipster's service worker. It dynamically generates the `service-worker.js` file.
-
-### Managing dependencies
-
-For example, to add [Leaflet][] library as a runtime dependency of your application, you would run following command:
-
-```
-./npmw install --save --save-exact leaflet
-```
-
-To benefit from TypeScript type definitions from [DefinitelyTyped][] repository in development, you would run following command:
-
-```
-./npmw install --save-dev --save-exact @types/leaflet
-```
-
-Then you would import the JS and CSS files specified in library's installation instructions so that [Webpack][] knows about them:
-Note: There are still a few other things remaining to do for Leaflet that we won't detail here.
-
-For further instructions on how to develop with JHipster, have a look at [Using JHipster in development][].
-
-## Building for production
-
-### Packaging as jar
-
-To build the final jar and optimize the DIGITADO application for production, run:
-
-```
+```bash
 ./mvnw -Pprod clean verify
 ```
 
-This will concatenate and minify the client CSS and JavaScript files. It will also modify `index.html` so it references these new files.
-To ensure everything worked, run:
+Gera um jar único (front minificado embutido). Para executar:
 
-```
+```bash
 java -jar target/*.jar
 ```
 
-Then navigate to [http://localhost:8080](http://localhost:8080) in your browser.
+Acesse <http://localhost:8080>. Em produção, informe o segredo JWT e as credenciais do banco por variáveis de ambiente.
 
-Refer to [Using JHipster in production][] for more details.
+## ✅ Testes
 
-### Packaging as war
-
-To package your application as a war in order to deploy it to an application server, run:
-
-```
-./mvnw -Pprod,war clean verify
-```
-
-### JHipster Control Center
-
-JHipster Control Center can help you manage and control your application(s). You can start a local control center server (accessible on http://localhost:7419) with:
-
-```
-docker compose -f src/main/docker/jhipster-control-center.yml up
-```
-
-## Testing
-
-### Spring Boot tests
-
-To launch your application's tests, run:
-
-```
+```bash
+# Testes de backend (JUnit + Testcontainers)
 ./mvnw verify
 ```
 
-### Client tests
-
-Unit tests are run by [Jest][]. They're located near components and can be run with:
-
-```
+```bash
+# Testes de frontend (Jest)
 ./npmw test
 ```
 
-## Others
-
-### Code quality using Sonar
-
-Sonar is used to analyse code quality. You can start a local Sonar server (accessible on http://localhost:9001) with:
+## 📁 Estrutura do projeto
 
 ```
-docker compose -f src/main/docker/sonar.yml up -d
+DIGITADO/
+├── src/main/java/br/com/digitado/
+│   ├── config/            # Segurança, WebSocket, propriedades da aplicação
+│   ├── domain/            # Entidades JPA e enums
+│   ├── service/           # Regras de jogo, XP, conquistas, palavra do dia, LGPD
+│   ├── web/rest/          # Controladores REST (API)
+│   ├── web/websocket/     # Endpoints STOMP das salas
+│   └── web/filter/        # Rate limit, Request-Id, SPA
+├── src/main/webapp/app/
+│   ├── modules/           # Telas de jogo (sala, duelo, lobby, ranking, conquistas…)
+│   ├── entities/          # CRUDs administrativos
+│   └── shared/            # Componentes e utilitários (ex.: campo anti-cola)
+├── src/main/resources/config/liquibase/   # Migrações de schema
+├── src/main/docker/       # Compose: app, MySQL, monitoramento, Sonar
+└── DIGITADO.jdl           # Modelo de domínio
 ```
 
-Note: we have turned off forced authentication redirect for UI in [src/main/docker/sonar.yml](src/main/docker/sonar.yml) for out of the box experience while trying out SonarQube, for real use cases turn it back on.
+## 📈 Monitoramento
 
-You can run a Sonar analysis with using the [sonar-scanner](https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner) or by using the maven plugin.
+Stack de observabilidade com Prometheus, Grafana e Alertmanager. Consulte **[MONITORING.md](MONITORING.md)** para subir e configurar. Para iniciar os serviços:
 
-Then, run a Sonar analysis:
-
-```
-./mvnw -Pprod clean verify sonar:sonar -Dsonar.login=admin -Dsonar.password=admin
+```bash
+docker compose -f src/main/docker/monitoring.yml up -d
 ```
 
-If you need to re-run the Sonar phase, please be sure to specify at least the `initialize` phase since Sonar properties are loaded from the sonar-project.properties file.
+## 🛡️ LGPD
 
-```
-./mvnw initialize sonar:sonar -Dsonar.login=admin -Dsonar.password=admin
-```
+O DIGITADO trata dados pessoais conforme a LGPD: o titular pode **exportar** (`GET /api/account/export`) e **excluir** (`DELETE /api/account`) seus dados, e um job agendado **anonimiza automaticamente** as tentativas antigas (retenção mínima de dados).
 
-Additionally, Instead of passing `sonar.password` and `sonar.login` as CLI arguments, these parameters can be configured from [sonar-project.properties](sonar-project.properties) as shown below:
+## 🤝 Contribuindo
 
-```
-sonar.login=admin
-sonar.password=admin
-```
+Os hooks de pre-commit (Husky) rodam Prettier e lint automaticamente. Mantenha os testes verdes (`./mvnw verify` e `./npmw test`) antes de abrir um PR.
 
-For more information, refer to the [Code quality page][].
+---
 
-### Docker Compose support
-
-JHipster generates a number of Docker Compose configuration files in the [src/main/docker/](src/main/docker/) folder to launch required third party services.
-
-For example, to start required services in Docker containers, run:
-
-```
-docker compose -f src/main/docker/services.yml up -d
-```
-
-To stop and remove the containers, run:
-
-```
-docker compose -f src/main/docker/services.yml down
-```
-
-[Spring Docker Compose Integration](https://docs.spring.io/spring-boot/reference/features/dev-services.html) is enabled by default. It's possible to disable it in application.yml:
-
-```yaml
-spring:
-  ...
-  docker:
-    compose:
-      enabled: false
-```
-
-You can also fully dockerize your application and all the services that it depends on.
-To achieve this, first build a Docker image of your app by running:
-
-```sh
-npm run java:docker
-```
-
-Or build a arm64 Docker image when using an arm64 processor os like MacOS with M1 processor family running:
-
-```sh
-npm run java:docker:arm64
-```
-
-Then run:
-
-```sh
-docker compose -f src/main/docker/app.yml up -d
-```
-
-For more information refer to [Using Docker and Docker-Compose][], this page also contains information on the Docker Compose sub-generator (`jhipster docker-compose`), which is able to generate Docker configurations for one or several JHipster applications.
-
-## Continuous Integration (optional)
-
-To configure CI for your project, run the ci-cd sub-generator (`jhipster ci-cd`), this will let you generate configuration files for a number of Continuous Integration systems. Consult the [Setting up Continuous Integration][] page for more information.
-
-[JHipster Homepage and latest documentation]: https://www.jhipster.tech
-[JHipster 8.11.0 archive]: https://www.jhipster.tech/documentation-archive/v8.11.0
-[Using JHipster in development]: https://www.jhipster.tech/documentation-archive/v8.11.0/development/
-[Using Docker and Docker-Compose]: https://www.jhipster.tech/documentation-archive/v8.11.0/docker-compose
-[Using JHipster in production]: https://www.jhipster.tech/documentation-archive/v8.11.0/production/
-[Running tests page]: https://www.jhipster.tech/documentation-archive/v8.11.0/running-tests/
-[Code quality page]: https://www.jhipster.tech/documentation-archive/v8.11.0/code-quality/
-[Setting up Continuous Integration]: https://www.jhipster.tech/documentation-archive/v8.11.0/setting-up-ci/
-[Node.js]: https://nodejs.org/
-[NPM]: https://www.npmjs.com/
-[Webpack]: https://webpack.github.io/
-[BrowserSync]: https://www.browsersync.io/
-[Jest]: https://jestjs.io
-[Leaflet]: https://leafletjs.com/
-
-# [DefinitelyTyped]: https://definitelytyped.org/
-
-# digitado
-
-> > > > > > > 06a7cca929e699292a78e092fbe009868e3c6516
+<div align="center">
+DIGITADO © 2026 — gerado com <a href="https://www.jhipster.tech/">JHipster 8.11.0</a>
+</div>
