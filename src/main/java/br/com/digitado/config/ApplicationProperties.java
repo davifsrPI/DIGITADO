@@ -61,10 +61,9 @@ public class ApplicationProperties {
         // Limite mais rígido para autenticação (barra força bruta de senha)
         private int autenticacaoPorMinuto = 10;
 
-        // SEGURANÇA: só ligue quando o app estiver atrás de um proxy reverso
-        // CONFIÁVEL que sobrescreve o X-Forwarded-For (nginx/Caddy/Cloudflare).
-        // Exposto direto à internet, o cliente pode forjar esse cabeçalho e
-        // ganhar uma identidade nova a cada requisição, burlando o limite.
+        // só liga se estiver atrás de um proxy confiável (nginx/Caddy) que
+        // reescreve o X-Forwarded-For. Direto na internet dá pra forjar o header
+        // e furar o rate limit.
         private boolean confiarXForwardedFor = false;
 
         public boolean isEnabled() {

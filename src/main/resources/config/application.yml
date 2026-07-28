@@ -125,8 +125,7 @@ spring:
       hibernate.cache.use_second_level_cache: false
       hibernate.cache.use_query_cache: false
       hibernate.generate_statistics: false
-      # MONITORAMENTO: queries que demorarem mais que este limite (ms) são logadas
-      # com o tempo de execução no logger org.hibernate.SQL_SLOW
+      # query que passar desse tempo (ms) é logada no org.hibernate.SQL_SLOW
       hibernate.session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 250
       # modify batch size as necessary
       hibernate.jdbc.batch_size: 25

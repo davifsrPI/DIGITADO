@@ -33,8 +33,8 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
      * - < 15 tentativas: vale a coluna dificuldade (cadastrada); se nula, a palavra
      *   entra "aleatoriamente" numa das faixas via id % 3 (determinístico, estável).
      *
-     * Constante de compilação de propósito: as duas queries de sorteio abaixo a
-     * concatenam dentro de @Query, garantindo que nunca divirjam entre si.
+     * Deixei como constante porque as duas queries abaixo concatenam ela no @Query,
+     * assim não corro o risco de escrever diferente em cada uma.
      */
     String CASE_DIFICULDADE_SQL =
         "(CASE WHEN total_tentativas < 15 THEN " +

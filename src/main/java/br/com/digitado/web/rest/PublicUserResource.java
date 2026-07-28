@@ -35,11 +35,10 @@ public class PublicUserResource {
     }
 
     /**
-     * Usado pela tela de registro para avisar "este e-mail já tem cadastro".
-     * SEGURANÇA/LGPD: responde APENAS o booleano — nunca nome ou qualquer outro
-     * dado do titular (endpoint é público; devolver o nome permitiria colher
-     * dados pessoais a partir de uma lista de e-mails). Também está na lista de
-     * endpoints sensíveis do RateLimitFilter para frear enumeração em massa.
+     * Usado na tela de registro pra avisar "este e-mail já tem cadastro".
+     * Responde só um booleano, nunca o nome ou outro dado, porque o endpoint é
+     * público e senão daria pra colher dados a partir de uma lista de e-mails.
+     * Também está no RateLimitFilter pra frear enumeração em massa.
      */
     @GetMapping("/public/verificar-email")
     public ResponseEntity<Map<String, Object>> verificarEmail(@RequestParam String email) {

@@ -71,8 +71,8 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
-        {/* Pública de propósito: visitante sem conta pode ver o ranking mundial
-            (o backend expõe só nomes de exibição, nunca e-mail ou login) */}
+        {/* pública: qualquer visitante pode ver o ranking (o backend só manda
+            os nomes de exibição, nunca e-mail ou login) */}
         <Route path="ranking" element={<Ranking />} />
         <Route
           path="sala/new"
@@ -90,7 +90,7 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
-        {/* Pública de propósito: a LGPD exige a política acessível sem login */}
+        {/* pública: a política de privacidade precisa ficar acessível sem login */}
         <Route path="privacidade" element={<PoliticaPrivacidade />} />
         <Route path="login" element={<Login />} />
         <Route path="logout" element={<Logout />} />

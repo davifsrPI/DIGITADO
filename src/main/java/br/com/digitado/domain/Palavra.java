@@ -150,9 +150,8 @@ public class Palavra implements Serializable {
      * A mesma regra existe em SQL no PalavraRepository.findRandomByDificuldade —
      * mantenha as duas em sincronia.
      *
-     * Sem @Transient de propósito: a entidade usa acesso por campo (anotações nos
-     * atributos), então o Hibernate ignora getters sem campo correspondente — e o
-     * @Transient faria o Hibernate6Module do Jackson suprimir a propriedade do JSON.
+     * Sem @Transient: a entidade usa acesso por campo, então o Hibernate já ignora
+     * esse getter, e o @Transient acabaria tirando a propriedade do JSON.
      */
     /**
      * Indica se a palavra já tem estatística registrada (alguém já a jogou).

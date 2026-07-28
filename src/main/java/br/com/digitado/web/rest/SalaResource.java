@@ -66,13 +66,12 @@ public class SalaResource {
         this.objectMapper = objectMapper;
     }
 
-    // ─── Descrição em JSON ───────────────────────────────────────────────────
     // A coluna descricao guarda {"descricao": "<texto>", "modo": "1v1"|"normal"}.
-    // O JSON é montado SEMPRE aqui no backend: o cliente manda só o texto e o modo
-    // vem do tipo da sala — um cliente adulterado não consegue gravar outro modo.
+    // Quem monta o JSON é o backend: o cliente manda só o texto e o modo vem do
+    // tipo da sala, então não dá pra gravar outro modo.
 
-    // Extrai o texto puro da descrição, aceitando texto simples ou o JSON já embrulhado
-    // (caso o cliente devolva no PUT o objeto que recebeu do GET)
+    // pega só o texto da descrição, aceitando texto puro ou o JSON já montado
+    // (caso o cliente devolva no PUT o objeto que veio do GET)
     private String extrairTextoDescricao(String valor) {
         if (valor == null || valor.isBlank()) {
             return null;

@@ -44,8 +44,7 @@ export const RegisterPage = () => {
     setEmailCheck({ status: 'loading' });
     debounceRef.current = setTimeout(async () => {
       try {
-        // O backend responde apenas o booleano (LGPD: nome do titular nunca
-        // sai por endpoint público) - a mensagem aqui é genérica de propósito
+        // o backend só devolve true/false, o nome nunca sai; a mensagem aqui é genérica
         const { data } = await axios.get<{ encontrado: boolean }>('/api/public/verificar-email', {
           params: { email: value.trim().toLowerCase() },
         });

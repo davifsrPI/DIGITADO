@@ -35,11 +35,10 @@ public class Sala implements Serializable {
     private String nome;
 
     /**
-     * Coluna JSON (não mais longtext): guarda um objeto com a descrição em texto e o
-     * modo da sala — ex: {"descricao": "Aula de ortografia", "modo": "normal"} ou
-     * {"descricao": "Duelo relâmpago", "modo": "1v1"}. O JSON é montado SEMPRE pelo
-     * backend (SalaResource) a partir do texto enviado pelo cliente — o modo não é forjável.
-     * No Java o campo é a String JSON crua; na API REST entra e sai como objeto JSON.
+     * Coluna JSON: guarda a descrição e o modo da sala, ex:
+     * {"descricao": "Aula de ortografia", "modo": "normal"}. Quem monta o JSON é o
+     * backend (SalaResource), então o cliente não consegue forjar o modo.
+     * No Java o campo é a String crua; na API entra e sai como objeto JSON.
      */
     @Column(name = "descricao", columnDefinition = "json")
     private String descricao;

@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.*;
  * Direitos do titular (LGPD art. 18) — endpoints de autoatendimento.
  *
  * Segurança:
- * - Identidade SEMPRE resolvida pelo token (nenhum id vem do frontend);
- * - A exclusão exige a senha atual no corpo: um token roubado (XSS) não basta
- *   para destruir a conta;
- * - A exportação nunca inclui senha ou hash.
+ * - a identidade vem sempre do token, nenhum id vem do frontend;
+ * - pra excluir a conta precisa da senha atual no corpo, então um token roubado
+ *   sozinho não destrói a conta;
+ * - a exportação nunca inclui a senha nem o hash.
  */
 @RestController
 @RequestMapping("/api/account")

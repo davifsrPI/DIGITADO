@@ -55,10 +55,9 @@ public class Usuario implements Serializable {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    // WRITE_ONLY: a senha pode ser ENVIADA (ex.: criação de usuário, onde é
-    // guardada com bcrypt) mas NUNCA é serializada nas respostas da API —
-    // nenhum GET expõe o hash. @JsonIgnore bloquearia também a escrita, o que
-    // tornaria a criação impossível (o campo é obrigatório no banco).
+    // WRITE_ONLY: dá pra enviar a senha (na criação, guardada com bcrypt) mas ela
+    // não sai em nenhum GET. Usei WRITE_ONLY e não @JsonIgnore porque o @JsonIgnore
+    // bloquearia a escrita também e a criação ficaria impossível.
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "senha", nullable = false)
     private String senha;
@@ -334,8 +333,7 @@ public class Usuario implements Serializable {
     }
 
     // prettier-ignore
-    // LGPD/segurança: a senha (mesmo sendo hash) NUNCA entra no toString —
-    // qualquer log de Usuario vazaria o hash para arquivos de log
+    // a senha (mesmo em hash) não entra no toString pra não vazar em log
     @Override
     public String toString() {
         return "Usuario{" +

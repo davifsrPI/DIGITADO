@@ -25,12 +25,10 @@ public class JogoSalaService {
     private static final int[] PONTOS_BASE = { 20, 15, 12, 8 };
     private static final int[] BONUS_MAX = { 10, 7, 5, 3 };
 
-    // Tolerância além do tempo da rodada para aceitar resposta (latência de rede) —
-    // depois disso o servidor rejeita, mesmo que um cliente adulterado envie
+    // folga de rede: aceita resposta até 2s depois do tempo da rodada
     private static final long FOLGA_RESPOSTA_MS = 2000;
 
-    // Piso de plausibilidade: nenhum humano digita mais rápido que ~80ms por letra.
-    // Resposta que chega antes disso (bot, injeção via DevTools) vira alerta de burla
+    // ninguém digita mais rápido que ~80ms por letra; abaixo disso trato como bot
     private static final long MIN_MS_POR_LETRA = 80;
 
     private final PalavraRepository palavraRepository;
@@ -82,16 +80,12 @@ public class JogoSalaService {
         if (jogo != null) jogo.removerAluno(login);
     }
 
-    // Resultado do processamento de uma desconexão:
-    // salasComSaida: salas de onde o jogador foi removido (quem ficou precisa ver o estado novo);
-    // salasVazias: salas que ficaram SEM NENHUM participante após a saída — o chamador deve
-    // fechá-las no banco (ativo = false). Vale para qualquer estado: lobby, em jogo ou encerrada.
+    // salasComSaida: salas de onde o jogador saiu; salasVazias: as que ficaram sem ninguém
+    // (o chamador fecha essas no banco)
     public record ResultadoDesconexao(List<String> salasComSaida, List<String> salasVazias) {}
 
-    // Processa a desconexão de um usuário: remove-o de todas as salas em que estava
-    // conectado e identifica as que ficaram vazias. Assim que sai o último participante,
-    // a sala é sinalizada para fechamento (ativo = false, feito pelo listener) e seu estado
-    // em memória é descartado — independentemente de estar no lobby, em jogo ou encerrada.
+    // remove o usuário de todas as salas em que estava e devolve quais ficaram vazias
+    // pra fechar depois
     public ResultadoDesconexao aoDesconectar(String login) {
         List<String> salasComSaida = new ArrayList<>();
         List<String> salasVazias = new ArrayList<>();
@@ -99,7 +93,7 @@ public class JogoSalaService {
             if (jogo.getAlunosConectados().containsKey(login)) {
                 jogo.removerAluno(login);
                 salasComSaida.add(codigo);
-                // Saiu o último → sala vazia: fecha no banco e descarta o estado em memória
+                // saiu o último, sala ficou vazia
                 if (jogo.totalConectados() == 0) {
                     salasVazias.add(codigo);
                 }
@@ -109,23 +103,14 @@ public class JogoSalaService {
         return new ResultadoDesconexao(salasComSaida, salasVazias);
     }
 
-    // Descarta o estado em memória de uma sala fechada/excluída em definitivo
-    // (botão "Encerrar e fechar sala" ou DELETE do professor). Sem isto, o
-    // EstadoJogo — palavras, placar e histórico de respostas — ficaria retido
-    // no mapa de jogos até o próximo restart do servidor.
+    // tira a sala do mapa quando o professor encerra/exclui, senão o estado
+    // ficaria na memória até reiniciar o servidor
     public void descartarSala(String codigoSala) {
         jogos.remove(codigoSala);
     }
 
-    /**
-     * Nome da sala com cache no EstadoJogo: o controller WebSocket precisa do nome
-     * em TODA mensagem (entrar, responder, próxima...) e fazia um SELECT na sala a
-     * cada uma — em plena rodada, isso era uma consulta por resposta de aluno.
-     * A primeira chamada resolve via banco (resolver) e guarda; as demais leem da
-     * memória. O cache vive e morre com o EstadoJogo, então sala fechada/descartada
-     * não deixa nome retido; renomear a sala no meio de uma partida (caso raríssimo)
-     * só reflete no placar na partida seguinte.
-     */
+    // guarda o nome da sala em cache pra não fazer um SELECT a cada mensagem do
+    // WebSocket. A primeira chamada busca no banco e guarda, as próximas leem da memória.
     public String nomeSalaCacheado(String codigoSala, java.util.function.Supplier<String> resolver) {
         EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
         String nome = jogo.getNomeSala();
@@ -163,11 +148,8 @@ public class JogoSalaService {
             palavras.addAll(palavraRepository.findRandomByDificuldadeExcluindo(Dificuldade.DIFICIL.name(), payload.qtdDificil(), excluir));
             totalPedido = payload.qtdFacil() + payload.qtdMedio() + payload.qtdDificil();
         }
-        // A dificuldade é uma MÉTRICA (taxa de acerto), então alguma faixa pode não ter
-        // palavras suficientes (ex: banco novo, onde quase tudo ainda é MEDIO) — e uma
-        // palavra fixa pode ter sido desativada entre a criação da sala e o início.
-        // Completa a diferença sorteando entre as demais palavras ativas, para a
-        // partida sempre ter o total de palavras que o professor pediu.
+        // pode faltar palavra numa faixa de dificuldade, então completo o que faltou
+        // sorteando entre as outras ativas pra bater o total que o professor pediu
         int faltam = totalPedido - palavras.size();
         if (faltam > 0) {
             List<Long> indisponiveis = new ArrayList<>(recentes);
@@ -368,9 +350,8 @@ public class JogoSalaService {
         String cLower = textoCorreto.trim().toLowerCase();
         boolean correta = dLower.equals(cLower);
 
-        // Alerta de burla: o cliente reportou inserções bloqueadas (colar/corretor) ou a
-        // resposta chegou rápido demais para ter sido digitada. A resposta continua valendo —
-        // o alerta aparece no placar do professor, que decide o que fazer
+        // marca como suspeita se tentou colar/corretor ou respondeu rápido demais.
+        // a resposta ainda vale, só mostra um alerta no placar do professor
         boolean suspeita = tentativasBurla > 0 || decorrido < dLower.length() * MIN_MS_POR_LETRA;
         if (suspeita) {
             jogo.registrarAlerta(login);
@@ -392,18 +373,15 @@ public class JogoSalaService {
                 : classificarErro(normalizar(dLower), normalizar(cLower));
         }
 
-        // Contabiliza a tentativa nas colunas de estatística da tabela palavra
-        // (total_tentativas/total_acertos) SOMENTE em duelos 1v1 — salas criadas por
-        // professor ficam de fora para a turma não distorcer a métrica de dificuldade.
-        // A Palavra do Dia contabiliza no próprio fluxo (PalavraDoDiaService.tentar).
+        // só conta a estatística da palavra em duelo 1v1; sala de professor fica de
+        // fora pra turma não distorcer a dificuldade
         if (jogo.isModo1v1()) {
             palavraEstatisticaService.registrarTentativa(jogo.getPalavraAtual().getId(), correta);
         }
 
         // Registra a resposta e guarda a ordem de acerto (1º, 2º, 3º...)
         int ordem = jogo.registrarResposta(login, correta);
-        // Guarda a resposta LITERAL digitada (aparada, sem alterar caixa) no
-        // histórico da rodada — é o que o professor vê no relatório da partida
+        // guarda o que o aluno digitou de fato, pro relatório do professor
         jogo.registrarRespostaDetalhada(login, nomeAluno, respostaDigitada.trim(), correta, ordem);
         int pontos = 0;
         if (correta) {

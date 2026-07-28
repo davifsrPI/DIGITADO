@@ -22,14 +22,12 @@ logging:
 management:
   info:
     git:
-      # SEGURANÇA: /management/info é público (o front lê o perfil ativo de lá);
-      # sem esta chave ele exporia branch e commit do repositório para qualquer um
+      # /management/info é público, então desligo pra não expor branch/commit
       enabled: false
   prometheus:
     metrics:
       export:
-        # MONITORAMENTO: exporta métricas (tempo de resposta, memória, CPU, pool de
-        # conexões...) em /management/prometheus para scrape do Prometheus
+        # expõe as métricas em /management/prometheus pro Prometheus ler
         enabled: true
 
 spring:
@@ -40,16 +38,11 @@ spring:
       enabled: false
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    # A URL padrão abaixo serve para TESTE LOCAL (localhost): sem SSL, a flag
-    # allowPublicKeyRetrieval é necessária para o caching_sha2_password do MySQL 8
-    # e é segura porque a conexão não sai da máquina.
-    # SEGURANÇA: com banco REMOTO, defina SPRING_DATASOURCE_URL com
-    # useSSL=true&requireSSL=true e SEM allowPublicKeyRetrieval.
+    # url padrão é pra teste local (localhost, sem SSL). Com banco remoto,
+    # passa SPRING_DATASOURCE_URL com useSSL=true e sem allowPublicKeyRetrieval
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/DIGITADO?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&useLegacyDatetimeCode=false}
-    # Usuário DEDICADO com permissões só no schema DIGITADO (nunca root).
-    # A SENHA vem exclusivamente de variável de ambiente — NUNCA escreva a senha
-    # real neste arquivo: ele vai para o git e o histórico é permanente.
-    # Para teste local use o script iniciar-prod.local.ps1 (fora do git).
+    # usuário só do schema DIGITADO (não usar root). A senha vem por env var,
+    # não coloco a senha aqui porque vai pro git. Local: iniciar-prod.local.ps1
     username: ${SPRING_DATASOURCE_USERNAME:digitado}
     password: ${SPRING_DATASOURCE_PASSWORD:}
     hikari:
@@ -97,14 +90,9 @@ server:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json,image/svg+xml
     min-response-size: 1024
-  # ATRÁS DO PROXY REVERSO (Caddy/nginx na mesma máquina — ver deploy/Caddyfile):
-  # o Tomcat passa a ler X-Forwarded-For/Proto enviados pelo proxy. Com isso,
-  # getRemoteAddr() devolve o IP REAL do aluno (o rate limit depende disso) e
-  # request.isSecure() reflete o HTTPS externo.
-  # SEGURO por padrão: o Tomcat só aceita esses cabeçalhos quando a conexão vem
-  # de um IP interno (127.0.0.1, redes privadas) — quem acessar o :8080 direto
-  # da internet não consegue forjá-los. Mantenha o confiar-x-forwarded-for do
-  # rate limit em false: com o remoteip valve ele deixa de ser necessário.
+  # quando roda atrás do proxy (Caddy, ver deploy/Caddyfile) o Tomcat lê o
+  # X-Forwarded-For pra pegar o IP real do aluno (usado no rate limit) e o
+  # protocolo. Só aceita esses headers de IP interno, então não dá pra forjar de fora.
   tomcat:
     remoteip:
       remote-ip-header: x-forwarded-for
@@ -121,32 +109,25 @@ jhipster:
     cache: # Used by the CachingHttpHeadersFilter
       timeToLiveInDays: 1461
   security:
-    # CSP de PRODUÇÃO, mais estrita que a base (application.yml, usada no dev):
-    # - script-src SEM 'unsafe-inline'/'unsafe-eval' (o bundle de produção não
-    #   precisa de eval; o único script inline do index.html virou arquivo em
-    #   content/js/loading-timeout.js) e sem hosts externos;
-    # - style-src mantém 'unsafe-inline' (estilos inline do React/reactstrap);
-    # - object-src/base-uri/form-action fecham vetores clássicos de injeção.
-    # XSS que roubaria o JWT do localStorage é o principal risco mitigado aqui.
+    # CSP de produção, mais fechada que a do dev: script-src sem unsafe-inline/eval
+    # (o script inline virou content/js/loading-timeout.js), style-src ainda com
+    # unsafe-inline por causa do React. Serve pra dificultar XSS que roube o JWT.
     content-security-policy: "default-src 'self'; frame-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'"
     authentication:
       jwt:
-        # SEGURANÇA: SEM fallback de propósito — em produção a aplicação NÃO SOBE
-        # sem a variável de ambiente JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET
-        # (fail-fast é melhor do que rodar com a chave pública padrão do JHipster).
-        # Gere a sua: openssl rand -base64 64
+        # sem fallback de propósito: se a env var não existir a app não sobe,
+        # melhor do que subir com a chave padrão do JHipster.
+        # gerar com: openssl rand -base64 64
         base64-secret: ${JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET:}
-        # SEGURANÇA: o token vive no localStorage do navegador — se vazar por XSS
-        # ou máquina compartilhada (laboratório da escola!), a validade é a janela
-        # de abuso. 12h cobre o dia letivo inteiro; "lembrar de mim" dura 7 dias.
+        # o token fica no localStorage, então deixo a validade curta: 12h cobre
+        # o dia de aula e o "lembrar de mim" dura 7 dias.
         token-validity-in-seconds: 43200
         token-validity-in-seconds-for-remember-me: 604800
   mail: # specific JHipster mail property, for standard properties see MailProperties
     base-url: http://my-server-url-to-change # Modify according to your server's URL
   logging:
-    # MONITORAMENTO: em produção os logs saem estruturados em JSON (um objeto por linha,
-    # com timestamp, nível, logger, mensagem, stack trace e campos do MDC como o requestId),
-    # prontos para ingestão por Loki/ELK/CloudWatch
+    # em produção os logs saem em JSON (uma linha por log) pra facilitar
+    # jogar no Loki/ELK depois
     use-json-format: true
     logstash: # Forward logs to logstash over a socket, used by LoggingConfiguration
       enabled: false
@@ -164,9 +145,7 @@ jhipster:
 
 application:
   websocket:
-    # VAZIO de propósito: sem padrão registrado, o Spring só aceita handshake
-    # WebSocket vindo da MESMA origem do site — front e backend moram no mesmo
-    # domínio atrás do Caddy, então nada muda para os alunos. Se um dia o front
-    # for hospedado em domínio próprio, defina a env var com ele
-    # (ex.: APPLICATION_WEBSOCKET_ALLOWED_ORIGINS=https://app.exemplo.com.br).
+    # deixo vazio: assim o WebSocket só aceita conexão da mesma origem do site
+    # (front e back no mesmo domínio). Se um dia separar, passa a env var
+    # com a origem do front.
     allowed-origins: ${APPLICATION_WEBSOCKET_ALLOWED_ORIGINS:}
