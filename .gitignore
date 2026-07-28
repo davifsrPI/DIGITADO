@@ -154,3 +154,6 @@ coverage/
 
 # Credenciais locais de teste do perfil prod — nunca commitar
 *.local.ps1
+
+# IDE assistant
+.claude/
