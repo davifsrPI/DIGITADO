@@ -3,7 +3,7 @@ import { Client, IMessage } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Storage } from 'react-jhipster';
 
-// ─── Tipos que trafegam pelo WebSocket ───────────────────────────────────────
+// Tipos que trafegam pelo WebSocket
 
 export interface PalavraWS {
   id: number;
@@ -64,7 +64,7 @@ interface UseSalaWebSocketOptions {
   onErro?: (erro: ErroWS) => void;
 }
 
-// ─── Hook principal ───────────────────────────────────────────────────────────
+// Hook principal
 // Gerencia toda a conexão WebSocket com STOMP/SockJS para uma sala de jogo.
 // Retorna funções para enviar ações (iniciar, responder, próxima...) e o estado de conexão.
 export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback, onErro }: UseSalaWebSocketOptions) {
@@ -86,7 +86,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     onErroRef.current = onErro;
   }, [onErro]);
 
-  // ─── Cria e ativa o cliente STOMP ao montar o componente ────────────────────
+  // Cria e ativa o cliente STOMP ao montar o componente
   useEffect(() => {
     const token = Storage.local.get('jhi-authenticationToken') || Storage.session.get('jhi-authenticationToken');
     const client = new Client({
@@ -126,7 +126,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     };
   }, [codigoSala, login, nome]);
 
-  // ─── Função auxiliar para publicar mensagens no servidor ─────────────────────
+  // Função auxiliar para publicar mensagens no servidor
   const publicar = useCallback(
     (destino: string, payload?: unknown) => {
       clientRef.current?.publish({ destination: `/app/sala/${codigoSala}/${destino}`, body: payload ? JSON.stringify(payload) : '' });
@@ -134,7 +134,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     [codigoSala],
   );
 
-  // ─── Ações disponíveis para o componente que usa este hook ──────────────────
+  // Ações disponíveis para o componente que usa este hook
   return {
     conectado,
     iniciar: (payload: {

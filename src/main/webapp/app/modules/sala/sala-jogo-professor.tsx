@@ -39,7 +39,7 @@ interface Props {
   meuLogin?: string;
 }
 
-// ─── Relatório da partida (visão do professor) ──────────────────────────────
+// Relatório da partida (visão do professor)
 // Espelhos dos records RespostaDetalhe/RelatorioPalavra do JogoSalaService,
 // servidos por GET /api/salas/{codigo}/relatorio (restrito ao dono da sala):
 // cada palavra já jogada com as respostas digitadas e os totais de acerto.
@@ -105,7 +105,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   initialGameConfig,
   meuLogin,
 }) => {
-  // ─── Estado local do componente ───────────────────────────────────────────
+  // Estado local do componente
   const [cfg, setCfg] = useState<Cfg>(initialGameConfig ?? DEFAULT_CFG);
 
   const [falando, setFalando] = useState(false);
@@ -246,7 +246,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   const pct = estado && estado.tempoLimite > 0 ? (tempoRestante / estado.tempoLimite) * 100 : 0;
   const timerDanger = tempoRestante <= 5;
 
-  /* ── LOBBY ───────────────────────────────────────────────── */
+  /* LOBBY */
   if (!estado || estado.tipo === 'AGUARDANDO') {
     const alunos = estado?.alunosConectados ?? [];
     return (
@@ -357,7 +357,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   // aparecer no pódio nem no ranking que os alunos disputam
   const placarAlunos = estado.placar.filter(p => p.login !== meuLogin);
 
-  /* ── ENCERRADA ───────────────────────────────────────────── */
+  /* ENCERRADA */
   if (estado.tipo === 'ENCERRADA') {
     // Antes do placar final, roda a vinheta de suspense revelando o pódio
     if (!vinhetaFimConcluida) {
@@ -367,7 +367,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
       <div className="sj-ended">
         <h2 className="sj-ended-title">Atividade encerrada!</h2>
 
-        {/* ── Ranking completo da partida ── */}
+        {/* Ranking completo da partida */}
         <h3 className="sj-rel-secao">Ranking da partida</h3>
         {placarAlunos.length === 0 ? (
           <p className="sj-no-alunos">Nenhum aluno participou desta partida.</p>
@@ -390,7 +390,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           </div>
         )}
 
-        {/* ── Relatório da partida: cada palavra com quem escreveu o quê ──
+        {/* Relatório da partida: cada palavra com quem escreveu o quê
             Os dados vêm do endpoint restrito ao dono da sala (carregados no
             useEffect quando o estado vira ENCERRADA) */}
         <h3 className="sj-rel-secao">Relatório por palavra</h3>
@@ -434,7 +434,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           </div>
         )}
 
-        {/* ── Encerrar e fechar a sala ──
+        {/* Encerrar e fechar a sala
             Fecha a sala em definitivo (ativo=false no banco): ela some das
             listagens e não aceita novas entradas. Ação exclusiva do professor,
             disponível só aqui - depois que a partida terminou. */}
@@ -458,7 +458,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     );
   }
 
-  /* ── RANKING entre palavras ──────────────────────────────── */
+  /* RANKING entre palavras */
   if (showRanking) {
     const rankingPct = (rankingTimer / RANKING_DURATION) * 100;
     return (
@@ -495,7 +495,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     );
   }
 
-  /* ── EM JOGO - painel do professor ───────────────────────────
+  /* EM JOGO - painel do professor
      O professor não digita respostas: ele acompanha a rodada. O painel mostra
      a palavra atual (só ele vê o texto - os alunos recebem apenas o áudio nos
      seus aparelhos), os números ao vivo da rodada e a lista de palavras já

@@ -84,12 +84,12 @@ export const SalaJogo: React.FC = () => {
   const login = account?.login ?? 'anonimo';
   const nome = account?.apelido || (account?.firstName ? `${account.firstName} ${account.lastName ?? ''}`.trim() : login);
 
-  // ─── Estado local da página ───────────────────────────────────────────────
+  // Estado local da página
   const [estado, setEstado] = useState<EstadoJogo | null>(null);
   const [feedback, setFeedback] = useState<FeedbackAluno | null>(null);
   const [erroWS, setErroWS] = useState<ErroWS | null>(null);
 
-  // ─── Callbacks para o hook de WebSocket ──────────────────────────────────
+  // Callbacks para o hook de WebSocket
   // Quando chega um novo estado do jogo, atualiza e limpa o feedback da palavra anterior
   const handleEstado = useCallback((e: EstadoJogo) => {
     setEstado(e);
@@ -106,7 +106,7 @@ export const SalaJogo: React.FC = () => {
     setTimeout(() => setErroWS(null), 6000);
   }, []);
 
-  // ─── Conexão WebSocket ────────────────────────────────────────────────────
+  // Conexão WebSocket
   const { conectado, iniciar, proxima, pausar, encerrar, responder } = useSalaWebSocket({
     codigoSala: codigo,
     login,

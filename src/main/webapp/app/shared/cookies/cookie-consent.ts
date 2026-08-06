@@ -104,7 +104,7 @@ export const abrirGerenciadorCookies = () => {
   window.dispatchEvent(new CustomEvent(EVENTO_ABRIR_GERENCIADOR));
 };
 
-// ─── Portão de scripts de rastreamento ──────────────────────────────────────
+// Portão de scripts de rastreamento
 //
 // REGRA DE OURO: todo script de terceiros entra AQUI, nunca no index.html.
 // Assim é impossível carregar um rastreador antes do consentimento.

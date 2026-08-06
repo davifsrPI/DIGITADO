@@ -40,7 +40,7 @@ export const SettingsPage = () => {
     dispatch(saveAccountSettings({ ...account, ...values }));
   };
 
-  // ─── Direitos do titular (LGPD art. 18) ────────────────────────────────────
+  // Direitos do titular (LGPD art. 18)
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [senhaExclusao, setSenhaExclusao] = useState('');
   const [processando, setProcessando] = useState(false);
@@ -154,7 +154,7 @@ export const SettingsPage = () => {
           </ValidatedForm>
         </div>
 
-        {/* ── Meus dados (LGPD art. 18): exclusão da conta ── */}
+        {/* Meus dados (LGPD art. 18): exclusão da conta */}
         <div className="st-card st-lgpd">
           <p className="st-lgpd-sub">Você pode excluir sua conta e todos os seus dados definitivamente.</p>
 

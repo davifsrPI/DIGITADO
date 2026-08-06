@@ -45,7 +45,7 @@ interface Props {
   // conectados já responderam, a tela de correção da palavra aparece na hora,
   // sem esperar o tempo da rodada esgotar
   duelo1v1?: boolean;
-  // ─── Modo CRIADOR do duelo 1v1 ───
+  // Modo CRIADOR do duelo 1v1
   // APENAS no 1v1 quem criou a sala joga junto: além de digitar como qualquer
   // jogador, ele inicia o duelo e seu cliente avança as rodadas automaticamente
   // (papéis que na sala de turma pertencem ao professor).
@@ -306,7 +306,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
     );
   }
 
-  /* ── RANKING entre palavras (tempo esgotado) ─────────────── */
+  /* RANKING entre palavras (tempo esgotado) */
   if (showRanking && ativo) {
     return (
       <div className="sj-ranking-screen">

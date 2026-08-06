@@ -49,7 +49,7 @@ export const CriarSala = () => {
   const [searchParams] = useSearchParams();
   const is1v1 = searchParams.get('modo') === '1v1';
 
-  // ─── Estado do formulário ──────────────────────────────────────────────────
+  // Estado do formulário
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [codigo, setCodigo] = useState(generateCode());

@@ -126,7 +126,7 @@ export const CookieConsentBanner = () => {
 
   return (
     <>
-      {/* ── Banner da primeira visita ─────────────────────────────── */}
+      {/* Banner da primeira visita */}
       {mostrarBanner && !mostrarModal && (
         <section className="cc-banner" role="region" aria-label="Consentimento de cookies">
           <div className="cc-banner-texto">
@@ -152,7 +152,7 @@ export const CookieConsentBanner = () => {
         </section>
       )}
 
-      {/* ── Modal de personalização / gerenciamento ───────────────── */}
+      {/* Modal de personalização / gerenciamento */}
       {mostrarModal && (
         <div className="cc-modal-overlay" onClick={() => setMostrarModal(false)}>
           <div className="cc-modal" role="dialog" aria-modal="true" aria-labelledby="cc-modal-titulo" onClick={e => e.stopPropagation()}>

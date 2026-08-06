@@ -3,7 +3,7 @@
 # DIGITADO
 
 **Plataforma gamificada de ditado ortográfico em tempo real.**
-Ouça a palavra, escreva a grafia correta, ganhe XP e suba no ranking — sozinho, em duelo 1v1 ou numa sala com a turma inteira.
+Ouça a palavra, escreva a grafia correta, ganhe XP e suba no ranking: sozinho, em duelo 1v1 ou numa sala com a turma inteira.
 
 [![Java](https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.7-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -14,6 +14,25 @@ Ouça a palavra, escreva a grafia correta, ganhe XP e suba no ranking — sozinh
 </div>
 
 ---
+
+## Índice
+
+- [Sobre o projeto](#sobre-o-projeto)
+- [Funcionalidades](#funcionalidades)
+- [Como funciona uma partida](#como-funciona-uma-partida)
+- [Stack tecnológica](#stack-tecnológica)
+- [Modelo de domínio](#modelo-de-domínio)
+- [Segurança](#segurança)
+- [Guia passo a passo (do zero até rodar)](#guia-passo-a-passo-do-zero-até-rodar)
+- [Configuração](#configuração)
+- [API](#api)
+- [Build de produção](#build-de-produção)
+- [Testes](#testes)
+- [Estrutura do projeto](#estrutura-do-projeto)
+- [Problemas comuns](#problemas-comuns)
+- [Monitoramento](#monitoramento)
+- [LGPD](#lgpd)
+- [Contribuindo](#contribuindo)
 
 ## Sobre o projeto
 
@@ -26,15 +45,43 @@ O sistema nasceu de um modelo de domínio em [JDL](DIGITADO.jdl) e foi gerado co
 | Recurso                 | Descrição                                                                                                                                                       |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Salas em tempo real** | O professor cria uma sala, compartilha o código, e os alunos entram e jogam juntos. Palavras avançam automaticamente com tempo por dificuldade; placar ao vivo. |
-| **Duelo 1v1**           | Desafio direto entre dois jogadores.                                                                                                                            |
-| **Palavra do Dia**      | Desafio público diário — uma chance por pessoa (controle no servidor por conta ou cookie). Acertar rende XP.                                                    |
+| **Duelo 1v1**           | Desafio direto entre dois jogadores. Quem cria a sala também joga e comanda o avanço das rodadas.                                                               |
+| **Palavra do Dia**      | Desafio público diário com uma chance por pessoa (controle no servidor por conta ou cookie). Acertar rende XP.                                                  |
 | **Ranking mundial**     | Os melhores jogadores por XP acumulado, com destaque para o top 5 na home.                                                                                      |
 | **Conquistas**          | Medalhas desbloqueadas conforme o desempenho, com recompensa de XP.                                                                                             |
-| **Ditado por áudio**    | A palavra é falada via síntese de voz do navegador — o texto nunca aparece na tela.                                                                             |
-| **Campo anti-cola**     | O input bloqueia colar, arrastar, autocompletar e correção ortográfica; só a digitação real (física ou teclado virtual) é aceita.                               |
+| **Ditado por áudio**    | A palavra é falada via síntese de voz do navegador; o texto nunca aparece na tela do aluno.                                                                     |
+| **Campo anti-cola**     | O input bloqueia colar, arrastar, autocompletar e correção ortográfica. Só a digitação real (física ou teclado virtual) é aceita.                               |
+| **Correção detalhada**  | O erro é classificado (acentuação, fonético, letra trocada/extra/faltando) em vez de virar um simples "errou".                                                  |
+| **Relatório da turma**  | Ao fim da partida o professor vê, palavra por palavra, o que cada aluno digitou e a taxa de acerto.                                                             |
 | **Banco de palavras**   | Palavras por dificuldade, categoria e dica, com sugestões enviadas pelos jogadores.                                                                             |
 | **LGPD**                | O titular pode exportar e excluir seus dados; há rotina de retenção automática.                                                                                 |
-| **Observabilidade**     | Métricas Prometheus, dashboards Grafana e alertas — ver [MONITORING.md](MONITORING.md).                                                                         |
+| **Observabilidade**     | Métricas Prometheus, dashboards Grafana e alertas. Ver [MONITORING.md](MONITORING.md).                                                                          |
+
+## Como funciona uma partida
+
+```
+professor                          servidor                          alunos
+   │                                  │                                 │
+   ├─ cria a sala ───────────────────▶ gera o código (ex: 8H4XEZ)       │
+   │                                  │                                 │
+   │                        ◀───────── entram com o código ─────────────┤
+   ├─ inicia ────────────────────────▶ sorteia as palavras da lista      │
+   │                                  ├─ broadcast /topic: nova palavra ▶│  fala o áudio
+   │                                  │                                 │
+   │                        ◀───────── resposta digitada ───────────────┤
+   │                                  ├─ valida no servidor, pontua     │
+   │                                  ├─ /queue: feedback individual ──▶│
+   │                                  ├─ /topic: placar atualizado ────▶│
+   │                                  │                                 │
+   ├─ encerra ───────────────────────▶ pódio + relatório por palavra     │
+```
+
+Pontos importantes do desenho:
+
+- **A validação é sempre no servidor.** O cliente nunca recebe o texto da palavra, apenas o áudio sintetizado, então não há como ler a resposta no DOM.
+- **O tempo da rodada depende da dificuldade** e o servidor aceita respostas com uma folga de rede de 2s após o fim.
+- **Respostas absurdamente rápidas são descartadas** (abaixo de ~80ms por letra ninguém digita de verdade).
+- **O estado da partida vive em memória**, por sala. Reiniciar o servidor encerra os jogos em andamento; o histórico persistido (respostas, ranking, XP) permanece no banco.
 
 ## Stack tecnológica
 
@@ -83,7 +130,7 @@ O modelo completo, incluindo enums (`Dificuldade`, `TipoUsuario`, `StatusAtivida
 
 Autenticação por **JWT** (stateless), com autorização baseada em papéis: `ROLE_ADMIN`, `ROLE_USER` e `ROLE_ANONYMOUS`.
 
-- **Manipulação do banco restrita ao ADMIN.** As escritas (`POST`/`PUT`/`PATCH`/`DELETE`) das entidades administrativas — `atividades`, `palavras`, `conquistas`, `rankings`, `respostas`, `lista-palavras`, `erro-ortograficos`, `usuarios` e `usuario-conquistas` — exigem `ROLE_ADMIN`.
+- **Manipulação do banco restrita ao ADMIN.** As escritas (`POST`/`PUT`/`PATCH`/`DELETE`) das entidades administrativas (`atividades`, `palavras`, `conquistas`, `rankings`, `respostas`, `lista-palavras`, `erro-ortograficos`, `usuarios` e `usuario-conquistas`) exigem `ROLE_ADMIN`.
 - **Endpoints de jogo** permanecem acessíveis a qualquer usuário autenticado: `palavras/sugerir`, `usuarios/alterar-senha`, `salas/**`, `conquistas/minhas`.
 - **Endpoints públicos:** `palavra-do-dia`, `ranking-mundial`, registro e recuperação de senha.
 - **Defesa em profundidade:** rate limiting configurável, `Request-Id` para rastreabilidade, validação server-side do ditado e das chances diárias, e handshake WebSocket autenticado por JWT.
@@ -123,7 +170,7 @@ A saída deve mostrar `17.x`. Se mostrar outra versão, ajuste a variável `JAVA
 
 #### 1.3. Node.js e npm
 
-O **npm** já vem junto com o Node.js — instalar o Node instala o npm. Use a versão **22 LTS** (a testada no projeto é a `v22.15.0`).
+O **npm** já vem junto com o Node.js: instalar o Node instala o npm. Use a versão **22 LTS** (a testada no projeto é a `v22.15.0`).
 
 - **Windows/macOS:** baixe o instalador LTS em <https://nodejs.org/> e execute.
 - **macOS (Homebrew):** `brew install node@22`
@@ -145,7 +192,7 @@ npm -v
 
 #### 1.4. MySQL (ou Docker)
 
-Você tem duas opções — escolha **uma**.
+Você tem duas opções, escolha **uma**.
 
 - **Opção A (mais fácil): Docker.** Instale o [Docker Desktop](https://www.docker.com/products/docker-desktop/). Não precisa instalar MySQL à mão; um container é subido no Passo 4.
 - **Opção B: MySQL local.** Instale o **MySQL 8+** em <https://dev.mysql.com/downloads/installer/> e deixe o serviço rodando na porta padrão `3306`.
@@ -205,7 +252,7 @@ Application 'DIGITADO' is running! Access URLs:
     Local:    http://localhost:8080/
 ```
 
-Deixe **este terminal aberto** — ele mantém a API rodando na porta **8080**.
+Deixe **este terminal aberto**: ele mantém a API rodando na porta **8080**.
 
 ### Passo 6 — Rodar o front-end (React)
 
@@ -225,7 +272,9 @@ Abra <http://localhost:9000> e faça login com uma das contas de desenvolvimento
 | `admin` | `admin` | ROLE_ADMIN |
 | `user`  | `user`  | ROLE_USER  |
 
-Pronto — você pode criar uma sala, jogar a Palavra do Dia e explorar o ranking.
+Pronto, você pode criar uma sala, jogar a Palavra do Dia e explorar o ranking.
+
+> Para testar uma sala de verdade, abra uma segunda janela do navegador (ou uma janela anônima), entre como `user` e use o código que apareceu na tela do professor.
 
 ### Resumo dos comandos
 
@@ -249,6 +298,65 @@ npm start         # ou ./npmw start  (Windows: .\npmw.cmd start)
 
 ---
 
+## Configuração
+
+Em desenvolvimento os valores padrão bastam. Em produção, tudo o que é sensível vem de variáveis de ambiente:
+
+| Variável                                             | Para que serve                                         | Padrão                                 |
+| ---------------------------------------------------- | ------------------------------------------------------ | -------------------------------------- |
+| `SPRING_DATASOURCE_URL`                              | URL JDBC do MySQL                                      | `jdbc:mysql://localhost:3306/DIGITADO` |
+| `SPRING_DATASOURCE_USERNAME`                         | Usuário do banco                                       | `digitado` (prod) / `root` (dev)       |
+| `SPRING_DATASOURCE_PASSWORD`                         | Senha do banco                                         | vazio (prod) / `31415` (dev)           |
+| `JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET` | Segredo de assinatura do JWT. **Obrigatório em prod.** | vazio (a aplicação não sobe sem ele)   |
+| `APPLICATION_WEBSOCKET_ALLOWED_ORIGINS`              | Origens aceitas no handshake STOMP                     | vazio (só a mesma origem do site)      |
+
+Gere o segredo do JWT com:
+
+```bash
+openssl rand -base64 64
+```
+
+Outras chaves úteis, em [`application.yml`](src/main/resources/config/application.yml) sob `application.rate-limit`:
+
+| Propriedade               | O que faz                                                        | Padrão  |
+| ------------------------- | ---------------------------------------------------------------- | ------- |
+| `enabled`                 | Liga/desliga o filtro de rate limit                              | `true`  |
+| `requisicoes-por-minuto`  | Teto de chamadas a `/api/**` por identidade (login ou IP)        | `100`   |
+| `autenticacao-por-minuto` | Teto mais rígido no login, contra força bruta de senha           | `10`    |
+| `confiar-x-forwarded-for` | Só ligue atrás de proxy reverso confiável, senão o IP é forjável | `false` |
+
+A validade do token é de 12h (43200s) e 7 dias com "lembrar de mim".
+
+## API
+
+Os recursos REST seguem o padrão do JHipster (`GET` lista/paginado, `GET /{id}`, `POST`, `PUT /{id}`, `PATCH /{id}`, `DELETE /{id}`):
+
+| Base                                                                                                                             | Conteúdo                                           | Acesso                             |
+| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
+| `/api/authenticate`                                                                                                              | Login, devolve o JWT                               | público                            |
+| `/api/register`, `/api/account`                                                                                                  | Registro, perfil, troca de senha                   | público / próprio                  |
+| `/api/public/palavra-do-dia`                                                                                                     | Desafio do dia e envio da tentativa                | público                            |
+| `/api/public/ranking-mundial`                                                                                                    | Ranking por XP acumulado                           | público                            |
+| `/api/salas`                                                                                                                     | Criar, listar, entrar, relatório da partida        | autenticado                        |
+| `/api/palavras`                                                                                                                  | Banco de palavras (`/sugerir` é aberto ao jogador) | leitura autenticada, escrita ADMIN |
+| `/api/conquistas`                                                                                                                | Catálogo (`/minhas` traz as do usuário)            | leitura autenticada, escrita ADMIN |
+| `/api/usuarios`                                                                                                                  | Perfis de jogador (`/alterar-senha` é do próprio)  | escrita ADMIN                      |
+| `/api/atividades`, `/api/respostas`, `/api/rankings`, `/api/lista-palavras`, `/api/erro-ortograficos`, `/api/usuario-conquistas` | CRUDs administrativos                              | escrita ADMIN                      |
+| `/api/admin/**`                                                                                                                  | Gestão de contas e authorities                     | ADMIN                              |
+
+Durante a partida, o que trafega é STOMP sobre WebSocket (prefixo `/app`, autenticado por JWT no handshake):
+
+| Mensagem                       | Quem envia   | Efeito                                         |
+| ------------------------------ | ------------ | ---------------------------------------------- |
+| `/app/sala/{codigo}/entrar`    | aluno        | Entra no lobby e aparece na lista              |
+| `/app/sala/{codigo}/iniciar`   | dono da sala | Sorteia as palavras e começa a primeira rodada |
+| `/app/sala/{codigo}/responder` | aluno        | Envia a grafia digitada; o servidor valida     |
+| `/app/sala/{codigo}/proxima`   | dono da sala | Avança para a próxima palavra                  |
+| `/app/sala/{codigo}/pausar`    | dono da sala | Pausa a rodada                                 |
+| `/app/sala/{codigo}/encerrar`  | dono da sala | Fecha a partida e libera o relatório           |
+
+O servidor responde em `/topic/sala/{codigo}` (estado e placar, para todos) e `/queue` (feedback individual). Logado como `admin`, a documentação interativa da API fica em `/admin/docs` (em desenvolvimento, <http://localhost:9000/admin/docs>).
+
 ## Build de produção
 
 ```bash
@@ -261,7 +369,7 @@ Gera um jar único com o front-end minificado embutido. Para executar:
 java -jar target/*.jar
 ```
 
-Acesse <http://localhost:8080>. Em produção, informe o segredo JWT e as credenciais do banco por variáveis de ambiente.
+Acesse <http://localhost:8080>. Em produção, informe o segredo JWT e as credenciais do banco por variáveis de ambiente (ver [Configuração](#configuração)).
 
 ## Testes
 
@@ -274,6 +382,8 @@ Acesse <http://localhost:8080>. Em produção, informe o segredo JWT e as creden
 # Testes de frontend (Jest)
 ./npmw test
 ```
+
+Os testes de backend sobem um MySQL em container, então o Docker precisa estar rodando.
 
 ## Estrutura do projeto
 
@@ -294,6 +404,18 @@ DIGITADO/
 ├── src/main/docker/       # Compose: app, MySQL, monitoramento, Sonar
 └── DIGITADO.jdl           # Modelo de domínio
 ```
+
+## Problemas comuns
+
+| Sintoma                                                      | Causa provável e solução                                                                                                                                      |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Port 8080 was already in use`                               | Outra aplicação ocupa a porta. Encerre o processo ou suba com `./mvnw -Dserver.port=8081` (e ajuste o proxy do webpack).                                      |
+| `Access denied for user` / `Communications link failure`     | MySQL fora do ar ou credenciais diferentes. Confira o serviço/container e defina `SPRING_DATASOURCE_USERNAME` e `SPRING_DATASOURCE_PASSWORD`.                 |
+| `Unsupported class file major version` ou erro de compilação | JDK diferente do 17. Rode `java -version` e aponte o `JAVA_HOME` para o JDK 17.                                                                               |
+| A palavra não é falada                                       | A síntese de voz do navegador exige uma interação do usuário antes do primeiro áudio e uma voz pt-BR instalada. Use Chrome ou Edge atualizados.               |
+| Placar não atualiza / "desconectado" na sala                 | O WebSocket não conectou. Verifique se o back-end está no ar e, se front e back estão em domínios diferentes, defina `APPLICATION_WEBSOCKET_ALLOWED_ORIGINS`. |
+| `429 Too Many Requests`                                      | Rate limit atingido. Em desenvolvimento, baixe a restrição em `application.rate-limit`.                                                                       |
+| Liquibase falha com checksum inválido                        | O schema local divergiu das migrações. Em ambiente de desenvolvimento, o caminho mais rápido é recriar o schema `DIGITADO`.                                   |
 
 ## Monitoramento
 

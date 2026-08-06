@@ -121,7 +121,7 @@ public class ConquistaEngineService {
         this.xpService = xpService;
     }
 
-    // ─── Eventos do jogo ─────────────────────────────────────────────────────
+    // Eventos do jogo
 
     /** Resposta dada numa partida (correta ou não), com o tempo gasto e a sequência atual de acertos. */
     @Transactional
@@ -227,7 +227,7 @@ public class ConquistaEngineService {
         resolverUsuario(login).ifPresent(this::verificarXpERankingInterno);
     }
 
-    // ─── Regras de XP acumulado e ranking ────────────────────────────────────
+    // Regras de XP acumulado e ranking
 
     // Desbloqueios creditam XP, o que pode atingir a próxima meta de XP — itera
     // até estabilizar (limitado: são poucas conquistas e todas idempotentes)
@@ -247,7 +247,7 @@ public class ConquistaEngineService {
         }
     }
 
-    // ─── Mecânica de progresso ───────────────────────────────────────────────
+    // Mecânica de progresso
 
     /** Soma incremento ao progresso; desbloqueia ao atingir a meta. Retorna true se desbloqueou agora. */
     private boolean incrementar(Usuario usuario, String nome, int incremento) {
