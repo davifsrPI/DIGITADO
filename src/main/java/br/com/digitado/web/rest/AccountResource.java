@@ -69,8 +69,8 @@ public class AccountResource {
         if (isPasswordInvalid(managedUserVM.getPassword())) {
             throw new InvalidPasswordException();
         }
-        User user = userService.registerUser(managedUserVM, managedUserVM.getPassword());
-        mailService.sendActivationEmail(user);
+        // A conta ja e criada ativa, entao nao ha e-mail de ativacao para enviar.
+        userService.registerUser(managedUserVM, managedUserVM.getPassword());
     }
 
     /**

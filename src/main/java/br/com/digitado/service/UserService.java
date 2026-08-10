@@ -18,7 +18,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -44,20 +43,16 @@ public class UserService {
 
     private final UsuarioRepository usuarioRepository;
 
-    private final Environment environment;
-
     public UserService(
         UserRepository userRepository,
         PasswordEncoder passwordEncoder,
         AuthorityRepository authorityRepository,
-        UsuarioRepository usuarioRepository,
-        Environment environment
+        UsuarioRepository usuarioRepository
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authorityRepository = authorityRepository;
         this.usuarioRepository = usuarioRepository;
-        this.environment = environment;
     }
 
     public Optional<User> activateRegistration(String key) {
@@ -126,11 +121,8 @@ public class UserService {
         }
         newUser.setImageUrl(userDTO.getImageUrl());
         newUser.setLangKey(userDTO.getLangKey());
-        boolean isDev = Arrays.asList(environment.getActiveProfiles()).contains("dev");
-        newUser.setActivated(isDev);
-        if (!isDev) {
-            newUser.setActivationKey(RandomUtil.generateActivationKey());
-        }
+        // A conta ja nasce ativa: o cadastro nao depende de confirmacao por e-mail.
+        newUser.setActivated(true);
         Set<Authority> authorities = new HashSet<>();
         authorityRepository.findById(AuthoritiesConstants.USER).ifPresent(authorities::add);
         newUser.setAuthorities(authorities);
