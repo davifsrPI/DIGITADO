@@ -12,7 +12,11 @@
 #>
 
 param(
-    [string]$Arquivo = 'dados\banco-digitado.sql'
+    [string]$Arquivo = 'dados\banco-digitado.sql',
+
+    # Ligado pelo copiar-para-pendrive.ps1: omite a dica do proximo passo,
+    # que naquele fluxo ja esta sendo executado.
+    [switch]$Encadeado
 )
 
 # 'Continue', e nao 'Stop': no Windows PowerShell 5.1 qualquer texto que um
@@ -114,9 +118,11 @@ try {
     Escrever ("  {0}  ({1:N1} MB)" -f $destino, ($tamanho / 1MB))
     Escrever "  Contem CREATE TABLE: $temCreate"
     Escrever "  Contem INSERT INTO:  $temInsert"
-    Escrever ""
-    Escrever "  Agora copie o projeto para o pendrive:"
-    Escrever "    powershell -ExecutionPolicy Bypass -File .\copiar-para-pendrive.ps1 -Destino E:\" Cyan
+    if (-not $Encadeado) {
+        Escrever ""
+        Escrever "  Agora copie o projeto para o pendrive:"
+        Escrever "    powershell -ExecutionPolicy Bypass -File .\copiar-para-pendrive.ps1 -Destino E:\" Cyan
+    }
     Escrever ""
 } finally {
     Pop-Location

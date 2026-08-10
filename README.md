@@ -160,11 +160,7 @@ Você precisa de quatro coisas: **Git**, **JDK 17**, **Node.js (que traz o npm)*
 
 Para instalar em outra máquina copiando por pendrive, em vez de clonar:
 
-1. **Na máquina de origem**, exporte o banco e copie o projeto:
-
-   ```bash
-   powershell -ExecutionPolicy Bypass -File .\exportar-banco.ps1
-   ```
+1. **Na máquina de origem**, um único comando exporta o banco e copia o projeto (troque `E:` pela letra do pendrive):
 
    ```bash
    powershell -ExecutionPolicy Bypass -File .\copiar-para-pendrive.ps1 -Destino E:\
@@ -172,7 +168,7 @@ Para instalar em outra máquina copiando por pendrive, em vez de clonar:
 
    O prefixo `powershell -ExecutionPolicy Bypass -File` é necessário porque o Windows bloqueia a execução de scripts `.ps1` por padrão. Ele vale só para aquela execução, sem alterar a configuração da máquina.
 
-   O [`exportar-banco.ps1`](exportar-banco.ps1) grava `dados\banco-digitado.sql` com estrutura e dados (palavras, listas, conquistas, contas). O [`copiar-para-pendrive.ps1`](copiar-para-pendrive.ps1) copia só o necessário — cerca de 6 MB — deixando de fora `node_modules` e `target`, que a outra máquina regenera.
+   O [`copiar-para-pendrive.ps1`](copiar-para-pendrive.ps1) chama o [`exportar-banco.ps1`](exportar-banco.ps1), que grava `dados\banco-digitado.sql` com estrutura e dados (palavras, listas, conquistas, contas), e em seguida copia o necessário — cerca de 6 MB — deixando de fora `node_modules` e `target`, que a outra máquina regenera. Use `-SemBanco` para copiar sem reexportar, ou `-Simular` para só ver o que seria feito.
 
 2. **Na máquina de destino**, copie a pasta do pendrive para o disco (não rode direto do pendrive) e execute o `setup-ambiente.ps1` como administrador. Ele restaura o dump automaticamente, desde que o banco de destino esteja vazio — se já houver tabelas, os dados existentes são preservados e a restauração é pulada (use `-ForcarImportacao` para sobrescrever).
 

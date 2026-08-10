@@ -1,6 +1,7 @@
 <#
-    Copia o projeto DIGITADO para um pendrive (ou qualquer pasta de destino),
-    deixando de fora o que se regenera sozinho na outra maquina.
+    Exporta o banco e copia o projeto DIGITADO para um pendrive (ou qualquer
+    pasta de destino), deixando de fora o que se regenera sozinho na outra
+    maquina. Um comando so, portanto, leva codigo e dados.
 
     Sao ignorados:
       node_modules  - 374 MB e 68 mil arquivos; o 'npmw install' recria
@@ -11,14 +12,18 @@
 
     Uso:
         powershell -ExecutionPolicy Bypass -File .\copiar-para-pendrive.ps1 -Destino E:\
-        acrescente -Simular para so listar, sem copiar
+
+    Parametros:
+        -Simular    so lista o que seria copiado, sem gravar nem exportar
+        -SemBanco   nao exporta o banco; copia o dump que ja existir
 #>
 
 param(
     [Parameter(Mandatory = $true)]
     [string]$Destino,
 
-    [switch]$Simular
+    [switch]$Simular,
+    [switch]$SemBanco
 )
 
 # 'Continue', e nao 'Stop': no Windows PowerShell 5.1 o texto que o robocopy
@@ -45,13 +50,28 @@ if (-not (Test-Path $Destino)) {
 
 $pasta = Join-Path $Destino 'DIGITADO'
 
-# Sem o dump, a outra maquina comeca com o banco vazio - vale avisar a tempo.
-if (-not (Test-Path (Join-Path $origem 'dados\banco-digitado.sql'))) {
+$arquivoDump = Join-Path $origem 'dados\banco-digitado.sql'
+
+# O banco e exportado aqui mesmo, para que um unico comando leve codigo e dados.
+if (-not $SemBanco -and -not $Simular) {
+    Escrever "`n  Exportando o banco antes de copiar..." Yellow
+    & (Join-Path $origem 'exportar-banco.ps1') -Encadeado | Out-Host
+}
+
+# Se a exportacao falhou (ou foi pulada), a copia segue - mas sem os dados a
+# outra maquina comeca com o banco vazio, e isso precisa ficar visivel.
+if (-not (Test-Path $arquivoDump)) {
     Escrever "`n  AVISO: nao existe dados\banco-digitado.sql." Yellow
-    Escrever "  Sem ele a outra maquina comeca com o banco vazio (sem palavras," Yellow
-    Escrever "  listas nem contas). Para levar os dados, cancele com Ctrl+C e rode:" Yellow
-    Escrever "      powershell -ExecutionPolicy Bypass -File .\exportar-banco.ps1" Cyan
+    Escrever "  A outra maquina vai comecar com o banco vazio: sem palavras," Yellow
+    Escrever "  listas nem contas alem das que o Liquibase cria." Yellow
     Start-Sleep -Seconds 4
+} elseif (-not $Simular) {
+    $idade = (Get-Date) - (Get-Item $arquivoDump).LastWriteTime
+    if ($idade.TotalMinutes -gt 10) {
+        Escrever "`n  AVISO: o dump do banco tem $([int]$idade.TotalMinutes) minutos e nao foi atualizado agora." Yellow
+        Escrever "  O que voce jogou ou cadastrou depois disso nao vai junto." Yellow
+        Start-Sleep -Seconds 4
+    }
 }
 
 Escrever "`n  Origem:  $origem"
