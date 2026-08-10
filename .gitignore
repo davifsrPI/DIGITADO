@@ -154,3 +154,7 @@ coverage/
 
 # Credenciais locais de teste do perfil prod — nunca commitar
 *.local.ps1
+
+# Dump do banco gerado por exportar-banco.ps1: contém e-mails e hashes de senha
+# dos usuários. Viaja por pendrive junto com o projeto, nunca pelo repositório.
+dados/

@@ -133,6 +133,7 @@ Autenticação por **JWT** (stateless), com autorização baseada em papéis: `R
 - **Manipulação do banco restrita ao ADMIN.** As escritas (`POST`/`PUT`/`PATCH`/`DELETE`) das entidades administrativas (`atividades`, `palavras`, `conquistas`, `rankings`, `respostas`, `lista-palavras`, `erro-ortograficos`, `usuarios` e `usuario-conquistas`) exigem `ROLE_ADMIN`.
 - **Endpoints de jogo** permanecem acessíveis a qualquer usuário autenticado: `palavras/sugerir`, `usuarios/alterar-senha`, `salas/**`, `conquistas/minhas`.
 - **Endpoints públicos:** `palavra-do-dia`, `ranking-mundial`, registro e recuperação de senha.
+- **Cadastro sem confirmação por e-mail.** A conta nasce ativa e o usuário já pode entrar; nenhum e-mail de ativação é enviado. O endpoint `GET /api/activate` continua existindo para contas antigas que tenham chave pendente.
 - **Defesa em profundidade:** rate limiting configurável, `Request-Id` para rastreabilidade, validação server-side do ditado e das chances diárias, e handshake WebSocket autenticado por JWT.
 
 As regras ficam em [`SecurityConfiguration.java`](src/main/java/br/com/digitado/config/SecurityConfiguration.java).
@@ -154,6 +155,26 @@ Você precisa de quatro coisas: **Git**, **JDK 17**, **Node.js (que traz o npm)*
 > ```
 >
 > Use `-Simular` para só ver o que ele faria, sem alterar nada. Ao final ele imprime `TUDO FUNCIONOU` ou a lista do que falhou.
+
+#### Levando o projeto sem o GitHub (pendrive)
+
+Para instalar em outra máquina copiando por pendrive, em vez de clonar:
+
+1. **Na máquina de origem**, exporte o banco e copie o projeto:
+
+   ```bash
+   .\exportar-banco.ps1
+   ```
+
+   ```bash
+   .\copiar-para-pendrive.ps1 -Destino E:\
+   ```
+
+   O [`exportar-banco.ps1`](exportar-banco.ps1) grava `dados\banco-digitado.sql` com estrutura e dados (palavras, listas, conquistas, contas). O [`copiar-para-pendrive.ps1`](copiar-para-pendrive.ps1) copia só o necessário — cerca de 6 MB — deixando de fora `node_modules` e `target`, que a outra máquina regenera.
+
+2. **Na máquina de destino**, copie a pasta do pendrive para o disco (não rode direto do pendrive) e execute o `setup-ambiente.ps1` como administrador. Ele restaura o dump automaticamente, desde que o banco de destino esteja vazio — se já houver tabelas, os dados existentes são preservados e a restauração é pulada (use `-ForcarImportacao` para sobrescrever).
+
+> O arquivo `dados\banco-digitado.sql` contém e-mails e hashes de senha, por isso está no `.gitignore`: ele viaja no pendrive, nunca no repositório.
 
 #### 1.1. Git
 

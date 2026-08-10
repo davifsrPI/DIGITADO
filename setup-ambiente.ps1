@@ -5,11 +5,13 @@
       1. Instala e configura o JDK 17 (o enforcer do pom.xml aceita apenas 17, 21 ou 24)
       2. Sobe um MySQL em localhost:3306 com o banco DIGITADO e as credenciais
          esperadas por src/main/resources/config/application-dev.yml (root / 31415)
-      3. Libera as portas 8080 e 9000 no firewall (perfil Private), para que
+      3. Restaura os dados de dados\banco-digitado.sql, se o arquivo existir
+         (gerado na maquina de origem pelo exportar-banco.ps1)
+      4. Libera as portas 8080 e 9000 no firewall (perfil Private), para que
          outras maquinas da rede local consigam acessar a aplicacao
-      4. Compila o backend com o Maven Wrapper (baixa Node e npm automaticamente)
-      5. Instala as dependencias do frontend
-      6. Mostra um resumo dizendo se tudo funcionou ou o que falhou
+      5. Compila o backend com o Maven Wrapper (baixa Node e npm automaticamente)
+      6. Instala as dependencias do frontend
+      7. Mostra um resumo dizendo se tudo funcionou ou o que falhou
 
     Node, npm e Maven nao precisam estar instalados: o projeto ja traz o
     Maven Wrapper e o frontend-maven-plugin baixa o Node dentro da pasta do projeto.
@@ -21,11 +23,14 @@
         -PularBuild    nao compila nem instala o frontend, so configura Java e banco
         -Simular       mostra o que seria feito sem alterar nada na maquina
                        (nao grava variaveis, nao instala, nao sobe container, nao compila)
+        -ForcarImportacao  restaura o dump mesmo que o banco de destino ja tenha
+                       tabelas, substituindo o que estiver la
 #>
 
 param(
     [switch]$PularBuild,
-    [switch]$Simular
+    [switch]$Simular,
+    [switch]$ForcarImportacao
 )
 
 # Sem 'Stop' global: o script tenta todas as etapas e resume as falhas no fim.
@@ -37,6 +42,11 @@ $VERSOES_ACEITAS = @('17', '21', '24')
 $SENHA_MYSQL = '31415'
 $NOME_BANCO = 'DIGITADO'
 $COMPOSE_MYSQL = 'src/main/docker/mysql.yml'
+
+# Dump gerado por exportar-banco.ps1 na maquina de origem. Se existir, os dados
+# sao restaurados aqui, para a instalacao ja nascer com palavras, listas e
+# conquistas em vez de um banco vazio.
+$ARQUIVO_DUMP = 'dados\banco-digitado.sql'
 
 # Portas liberadas no firewall para que outras maquinas da rede local alcancem
 # a aplicacao: 8080 e o back-end (Spring Boot) e 9000 e o front-end de
@@ -144,6 +154,20 @@ function Gravar-PathBruto($escopo, $valor) {
     Set-ItemProperty -Path (Caminho-Registro $escopo) -Name Path -Value $valor -Type ExpandString
 }
 
+# Procura o cliente de linha de comando de uma instalacao local do MySQL.
+function Procurar-MysqlCliente {
+    if (Get-Command mysql -ErrorAction SilentlyContinue) {
+        return (Get-Command mysql).Source
+    }
+    foreach ($base in @("$env:ProgramFiles\MySQL", "${env:ProgramFiles(x86)}\MySQL")) {
+        if (-not (Test-Path $base)) { continue }
+        $exe = Get-ChildItem $base -Recurse -Filter 'mysql.exe' -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if ($exe) { return $exe.FullName }
+    }
+    return $null
+}
+
 # Devolve o Path com o bin do JDK na primeira posicao, sem duplicar entradas.
 function Reordenar-Path($pathBruto, $binJdk) {
     $entradas = $pathBruto -split ';' | Where-Object { $_ -ne '' }
@@ -170,7 +194,7 @@ if (-not $admin) {
 Push-Location $PSScriptRoot
 
 # =====================================================================  JAVA
-Escrever "`n[1/5] Java (aceitos: $($VERSOES_ACEITAS -join ', '))" Cyan
+Escrever "`n[1/6] Java (aceitos: $($VERSOES_ACEITAS -join ', '))" Cyan
 
 $achado = Procurar-Jdk
 $jdk = if ($achado) { $achado.Caminho } else { $null }
@@ -222,9 +246,11 @@ if ($jdk) {
 }
 
 # =====================================================================  BANCO
-Escrever "`n[2/5] Banco de dados MySQL" Cyan
+Escrever "`n[2/6] Banco de dados MySQL" Cyan
 
 $bancoOk = $false
+$idMysql = $null       # container do Docker, quando o banco vem de la
+$clienteMysql = $null  # mysql.exe local, quando o banco ja existe na maquina
 
 if (Porta-Ocupada 3306) {
     # Ja existe algo na porta. Se for o container do projeto, esta tudo certo.
@@ -234,8 +260,10 @@ if (Porta-Ocupada 3306) {
         $nosso = [bool]$rodando
     }
     if ($nosso) {
+        $idMysql = ($rodando | Select-Object -First 1)
         Registrar 'MySQL disponivel em localhost:3306' $true 'container do projeto ja em execucao'
     } else {
+        $clienteMysql = Procurar-MysqlCliente
         Registrar 'MySQL disponivel em localhost:3306' $true `
             'ja havia um servico na porta 3306 - confira se o usuario root com senha 31415 e o banco DIGITADO existem'
     }
@@ -269,6 +297,7 @@ if (Porta-Ocupada 3306) {
                 Start-Sleep -Seconds 2
             }
             if ($pronto) {
+                $idMysql = $id
                 Registrar 'MySQL via Docker' $true "banco $NOME_BANCO pronto em localhost:3306 (root / $SENHA_MYSQL)"
                 $bancoOk = $true
             } else {
@@ -282,8 +311,72 @@ if (Porta-Ocupada 3306) {
         'nem Docker nem MySQL encontrados - instale o Docker Desktop (winget install Docker.DockerDesktop) ou um MySQL local com usuario root, senha 31415 e banco DIGITADO'
 }
 
+# ==================================================================  DADOS
+Escrever "`n[3/6] Dados do banco" Cyan
+
+$dump = Join-Path $PSScriptRoot $ARQUIVO_DUMP
+
+if (-not (Test-Path $dump)) {
+    Escrever "  Nenhum dump em $ARQUIVO_DUMP - o banco comeca vazio," DarkGray
+    Escrever "  com apenas as contas e conquistas criadas pelo Liquibase." DarkGray
+} elseif ($Simular) {
+    $mb = '{0:N1}' -f ((Get-Item $dump).Length / 1MB)
+    Simulado "restauracao de $ARQUIVO_DUMP ($mb MB), se o banco de destino estiver vazio"
+} elseif (-not $bancoOk) {
+    Registrar 'Dados restaurados' $false 'depende do banco, que nao ficou disponivel'
+} else {
+    # Conta as tabelas do banco de destino: so importamos sobre um banco vazio,
+    # para nunca apagar dados de quem ja estava usando a aplicacao.
+    $consulta = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$NOME_BANCO';"
+    $saida = if ($idMysql) {
+        docker exec $idMysql mysql -u root "-p$SENHA_MYSQL" -N -B -e $consulta 2>$null
+    } elseif ($clienteMysql) {
+        & $clienteMysql -u root "-p$SENHA_MYSQL" -N -B -e $consulta 2>$null
+    }
+    $tabelas = 0
+    if ($saida) { [int]::TryParse(($saida | Select-Object -Last 1).Trim(), [ref]$tabelas) | Out-Null }
+
+    if (-not $idMysql -and -not $clienteMysql) {
+        Registrar 'Dados restaurados' $false `
+            'nao encontrei como falar com o MySQL (nem container do projeto, nem cliente mysql local)'
+    } elseif ($tabelas -gt 0 -and -not $ForcarImportacao) {
+        Registrar 'Dados restaurados' $true `
+            "o banco ja tem $tabelas tabelas e foi preservado - use -ForcarImportacao para sobrescrever"
+    } else {
+        Escrever "  Restaurando $ARQUIVO_DUMP..." Yellow
+        if ($idMysql) {
+            # Copiar para dentro do container evita problemas de codificacao que
+            # o redirecionamento de entrada do PowerShell costuma causar.
+            docker cp $dump "${idMysql}:/tmp/dump.sql" 2>&1 | Out-Null
+            docker exec $idMysql sh -c "mysql -u root -p$SENHA_MYSQL < /tmp/dump.sql" 2>&1 | Out-Null
+            $codigo = $LASTEXITCODE
+            docker exec $idMysql rm -f /tmp/dump.sql 2>&1 | Out-Null
+        } else {
+            cmd /c "`"$clienteMysql`" -u root -p$SENHA_MYSQL < `"$dump`"" 2>&1 | Out-Null
+            $codigo = $LASTEXITCODE
+        }
+
+        if ($codigo -ne 0) {
+            Registrar 'Dados restaurados' $false "o mysql retornou codigo $codigo ao importar o dump"
+        } else {
+            $depois = if ($idMysql) {
+                docker exec $idMysql mysql -u root "-p$SENHA_MYSQL" -N -B -e $consulta 2>$null
+            } else {
+                & $clienteMysql -u root "-p$SENHA_MYSQL" -N -B -e $consulta 2>$null
+            }
+            $total = 0
+            if ($depois) { [int]::TryParse(($depois | Select-Object -Last 1).Trim(), [ref]$total) | Out-Null }
+            if ($total -gt 0) {
+                Registrar 'Dados restaurados' $true "$total tabelas importadas de $ARQUIVO_DUMP"
+            } else {
+                Registrar 'Dados restaurados' $false 'a importacao terminou sem erro, mas o banco continua sem tabelas'
+            }
+        }
+    }
+}
+
 # =================================================================  FIREWALL
-Escrever "`n[3/5] Firewall" Cyan
+Escrever "`n[4/6] Firewall" Cyan
 
 foreach ($item in $PORTAS_FIREWALL) {
     $porta = $item.Porta
@@ -321,7 +414,7 @@ foreach ($item in $PORTAS_FIREWALL) {
 }
 
 # ==================================================================  BACKEND
-Escrever "`n[4/5] Backend (Maven)" Cyan
+Escrever "`n[5/6] Backend (Maven)" Cyan
 
 if ($Simular) {
     Simulado '.\mvnw.cmd -ntp clean package -DskipTests'
@@ -345,7 +438,7 @@ if ($Simular) {
 }
 
 # =================================================================  FRONTEND
-Escrever "`n[5/5] Frontend (npm)" Cyan
+Escrever "`n[6/6] Frontend (npm)" Cyan
 
 if ($Simular) {
     Simulado '.\npmw.cmd install'
@@ -434,3 +527,4 @@ if ($falhas.Count -eq 0) {
     Escrever ""
     exit 1
 }
+

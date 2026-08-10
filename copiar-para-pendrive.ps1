@@ -42,6 +42,15 @@ if (-not (Test-Path $Destino)) {
 
 $pasta = Join-Path $Destino 'DIGITADO'
 
+# Sem o dump, a outra maquina comeca com o banco vazio - vale avisar a tempo.
+if (-not (Test-Path (Join-Path $origem 'dados\banco-digitado.sql'))) {
+    Escrever "`n  AVISO: nao existe dados\banco-digitado.sql." Yellow
+    Escrever "  Sem ele a outra maquina comeca com o banco vazio (sem palavras," Yellow
+    Escrever "  listas nem contas). Para levar os dados, cancele com Ctrl+C e rode:" Yellow
+    Escrever "      .\exportar-banco.ps1" Cyan
+    Start-Sleep -Seconds 4
+}
+
 Escrever "`n  Origem:  $origem"
 Escrever "  Destino: $pasta"
 
