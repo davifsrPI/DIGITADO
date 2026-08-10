@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Troca a senha do usuário 'admin', que vinha como 'admin' nos dados iniciais
+        de config/liquibase/data/user.csv.
+
+        A alteração é feita aqui, e não no CSV, porque aquele arquivo é carregado
+        pelo changeset 00000000000001: mudá-lo invalidaria o checksum e faria o
+        Liquibase recusar a subida em bancos que já existem. Este changelog roda
+        depois da carga inicial, entao vale tanto para bancos novos quanto antigos.
+
+        O valor abaixo é o hash BCrypt (custo 10) da nova senha - o mesmo formato
+        que o Spring Security usa para conferir o login.
+    -->
+    <changeSet id="20260810120000-1" author="digitado">
+        <update tableName="jhi_user">
+            <column name="password_hash" value="$2a$10$U48jnw6Wm85UAyKF1uHSSODUofaC/KtDWnHBPcuS8e.cZKuQx8pyW"/>
+            <where>login = 'admin'</where>
+        </update>
+    </changeSet>
+</databaseChangeLog>
