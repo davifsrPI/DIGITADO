@@ -10,8 +10,8 @@
     O codigo-fonte tem cerca de 3 MB, entao a copia e rapida.
 
     Uso:
-        .\copiar-para-pendrive.ps1 -Destino E:\
-        .\copiar-para-pendrive.ps1 -Destino E:\ -Simular    (so lista, nao copia)
+        powershell -ExecutionPolicy Bypass -File .\copiar-para-pendrive.ps1 -Destino E:\
+        acrescente -Simular para so listar, sem copiar
 #>
 
 param(
@@ -21,7 +21,10 @@ param(
     [switch]$Simular
 )
 
-$ErrorActionPreference = 'Stop'
+# 'Continue', e nao 'Stop': no Windows PowerShell 5.1 o texto que o robocopy
+# escreve na saida de erro (acesso negado, midia protegida) viraria excecao
+# fatal, escondendo a mensagem util. O resultado e conferido pelo codigo de saida.
+$ErrorActionPreference = 'Continue'
 
 $origem = $PSScriptRoot
 
@@ -47,7 +50,7 @@ if (-not (Test-Path (Join-Path $origem 'dados\banco-digitado.sql'))) {
     Escrever "`n  AVISO: nao existe dados\banco-digitado.sql." Yellow
     Escrever "  Sem ele a outra maquina comeca com o banco vazio (sem palavras," Yellow
     Escrever "  listas nem contas). Para levar os dados, cancele com Ctrl+C e rode:" Yellow
-    Escrever "      .\exportar-banco.ps1" Cyan
+    Escrever "      powershell -ExecutionPolicy Bypass -File .\exportar-banco.ps1" Cyan
     Start-Sleep -Seconds 4
 }
 

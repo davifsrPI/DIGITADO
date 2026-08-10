@@ -7,15 +7,19 @@
     ja aplicados e nao tenta recria-los.
 
     Uso:
-        .\exportar-banco.ps1
-        .\exportar-banco.ps1 -Arquivo dados\meu-backup.sql
+        powershell -ExecutionPolicy Bypass -File .\exportar-banco.ps1
+        acrescente -Arquivo dados\meu-backup.sql para escolher outro destino
 #>
 
 param(
     [string]$Arquivo = 'dados\banco-digitado.sql'
 )
 
-$ErrorActionPreference = 'Stop'
+# 'Continue', e nao 'Stop': no Windows PowerShell 5.1 qualquer texto que um
+# programa externo escreva na saida de erro viraria excecao fatal com 'Stop'.
+# O mysqldump e o docker fazem isso em situacoes normais (aviso de senha na
+# linha de comando, daemon parado). O sucesso e conferido por $LASTEXITCODE.
+$ErrorActionPreference = 'Continue'
 
 $SENHA_MYSQL = '31415'
 $NOME_BANCO = 'digitado'
@@ -62,8 +66,14 @@ try {
 
     $dump = Procurar-MysqlDump
     $idContainer = $null
-    if (Get-Command docker -ErrorAction SilentlyContinue) {
-        $idContainer = (docker compose -f $COMPOSE_MYSQL ps -q mysql 2>$null | Select-Object -First 1)
+
+    # O Docker so e consultado quando nao ha mysqldump local. O filtro descarta
+    # as mensagens de erro que o docker imprime quando o daemon esta parado,
+    # deixando passar apenas um id de container.
+    if (-not $dump -and (Get-Command docker -ErrorAction SilentlyContinue)) {
+        $idContainer = (docker compose -f $COMPOSE_MYSQL ps -q mysql 2>&1 |
+            Where-Object { $_ -is [string] -and $_ -match '^[0-9a-f]{12,}$' } |
+            Select-Object -First 1)
     }
 
     if ($dump) {
@@ -106,7 +116,7 @@ try {
     Escrever "  Contem INSERT INTO:  $temInsert"
     Escrever ""
     Escrever "  Agora copie o projeto para o pendrive:"
-    Escrever "    .\copiar-para-pendrive.ps1 -Destino E:\" Cyan
+    Escrever "    powershell -ExecutionPolicy Bypass -File .\copiar-para-pendrive.ps1 -Destino E:\" Cyan
     Escrever ""
 } finally {
     Pop-Location

@@ -163,12 +163,14 @@ Para instalar em outra máquina copiando por pendrive, em vez de clonar:
 1. **Na máquina de origem**, exporte o banco e copie o projeto:
 
    ```bash
-   .\exportar-banco.ps1
+   powershell -ExecutionPolicy Bypass -File .\exportar-banco.ps1
    ```
 
    ```bash
-   .\copiar-para-pendrive.ps1 -Destino E:\
+   powershell -ExecutionPolicy Bypass -File .\copiar-para-pendrive.ps1 -Destino E:\
    ```
+
+   O prefixo `powershell -ExecutionPolicy Bypass -File` é necessário porque o Windows bloqueia a execução de scripts `.ps1` por padrão. Ele vale só para aquela execução, sem alterar a configuração da máquina.
 
    O [`exportar-banco.ps1`](exportar-banco.ps1) grava `dados\banco-digitado.sql` com estrutura e dados (palavras, listas, conquistas, contas). O [`copiar-para-pendrive.ps1`](copiar-para-pendrive.ps1) copia só o necessário — cerca de 6 MB — deixando de fora `node_modules` e `target`, que a outra máquina regenera.
 
