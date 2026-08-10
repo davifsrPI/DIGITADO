@@ -5,16 +5,18 @@ services:
     image: mysql:9.2.0
     volumes:
       - ./config/mysql:/etc/mysql/conf.d
+    # Credenciais iguais as de src/main/resources/config/application-dev.yml,
+    # para que o back-end conecte sem nenhuma configuracao extra.
     environment:
-      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
-      - MYSQL_DATABASE=digitado
+      - MYSQL_ROOT_PASSWORD=31415
+      - MYSQL_DATABASE=DIGITADO
     # If you want to expose these ports outside your dev PC,
     # remove the "127.0.0.1:" prefix
     ports:
       - 127.0.0.1:3306:3306
     command: mysqld --lower_case_table_names=1 --skip-mysqlx --character_set_server=utf8mb4 --explicit_defaults_for_timestamp
     healthcheck:
-      test: ['CMD-SHELL', 'mysql -e "SHOW DATABASES;" && sleep 5']
+      test: ['CMD-SHELL', 'mysql -uroot -p31415 -e "SHOW DATABASES;" && sleep 5']
       interval: 5s
       timeout: 10s
       retries: 10

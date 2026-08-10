@@ -147,6 +147,14 @@ Este guia parte de uma máquina sem nada instalado e termina com o back-end e o 
 
 Você precisa de quatro coisas: **Git**, **JDK 17**, **Node.js (que traz o npm)** e um **MySQL** (ou Docker).
 
+> **Atalho no Windows:** o script [`setup-ambiente.ps1`](setup-ambiente.ps1) faz os passos 1, 3 e 4 sozinho — instala o JDK se necessário, configura o `JAVA_HOME`, sobe o banco, libera as portas 8080 e 9000 no firewall (perfil _Private_, para acesso pela rede local) e instala as dependências. Rode-o em um PowerShell **como administrador**, depois de clonar o projeto (Passo 2):
+>
+> ```bash
+> powershell -ExecutionPolicy Bypass -File .\setup-ambiente.ps1
+> ```
+>
+> Use `-Simular` para só ver o que ele faria, sem alterar nada. Ao final ele imprime `TUDO FUNCIONOU` ou a lista do que falhou.
+
 #### 1.1. Git
 
 - Windows: baixe em <https://git-scm.com/download/win> e instale (avance com "Next" e conclua com "Finish").
@@ -166,7 +174,15 @@ Baixe o **Java 17** (Temurin/Adoptium é uma boa opção): <https://adoptium.net
 java -version
 ```
 
-A saída deve mostrar `17.x`. Se mostrar outra versão, ajuste a variável `JAVA_HOME` para apontar para o JDK 17.
+A saída deve mostrar `17.x`. O projeto compila para Java 17, mas o `maven-enforcer-plugin` aceita **17, 21 ou 24** — apenas essas. Um JDK 20 ou 23, por exemplo, é recusado com a mensagem `You are running an incompatible version of Java`, mesmo estando dentro da faixa citada no erro.
+
+Se aparecer outra versão, aponte o `JAVA_HOME` para um JDK aceito. No Windows, o instalador da Oracle costuma colocar `C:\Program Files\Common Files\Oracle\Java\javapath` no **início** do `Path` do sistema, e é ele que vence — nesse caso, mova `%JAVA_HOME%\bin` para cima dessa entrada em _Variáveis de Ambiente → Variáveis do sistema → Path_. Confira qual está sendo usado com:
+
+```bash
+where java
+```
+
+O Maven não usa necessariamente o mesmo `java` do `Path`: ele segue o `JAVA_HOME`. Para ver o que a build enxerga, rode `.\mvnw.cmd --version` (Windows) ou `./mvnw --version`.
 
 #### 1.3. Node.js e npm
 
@@ -219,11 +235,13 @@ Alternativa com o wrapper (fixa a versão do npm):
 
 ### Passo 4 — Preparar o banco de dados
 
-**Se escolheu Docker (Opção A):** suba o MySQL em container:
+**Se escolheu Docker (Opção A):** suba o MySQL em container. O Docker Desktop precisa estar **aberto e rodando**:
 
 ```bash
 docker compose -f src/main/docker/mysql.yml up -d
 ```
+
+O container já sobe com o banco `DIGITADO` e as credenciais que o perfil de desenvolvimento espera (`root` / `31415`), então nada mais precisa ser configurado.
 
 **Se escolheu MySQL local (Opção B):** o perfil de desenvolvimento cria o schema `DIGITADO` automaticamente e, por padrão, conecta com usuário `root` / senha `31415` (definido em [`application-dev.yml`](src/main/resources/config/application-dev.yml)). Para usar outras credenciais, defina variáveis de ambiente **antes** de subir o back-end:
 
@@ -267,10 +285,10 @@ O webpack compila e abre o navegador em **<http://localhost:9000>**, com hot-rel
 
 Abra <http://localhost:9000> e faça login com uma das contas de desenvolvimento já cadastradas:
 
-| Usuário | Senha   | Papel      |
-| ------- | ------- | ---------- |
-| `admin` | `admin` | ROLE_ADMIN |
-| `user`  | `user`  | ROLE_USER  |
+| Usuário | Senha          | Papel      |
+| ------- | -------------- | ---------- |
+| `admin` | `Davidigitado` | ROLE_ADMIN |
+| `user`  | `user`         | ROLE_USER  |
 
 Pronto, você pode criar uma sala, jogar a Palavra do Dia e explorar o ranking.
 
