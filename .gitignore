@@ -158,3 +158,28 @@ coverage/
 # Dump do banco gerado por exportar-banco.ps1: contém e-mails e hashes de senha
 # dos usuários. Viaja por pendrive junto com o projeto, nunca pelo repositório.
 dados/
+
+######################
+# Segredos e dados sensíveis — este repositório é público
+######################
+# Dumps e backups de banco, em qualquer pasta
+*.sql
+*.dump
+*.sql.gz
+*.bak
+
+# Variáveis de ambiente com credenciais
+.env
+.env.*
+!.env.example
+
+# Qualquer arquivo marcado como local (senhas de produção, configs pessoais)
+*.local.*
+
+# Chaves, certificados e keystores
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore

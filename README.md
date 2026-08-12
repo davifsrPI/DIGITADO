@@ -304,10 +304,12 @@ O webpack compila e abre o navegador em **<http://localhost:9000>**, com hot-rel
 
 Abra <http://localhost:9000> e faça login com uma das contas de desenvolvimento já cadastradas:
 
-| Usuário | Senha          | Papel      |
-| ------- | -------------- | ---------- |
-| `admin` | `Davidigitado` | ROLE_ADMIN |
-| `user`  | `user`         | ROLE_USER  |
+| Usuário | Senha                      | Papel      |
+| ------- | -------------------------- | ---------- |
+| `admin` | definida por quem instalou | ROLE_ADMIN |
+| `user`  | `user`                     | ROLE_USER  |
+
+> A senha do `admin` não é documentada aqui de propósito: este repositório é público. Ela é aplicada pelo changelog [`20260810120000_senha_admin.xml`](src/main/resources/config/liquibase/changelog/20260810120000_senha_admin.xml) na primeira subida do back-end.
 
 Pronto, você pode criar uma sala, jogar a Palavra do Dia e explorar o ranking.
 
