@@ -54,7 +54,7 @@ public class JogoSalaService {
     }
 
     // Registra um participante num duelo 1v1, respeitando o limite de 2 jogadores.
-    // Retorna false se a sala já está cheia (e o login não é um dos dois que já estão nela —
+    // Retorna false se a sala já está cheia (e o login não é um dos dois que já estão nela -
     // reconexão de quem já participa é sempre aceita).
     public boolean registrarNoDuelo(String codigoSala, String login, String nome) {
         EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
@@ -125,7 +125,7 @@ public class JogoSalaService {
     // adiciona quaisquer palavras extras selecionadas manualmente e embaralha tudo
     public EstadoJogoDTO iniciar(String codigoSala, String nomeSala, IniciarPayload payload) {
         EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
-        // Palavras da PARTIDA ANTERIOR desta sala ficam fora do sorteio — evita que
+        // Palavras da PARTIDA ANTERIOR desta sala ficam fora do sorteio - evita que
         // duas partidas seguidas repitam as mesmas palavras
         List<Long> recentes = jogo.getIdsPalavras();
         List<Long> excluir = recentes.isEmpty() ? List.of(-1L) : recentes;
@@ -177,7 +177,7 @@ public class JogoSalaService {
     }
 
     // Avança para a próxima palavra; se não houver mais, encerra o jogo.
-    // loginProfessor: quem comanda a sala — excluído da contagem de silenciosos.
+    // loginProfessor: quem comanda a sala - excluído da contagem de silenciosos.
     public EstadoJogoDTO proximaPalavra(String codigoSala, String nomeSala, String loginProfessor) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null) return null;
@@ -209,7 +209,7 @@ public class JogoSalaService {
     }
 
     // Quem estava conectado e NÃO respondeu a palavra da rodada conta como
-    // tentativa errada nas estatísticas — mas só quando o tempo realmente esgotou
+    // tentativa errada nas estatísticas - mas só quando o tempo realmente esgotou
     // (protege contra avanço duplo/precoce contaminar os números). O professor
     // que comanda a sala fica de fora: ele não é obrigado a jogar. No duelo 1v1
     // não há isenção: o criador joga como qualquer participante.
@@ -260,7 +260,7 @@ public class JogoSalaService {
                 LOG.error("Falha ao premiar fim de partida para {}: {}", login, e.getMessage(), e);
             }
         }
-        // Conquistas exclusivas do modo Duelo 1v1 — só valem com os dois oponentes
+        // Conquistas exclusivas do modo Duelo 1v1 - só valem com os dois oponentes
         // tendo participado ("Primeiro Duelo", "Duelista", "Vença de um Desenvolvedor"...)
         if (jogo.isModo1v1() && ordenados.size() == 2) {
             for (int i = 0; i < 2; i++) {
@@ -293,7 +293,7 @@ public class JogoSalaService {
     /**
      * Consolidado de UMA palavra da partida para o relatório do professor:
      * o texto e a dificuldade da palavra, os totais (quantos responderam e
-     * quantos acertaram — o % é calculado no frontend) e a lista de respostas.
+     * quantos acertaram - o % é calculado no frontend) e a lista de respostas.
      */
     public record RelatorioPalavra(
         int indice,
@@ -309,7 +309,7 @@ public class JogoSalaService {
      * uma entrada por palavra JÁ JOGADA, com as respostas de cada jogador.
      *
      * Exposto via GET /api/salas/{codigo}/relatorio, restrito ao professor dono
-     * (ou admin) — é ele quem vê o texto das palavras e as respostas dos alunos.
+     * (ou admin) - é ele quem vê o texto das palavras e as respostas dos alunos.
      * Sala sem estado em memória (servidor reiniciado / partida não iniciada)
      * devolve lista vazia, e o frontend trata como "sem dados ainda".
      */
@@ -339,7 +339,7 @@ public class JogoSalaService {
         // Cada aluno só pode responder uma vez por palavra
         if (jogo.jaRespondeu(login)) return null;
         // O relógio é validado NO SERVIDOR: rodada precisa estar ativa e dentro do
-        // tempo (com folga para latência) — um cliente adulterado não responde
+        // tempo (com folga para latência) - um cliente adulterado não responde
         // depois que o tempo esgota nem durante pausa/encerramento
         if (!"NOVA_PALAVRA".equals(jogo.getTipo())) return null;
         long decorrido = Instant.now().toEpochMilli() - jogo.getTimestampInicio();
@@ -396,7 +396,7 @@ public class JogoSalaService {
         jogo.adicionarPontos(login, nomeAluno, pontos);
 
         // Motor de conquistas: acerto, rapidez, acentos/cedilha e sequência.
-        // Transação própria e try/catch — conquista nunca derruba a partida.
+        // Transação própria e try/catch - conquista nunca derruba a partida.
         try {
             conquistaEngine.aoResponderNaPartida(login, jogo.getPalavraAtual(), correta, decorrido, jogo.getSequenciaAcertos(login));
         } catch (Exception e) {
@@ -426,7 +426,7 @@ public class JogoSalaService {
     }
 
     // Algoritmo de Levenshtein: calcula o número mínimo de edições (inserção, remoção, substituição)
-    // para transformar uma string na outra — usado para classificar erros de digitação
+    // para transformar uma string na outra - usado para classificar erros de digitação
     private int levenshtein(String a, String b) {
         int m = a.length(), n = b.length();
         int[][] dp = new int[m + 1][n + 1];
@@ -478,6 +478,9 @@ public class JogoSalaService {
             jogo.getTotalPalavras(),
             jogo.getTempoLimite(),
             jogo.getTimestampInicio(),
+            // Hora do servidor no instante do envio: referência para o cliente
+            // corrigir a diferença do próprio relógio antes de contar o tempo
+            Instant.now().toEpochMilli(),
             placar,
             nomeSala,
             codigoSala,
@@ -502,13 +505,13 @@ public class JogoSalaService {
         return jogos.values().stream().mapToInt(EstadoJogo::totalConectados).sum();
     }
 
-    // Estado interno de uma sala de jogo — mantido em memória enquanto o servidor está rodando.
+    // Estado interno de uma sala de jogo - mantido em memória enquanto o servidor está rodando.
     // Usa ConcurrentHashMap para suportar múltiplos jogadores respondendo ao mesmo tempo.
     public static class EstadoJogo {
 
         private List<Palavra> palavras = new ArrayList<>();
         private int indiceAtual = -1;
-        // Tempo de rodada por dificuldade — o tempo efetivo depende da palavra atual
+        // Tempo de rodada por dificuldade - o tempo efetivo depende da palavra atual
         private int tempoFacil = 30;
         private int tempoMedio = 30;
         private int tempoDificil = 30;
@@ -529,7 +532,7 @@ public class JogoSalaService {
         // Sala de duelo 1v1: no máximo 2 jogadores e conquistas próprias no fim
         private volatile boolean modo1v1 = false;
 
-        // Nome da sala (cache): resolvido no banco uma única vez por sala — ver
+        // Nome da sala (cache): resolvido no banco uma única vez por sala - ver
         // JogoSalaService.nomeSalaCacheado. volatile: escrito por uma mensagem
         // WebSocket e lido pelas seguintes, possivelmente em threads diferentes.
         private volatile String nomeSala;
@@ -539,7 +542,7 @@ public class JogoSalaService {
          * índice da palavra (posição na lista embaralhada) → lista de respostas
          * digitadas naquela rodada, na ordem de chegada.
          *
-         * É daqui que sai o relatório "quem escreveu o quê" — tanto o painel ao
+         * É daqui que sai o relatório "quem escreveu o quê" - tanto o painel ao
          * vivo (contagem e % de acerto por palavra) quanto o relatório final.
          * Vive apenas em memória, como todo o EstadoJogo: reiniciar o servidor
          * descarta o histórico da partida em andamento.
@@ -616,7 +619,7 @@ public class JogoSalaService {
 
         /**
          * Anexa a resposta digitada ao histórico da PALAVRA ATUAL (indiceAtual).
-         * Chamado logo após registrarResposta — que já garantiu resposta única por
+         * Chamado logo após registrarResposta - que já garantiu resposta única por
          * jogador na rodada e definiu a ordem de chegada. A lista é sincronizada
          * porque vários alunos respondem ao mesmo tempo.
          */
@@ -628,7 +631,7 @@ public class JogoSalaService {
 
         /**
          * Consolida o relatório da partida: uma entrada por palavra já jogada
-         * (índice 0 até o atual, inclusive — a rodada em curso entra com as
+         * (índice 0 até o atual, inclusive - a rodada em curso entra com as
          * respostas que já chegaram, alimentando o painel ao vivo do professor).
          * Palavras ainda não sorteadas para jogo ficam de fora: o relatório nunca
          * antecipa o que vem pela frente.
@@ -680,7 +683,7 @@ public class JogoSalaService {
         }
 
         // Ids das palavras carregadas nesta sala (da partida em curso ou da última
-        // encerrada) — usados para não repetir palavras na partida seguinte
+        // encerrada) - usados para não repetir palavras na partida seguinte
         List<Long> getIdsPalavras() {
             return palavras.stream().map(Palavra::getId).filter(Objects::nonNull).toList();
         }

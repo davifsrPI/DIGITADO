@@ -33,7 +33,11 @@ export interface EstadoJogo {
   indiceAtual: number;
   totalPalavras: number;
   tempoLimite: number;
+  // Já convertido para o relógio do CLIENTE por corrigirRelogio - as telas podem
+  // comparar com Date.now() diretamente
   timestampInicio: number;
+  // Hora do servidor quando a mensagem foi montada (referência da conversão)
+  timestampServidor: number;
   placar: PlacarEntry[];
   nomeSala: string;
   codigoSala: string;
@@ -53,6 +57,18 @@ export interface FeedbackAluno {
 export interface ErroWS {
   tipo: string;
   mensagem: string;
+}
+
+// Traz o início da rodada para o relógio do CLIENTE.
+// O servidor manda quando a rodada começou e que horas são para ele; a diferença
+// entre "que horas são para ele" e "que horas são aqui" é o desencontro dos dois
+// relógios (mais o tempo de rede, desprezível perto de uma rodada). Sem essa
+// correção, um celular com a hora adiantada calculava a rodada como já vencida e
+// caía direto no ranking, como se o aluno não tivesse respondido a tempo.
+export function corrigirRelogio(estado: EstadoJogo): EstadoJogo {
+  if (!estado.timestampServidor) return estado;
+  const diferenca = Date.now() - estado.timestampServidor;
+  return { ...estado, timestampInicio: estado.timestampInicio + diferenca };
 }
 
 interface UseSalaWebSocketOptions {
@@ -98,7 +114,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
         // Inscreve no tópico público da sala - recebe o estado do jogo para todos
         client.subscribe(`/topic/sala/${codigoSala}`, (msg: IMessage) => {
           const estado: EstadoJogo = JSON.parse(msg.body);
-          onEstadoRef.current?.(estado);
+          onEstadoRef.current?.(corrigirRelogio(estado));
         });
         // Inscreve no canal privado de feedback - só este usuário recebe
         client.subscribe(`/user/queue/sala/${codigoSala}/feedback`, (msg: IMessage) => {
