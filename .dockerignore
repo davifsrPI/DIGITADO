@@ -1,0 +1,22 @@
+# O que NAO entra no contexto enviado ao Docker na hora de construir a imagem.
+# Sem isto, os 374 MB de node_modules seriam copiados para o daemon a cada
+# build - e eles sao reinstalados dentro do container de qualquer forma.
+
+node_modules/
+target/
+.git/
+.idea/
+.vscode/
+*.log
+*.log.*
+
+# Dados e segredos nao vao para dentro da imagem: o dump e montado no MySQL
+# pelo docker-compose.yml, e as senhas chegam por variavel de ambiente.
+dados/
+.env
+*.local.ps1
+*.local.*
+
+# Nao servem para compilar
+deploy/
+MONITORING.md

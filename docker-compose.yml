@@ -1,0 +1,83 @@
+# ==========================================================================
+#  DIGITADO completo em containers.
+#
+#    app    - back-end e front-end ja compilados dentro de um .jar (Dockerfile)
+#    mysql  - banco com os dados de dados/banco-digitado.sql
+#
+#  Os dois sobem juntos com um comando so, e a maquina nao precisa de Java,
+#  Node, Maven nem MySQL instalados - apenas do Docker Desktop.
+#
+#  Nao chame o compose direto: use o script, que gera as senhas desta maquina
+#  no arquivo .env antes de subir.
+#
+#      powershell -ExecutionPolicy Bypass -File .\iniciar-container.ps1
+# ==========================================================================
+name: digitado-completo
+
+services:
+  mysql:
+    image: mysql:9.2.0
+    # As mesmas opcoes de src/main/docker/mysql.yml. lower_case_table_names=1
+    # e obrigatorio: o dump foi gerado no Windows, com nomes de tabela em
+    # minusculas, e o Linux diferencia maiusculas de minusculas.
+    command: mysqld --lower_case_table_names=1 --skip-mysqlx --character_set_server=utf8mb4 --explicit_defaults_for_timestamp
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: digitado
+      # Lida por 20-usuario-app.sh, que cria o usuario usado pela aplicacao.
+      DIGITADO_DB_PASSWORD: ${DIGITADO_DB_PASSWORD}
+    volumes:
+      # Os dois arquivos abaixo rodam UMA vez, quando o volume 'banco' ainda
+      # esta vazio. Depois disso a fonte da verdade e o volume: para recomecar
+      # do dump, use 'iniciar-container.ps1 -Limpar'.
+      - ./dados/banco-digitado.sql:/docker-entrypoint-initdb.d/10-dados.sql:ro
+      - ./src/main/docker/init/20-usuario-app.sh:/docker-entrypoint-initdb.d/20-usuario-app.sh:ro
+      - banco:/var/lib/mysql
+    # A porta 3306 nao e publicada de proposito: quem precisa do banco e a
+    # aplicacao, e ela fala com o MySQL pela rede interna do compose.
+    healthcheck:
+      # -h 127.0.0.1 forca TCP. Durante a importacao do dump o MySQL sobe um
+      # servidor temporario que so escuta no socket, entao o teste falha ate
+      # os dados terminarem de entrar - que e exatamente o que queremos.
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -u root -p"$$MYSQL_ROOT_PASSWORD" --silent']
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: digitado:completo
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # 'mysql' e o nome do servico acima: dentro da rede do compose ele vira
+      # o endereco do banco, no lugar de localhost.
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/digitado?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&useLegacyDatetimeCode=false
+      SPRING_DATASOURCE_USERNAME: digitado
+      SPRING_DATASOURCE_PASSWORD: ${DIGITADO_DB_PASSWORD}
+      SPRING_LIQUIBASE_URL: jdbc:mysql://mysql:3306/digitado?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&useLegacyDatetimeCode=false
+      # Sem esta chave a aplicacao nao sobe (de proposito, veja
+      # application-prod.yml). O iniciar-container.ps1 gera uma no .env.
+      JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET: ${JWT_SECRET}
+    ports:
+      # Sem o prefixo 127.0.0.1: assim outras maquinas da rede local tambem
+      # abrem o DIGITADO, como acontece no fluxo do setup-ambiente.ps1.
+      - '8080:8080'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/management/health']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    # Com 'unless-stopped' os dois containers voltam sozinhos quando o Docker
+    # Desktop e aberto - nos dias seguintes nao ha comando nenhum para rodar.
+    restart: unless-stopped
+
+volumes:
+  banco:

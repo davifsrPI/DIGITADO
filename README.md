@@ -144,11 +144,11 @@ As regras ficam em [`SecurityConfiguration.java`](src/main/java/br/com/digitado/
 
 Este guia parte de uma máquina sem nada instalado e termina com o back-end e o front-end rodando. Os comandos são mostrados para **Windows (PowerShell)** e, quando diferentes, para **macOS/Linux**.
 
-### Passo 1 — Instalar as ferramentas de base
+### Passo 1 - Instalar as ferramentas de base
 
 Você precisa de quatro coisas: **Git**, **JDK 17**, **Node.js (que traz o npm)** e um **MySQL** (ou Docker).
 
-> **Atalho no Windows:** o script [`setup-ambiente.ps1`](setup-ambiente.ps1) faz os passos 1, 3 e 4 sozinho — instala o JDK se necessário, configura o `JAVA_HOME`, sobe o banco, libera as portas 8080 e 9000 no firewall (perfil _Private_, para acesso pela rede local) e instala as dependências. Rode-o em um PowerShell **como administrador**, depois de clonar o projeto (Passo 2):
+> **Atalho no Windows:** o script [`setup-ambiente.ps1`](setup-ambiente.ps1) faz os passos 1, 3 e 4 sozinho - instala o JDK se necessário, configura o `JAVA_HOME`, sobe o banco, libera as portas 8080 e 9000 no firewall (perfil _Private_, para acesso pela rede local) e instala as dependências. Rode-o em um PowerShell **como administrador**, depois de clonar o projeto (Passo 2):
 >
 > ```bash
 > powershell -ExecutionPolicy Bypass -File .\setup-ambiente.ps1
@@ -168,11 +168,23 @@ Para instalar em outra máquina copiando por pendrive, em vez de clonar:
 
    O prefixo `powershell -ExecutionPolicy Bypass -File` é necessário porque o Windows bloqueia a execução de scripts `.ps1` por padrão. Ele vale só para aquela execução, sem alterar a configuração da máquina.
 
-   O [`copiar-para-pendrive.ps1`](copiar-para-pendrive.ps1) chama o [`exportar-banco.ps1`](exportar-banco.ps1), que grava `dados\banco-digitado.sql` com estrutura e dados (palavras, listas, conquistas, contas), e em seguida copia o necessário — cerca de 6 MB — deixando de fora `node_modules` e `target`, que a outra máquina regenera. Use `-SemBanco` para copiar sem reexportar, ou `-Simular` para só ver o que seria feito.
+   O [`copiar-para-pendrive.ps1`](copiar-para-pendrive.ps1) chama o [`exportar-banco.ps1`](exportar-banco.ps1), que grava `dados\banco-digitado.sql` com estrutura e dados (palavras, listas, conquistas, contas), e em seguida copia o necessário - cerca de 6 MB - deixando de fora `node_modules` e `target`, que a outra máquina regenera. Use `-SemBanco` para copiar sem reexportar, ou `-Simular` para só ver o que seria feito.
 
-2. **Na máquina de destino**, copie a pasta do pendrive para o disco (não rode direto do pendrive) e execute o `setup-ambiente.ps1` como administrador. Ele restaura o dump automaticamente, desde que o banco de destino esteja vazio — se já houver tabelas, os dados existentes são preservados e a restauração é pulada (use `-ForcarImportacao` para sobrescrever).
+2. **Na máquina de destino**, copie a pasta do pendrive para o disco (não rode direto do pendrive) e execute o `setup-ambiente.ps1` como administrador. Ele restaura o dump automaticamente, desde que o banco de destino esteja vazio - se já houver tabelas, os dados existentes são preservados e a restauração é pulada (use `-ForcarImportacao` para sobrescrever).
 
 > O arquivo `dados\banco-digitado.sql` contém e-mails e hashes de senha, por isso está no `.gitignore`: ele viaja no pendrive, nunca no repositório.
+
+#### Tudo em container (sem instalar Java nem Node)
+
+Alternativa ao `setup-ambiente.ps1` para quando a outra máquina só pode ter o Docker. O [`Dockerfile`](Dockerfile) compila back-end e front-end, e o [`docker-compose.yml`](docker-compose.yml) sobe a aplicação junto com um MySQL já carregado com `dados\banco-digitado.sql`:
+
+```bash
+powershell -ExecutionPolicy Bypass -File .\iniciar-container.ps1
+```
+
+Não pede administrador e não instala nada na máquina - nem JDK, nem Node, nem regra de firewall (o Docker publica a porta 8080 sozinho). Como o perfil `prod` embute o front-end no `.jar`, não existe segundo terminal: tudo responde em <http://localhost:8080>.
+
+Na primeira execução o script grava um `.env` (fora do git) com as senhas do banco e a chave JWT daquela máquina. Depois disso: `-Reconstruir` recompila a imagem a partir do código atual **preservando** o banco, `-Parar` desliga os containers e `-Limpar` apaga o banco do container para a próxima subida recomeçar do dump.
 
 #### 1.1. Git
 
@@ -193,9 +205,9 @@ Baixe o **Java 17** (Temurin/Adoptium é uma boa opção): <https://adoptium.net
 java -version
 ```
 
-A saída deve mostrar `17.x`. O projeto compila para Java 17, mas o `maven-enforcer-plugin` aceita **17, 21 ou 24** — apenas essas. Um JDK 20 ou 23, por exemplo, é recusado com a mensagem `You are running an incompatible version of Java`, mesmo estando dentro da faixa citada no erro.
+A saída deve mostrar `17.x`. O projeto compila para Java 17, mas o `maven-enforcer-plugin` aceita **17, 21 ou 24** - apenas essas. Um JDK 20 ou 23, por exemplo, é recusado com a mensagem `You are running an incompatible version of Java`, mesmo estando dentro da faixa citada no erro.
 
-Se aparecer outra versão, aponte o `JAVA_HOME` para um JDK aceito. No Windows, o instalador da Oracle costuma colocar `C:\Program Files\Common Files\Oracle\Java\javapath` no **início** do `Path` do sistema, e é ele que vence — nesse caso, mova `%JAVA_HOME%\bin` para cima dessa entrada em _Variáveis de Ambiente → Variáveis do sistema → Path_. Confira qual está sendo usado com:
+Se aparecer outra versão, aponte o `JAVA_HOME` para um JDK aceito. No Windows, o instalador da Oracle costuma colocar `C:\Program Files\Common Files\Oracle\Java\javapath` no **início** do `Path` do sistema, e é ele que vence - nesse caso, mova `%JAVA_HOME%\bin` para cima dessa entrada em _Variáveis de Ambiente → Variáveis do sistema → Path_. Confira qual está sendo usado com:
 
 ```bash
 where java
@@ -232,14 +244,14 @@ Você tem duas opções, escolha **uma**.
 - **Opção A (mais fácil): Docker.** Instale o [Docker Desktop](https://www.docker.com/products/docker-desktop/). Não precisa instalar MySQL à mão; um container é subido no Passo 4.
 - **Opção B: MySQL local.** Instale o **MySQL 8+** em <https://dev.mysql.com/downloads/installer/> e deixe o serviço rodando na porta padrão `3306`.
 
-### Passo 2 — Obter o código
+### Passo 2 - Obter o código
 
 ```bash
 git clone https://github.com/davifsrPI/DIGITADO.git
 cd DIGITADO
 ```
 
-### Passo 3 — Instalar as dependências do frontend
+### Passo 3 - Instalar as dependências do frontend
 
 Na raiz do projeto, baixe as dependências do npm (só é necessário na primeira vez e sempre que o `package.json` mudar):
 
@@ -252,7 +264,7 @@ Alternativa com o wrapper (fixa a versão do npm):
 - Windows (PowerShell): `.\npmw.cmd install`
 - macOS/Linux: `./npmw install`
 
-### Passo 4 — Preparar o banco de dados
+### Passo 4 - Preparar o banco de dados
 
 **Se escolheu Docker (Opção A):** suba o MySQL em container. O Docker Desktop precisa estar **aberto e rodando**:
 
@@ -275,7 +287,7 @@ O container já sobe com o banco `DIGITADO` e as credenciais que o perfil de des
   export SPRING_DATASOURCE_PASSWORD=suaSenha
   ```
 
-### Passo 5 — Rodar o back-end (Spring Boot)
+### Passo 5 - Rodar o back-end (Spring Boot)
 
 Em um terminal, na raiz do projeto:
 
@@ -291,7 +303,7 @@ Application 'DIGITADO' is running! Access URLs:
 
 Deixe **este terminal aberto**: ele mantém a API rodando na porta **8080**.
 
-### Passo 6 — Rodar o front-end (React)
+### Passo 6 - Rodar o front-end (React)
 
 Abra um **segundo terminal** (sem fechar o do back-end), na raiz do projeto:
 
@@ -300,7 +312,7 @@ Abra um **segundo terminal** (sem fechar o do back-end), na raiz do projeto:
 
 O webpack compila e abre o navegador em **<http://localhost:9000>**, com hot-reload (a página recarrega sozinha ao salvar arquivos). O front-end faz proxy das chamadas `/api` para o back-end na 8080.
 
-### Passo 7 — Acessar e entrar
+### Passo 7 - Acessar e entrar
 
 Abra <http://localhost:9000> e faça login com uma das contas de desenvolvimento já cadastradas:
 
@@ -475,5 +487,5 @@ Os hooks de pre-commit (Husky) rodam Prettier e lint automaticamente. Mantenha o
 ---
 
 <div align="center">
-DIGITADO © 2026 — gerado com <a href="https://www.jhipster.tech/">JHipster 8.11.0</a>
+DIGITADO © 2026 - gerado com <a href="https://www.jhipster.tech/">JHipster 8.11.0</a>
 </div>

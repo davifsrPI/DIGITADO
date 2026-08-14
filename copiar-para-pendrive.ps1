@@ -125,9 +125,13 @@ Escrever "`n  COPIA CONCLUIDA" Green
 Escrever ("  {0:N0} arquivos, {1:N1} MB em {2}" -f $copiado.Count, ($copiado.Sum / 1MB), $pasta)
 Escrever ""
 Escrever "  Na outra maquina: copie a pasta DIGITADO do pendrive para o disco"
-Escrever "  (por exemplo C:\Projetos\DIGITADO) e rode la dentro, como administrador:"
+Escrever "  (por exemplo C:\Projetos\DIGITADO) e rode la dentro um dos dois:"
 Escrever ""
 Escrever "    powershell -ExecutionPolicy Bypass -File .\setup-ambiente.ps1" Cyan
+Escrever "      instala Java e Node na maquina; precisa de administrador" DarkGray
+Escrever ""
+Escrever "    powershell -ExecutionPolicy Bypass -File .\iniciar-container.ps1" Cyan
+Escrever "      roda tudo em container; so precisa do Docker Desktop" DarkGray
 Escrever ""
 
 # Obrigatorio: sem isto o script herda o codigo do robocopy, que devolve 1
