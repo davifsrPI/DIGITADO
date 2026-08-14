@@ -86,7 +86,7 @@ module.exports = async options =>
             },
           },
           // ghostMode desativado: por padrão o BrowserSync ESPELHA cliques, navegação
-          // e formulários entre todos os dispositivos conectados — péssimo para testar
+          // e formulários entre todos os dispositivos conectados - péssimo para testar
           // o jogo multiusuário (professor no PC e aluno no celular precisam de
           // sessões independentes); https://github.com/jhipster/generator-jhipster/issues/11116
           ghostMode: {

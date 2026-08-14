@@ -75,7 +75,7 @@ public class PalavraResource {
     public record SugestaoPalavraPayload(String texto, String dificuldade) {}
 
     // Cadastro rápido feito na tela de criação de sala: palavra que não existe no
-    // banco entra como INATIVA — vale como palavra extra da sala de quem cadastrou,
+    // banco entra como INATIVA - vale como palavra extra da sala de quem cadastrou,
     // mas fica fora dos sorteios e da Palavra do Dia até um admin ativá-la.
     // Se a palavra já existir (qualquer caixa), devolve a existente: nunca duplica.
     @PostMapping("/sugerir")
@@ -87,7 +87,7 @@ public class PalavraResource {
         if (texto.length() > 60) {
             throw new BadRequestAlertException("Palavra longa demais", ENTITY_NAME, "textolongo");
         }
-        // Já existe (mesmo inativa)? Devolve a existente — também cobre a corrida de
+        // Já existe (mesmo inativa)? Devolve a existente - também cobre a corrida de
         // duas pessoas cadastrando a mesma palavra quase ao mesmo tempo
         Optional<Palavra> existente = palavraRepository.findFirstByTextoIgnoreCaseOrderByIdAsc(texto);
         if (existente.isPresent()) {
@@ -133,7 +133,7 @@ public class PalavraResource {
             throw new BadRequestAlertException("Dificuldade inválida", ENTITY_NAME, "dificuldadeinvalida");
         }
         int n = Math.max(1, Math.min(30, quantidade));
-        // NOT IN vazio quebra o SQL nativo — usa um id impossível como sentinela
+        // NOT IN vazio quebra o SQL nativo - usa um id impossível como sentinela
         List<Long> excluir = excluirIds == null || excluirIds.isEmpty() ? List.of(-1L) : excluirIds;
         return ResponseEntity.ok(palavraRepository.findRandomByDificuldadeExcluindo(dif.name(), n, excluir));
     }

@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <!-- Último patch da série 3.4 — inclui correções de segurança do Spring
+        <!-- Último patch da série 3.4 - inclui correções de segurança do Spring
              Security e do Tomcat embarcado posteriores ao 3.4.5 -->
         <version>3.4.7</version>
         <relativePath/>
@@ -282,7 +282,7 @@
         </dependency>
         <dependency>
             <!-- Logs estruturados em JSON no perfil prod (jhipster.logging.use-json-format)
-                 — exigida em runtime pelo LoggingConfiguration/LoggingUtils do JHipster -->
+                 - exigida em runtime pelo LoggingConfiguration/LoggingUtils do JHipster -->
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
             <version>8.0</version>

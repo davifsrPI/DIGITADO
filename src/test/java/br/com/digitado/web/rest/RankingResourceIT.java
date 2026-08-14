@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-// Escrita e leitura da entidade Ranking são restritas a ADMIN — ITs rodam como admin
+// Escrita e leitura da entidade Ranking são restritas a ADMIN - ITs rodam como admin
 @WithMockUser(authorities = "ROLE_ADMIN")
 class RankingResourceIT {
 

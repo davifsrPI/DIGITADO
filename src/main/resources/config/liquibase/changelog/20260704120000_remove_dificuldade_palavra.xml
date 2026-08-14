@@ -9,8 +9,8 @@
 
         A dificuldade deixou de ser um valor fixo cadastrado: agora é uma MÉTRICA
         calculada pela taxa de acerto (total_acertos / total_tentativas):
-          0–35%  -> DIFICIL
-          36–65% -> MEDIO
+          0-35%  -> DIFICIL
+          36-65% -> MEDIO
           66%+   -> FACIL
         Palavras sem tentativas começam como MEDIO. A regra vive em
         Palavra.getDificuldade() e no SQL de PalavraRepository.findRandomByDificuldade.

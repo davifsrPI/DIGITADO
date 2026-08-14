@@ -136,7 +136,7 @@ public class UserService {
         Usuario usuario = new Usuario();
         usuario.setNome(user.getFirstName() != null ? user.getFirstName() : user.getLogin());
         usuario.setSobrenome(user.getLastName() != null ? user.getLastName() : "");
-        // Apelido escolhido no cadastro — é o nome público do jogador no ranking e nas salas
+        // Apelido escolhido no cadastro - é o nome público do jogador no ranking e nas salas
         usuario.setApelido(apelido != null && !apelido.isBlank() ? apelido.trim() : null);
         String email = user.getEmail() != null ? user.getEmail() : user.getLogin() + "@digitado.local";
         usuario.setEmail(email);

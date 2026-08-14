@@ -18,18 +18,18 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     // duplicatas na busca e no cadastro rápido). findFIRST + ordem por id de
     // propósito: se o banco já tiver o mesmo texto duplicado (importações antigas),
     // devolve sempre o registro mais antigo em vez de estourar
-    // IncorrectResultSizeDataAccessException — que derrubava /buscar e /sugerir.
+    // IncorrectResultSizeDataAccessException - que derrubava /buscar e /sugerir.
     Optional<Palavra> findFirstByTextoIgnoreCaseOrderByIdAsc(String texto);
 
-    // Retorna até 5 palavras ativas cujo texto contenha o trecho digitado — usada no autocomplete
+    // Retorna até 5 palavras ativas cujo texto contenha o trecho digitado - usada no autocomplete
     List<Palavra> findTop5ByTextoContainingIgnoreCaseAndAtivaTrue(String texto);
 
     /**
-     * Classificação de dificuldade em SQL — mesma regra do getter
+     * Classificação de dificuldade em SQL - mesma regra do getter
      * Palavra.getDificuldade(), mantenha as duas em sincronia (o limiar 15 é
      * Palavra.MIN_TENTATIVAS_PARA_METRICA):
      * - >= 15 tentativas: CALCULADA pela taxa de acerto
-     *   (0–35% = DIFICIL, 36–65% = MEDIO, 66%+ = FACIL);
+     *   (0-35% = DIFICIL, 36-65% = MEDIO, 66%+ = FACIL);
      * - < 15 tentativas: vale a coluna dificuldade (cadastrada); se nula, a palavra
      *   entra "aleatoriamente" numa das faixas via id % 3 (determinístico, estável).
      *
@@ -50,7 +50,7 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     )
     List<Palavra> findRandomByDificuldade(@Param("dif") String dif, @Param("n") int n);
 
-    // Variante que exclui ids (palavras da partida anterior da sala) — evita que
+    // Variante que exclui ids (palavras da partida anterior da sala) - evita que
     // duas partidas seguidas repitam as mesmas palavras. Mesma regra de dificuldade.
     @Query(
         value = "SELECT * FROM palavra WHERE ativa = true AND id NOT IN (:ids) AND " +
@@ -60,7 +60,7 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     )
     List<Palavra> findRandomByDificuldadeExcluindo(@Param("dif") String dif, @Param("n") int n, @Param("ids") List<Long> ids);
 
-    // Sorteia N palavras ativas quaisquer, excluindo as já escolhidas — usado para
+    // Sorteia N palavras ativas quaisquer, excluindo as já escolhidas - usado para
     // completar a partida quando alguma faixa de dificuldade (calculada pela taxa
     // de acerto) não tem palavras suficientes, ex: banco novo onde quase tudo é MEDIO
     @Query(value = "SELECT * FROM palavra WHERE ativa = true AND id NOT IN (:ids) ORDER BY RAND() LIMIT :n", nativeQuery = true)
@@ -73,7 +73,7 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     Page<Palavra> findByAtivaTrue(Pageable pageable);
 
     // Incremento atômico das colunas de estatística da palavra (total_tentativas e
-    // total_acertos) — único ponto que escreve nesses contadores. Seguro mesmo com
+    // total_acertos) - único ponto que escreve nesses contadores. Seguro mesmo com
     // vários jogadores respondendo ao mesmo tempo em salas diferentes.
     @Modifying
     @Query(

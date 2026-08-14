@@ -36,7 +36,7 @@ public class Palavra implements Serializable {
     @Column(name = "idioma")
     private String idioma;
 
-    // Dica exibida ao jogador na Palavra do Dia (ex: "fruta amarela") — opcional
+    // Dica exibida ao jogador na Palavra do Dia (ex: "fruta amarela") - opcional
     @Column(name = "dica")
     private String dica;
 
@@ -54,7 +54,7 @@ public class Palavra implements Serializable {
      * taxa de acerto e este campo deixa de influenciar.
      *
      * Conversor próprio no lugar de @Enumerated(STRING): palavras importadas
-     * direto no banco podem trazer 'facil'/'media'/'dificil' — o conversor tolera
+     * direto no banco podem trazer 'facil'/'media'/'dificil' - o conversor tolera
      * essas variações em vez de estourar IllegalArgumentException na leitura.
      */
     @Convert(converter = DificuldadeConverter.class)
@@ -63,11 +63,11 @@ public class Palavra implements Serializable {
 
     /**
      * Estatísticas da palavra: total de pessoas que a fizeram (acertando ou não)
-     * e total de acertos — somando palavra do dia e partidas.
+     * e total de acertos - somando palavra do dia e partidas.
      *
      * - @JsonIgnore: os contadores nunca saem nas respostas da API que serializam
      *   Palavra (o backend só expõe quando quer, via VM da palavra do dia);
-     * - insertable/updatable = false: o JPA nunca escreve nessas colunas — o
+     * - insertable/updatable = false: o JPA nunca escreve nessas colunas - o
      *   incremento é feito exclusivamente por SQL atômico (PalavraRepository),
      *   então o CRUD de palavras não zera nem adultera os números.
      */
@@ -125,9 +125,9 @@ public class Palavra implements Serializable {
 
     /**
      * A dificuldade só passa a ser CALCULADA pela taxa de acerto quando a palavra
-     * acumula esta quantidade mínima de tentativas — abaixo disso a amostra é
+     * acumula esta quantidade mínima de tentativas - abaixo disso a amostra é
      * pequena demais e vale a dificuldade cadastrada. O mesmo limiar está fixo no
-     * SQL de PalavraRepository.findRandomByDificuldade — mantenha os dois iguais.
+     * SQL de PalavraRepository.findRandomByDificuldade - mantenha os dois iguais.
      */
     public static final int MIN_TENTATIVAS_PARA_METRICA = 15;
 
@@ -138,16 +138,16 @@ public class Palavra implements Serializable {
      * pela taxa de acerto:
      *
      *   percentual = total_acertos / total_tentativas
-     *   0–35%  -> DIFICIL   (poucas pessoas acertam)
-     *   36–65% -> MEDIO
+     *   0-35%  -> DIFICIL   (poucas pessoas acertam)
+     *   36-65% -> MEDIO
      *   66%+   -> FACIL     (maioria acerta)
      *
      * Com menos tentativas que isso, vale a dificuldade CADASTRADA na coluna
      * dificuldade; se também não houver cadastro, a palavra entra "aleatoriamente"
-     * numa das três faixas — de forma determinística pelo id (id % 3), porque a
+     * numa das três faixas - de forma determinística pelo id (id % 3), porque a
      * classificação precisa ser estável: o tempo da rodada é recalculado a partir
      * dela durante o jogo, e o sorteio em SQL precisa classificar exatamente igual.
-     * A mesma regra existe em SQL no PalavraRepository.findRandomByDificuldade —
+     * A mesma regra existe em SQL no PalavraRepository.findRandomByDificuldade -
      * mantenha as duas em sincronia.
      *
      * Sem @Transient: a entidade usa acesso por campo, então o Hibernate já ignora
@@ -156,7 +156,7 @@ public class Palavra implements Serializable {
     /**
      * Indica se a palavra já tem estatística registrada (alguém já a jogou).
      * Usado pelo frontend para não exibir a dificuldade provisória (id % 3)
-     * como se fosse real — sem registros, a UI mostra "Sem registros".
+     * como se fosse real - sem registros, a UI mostra "Sem registros".
      */
     @JsonProperty("temRegistros")
     public boolean getTemRegistros() {

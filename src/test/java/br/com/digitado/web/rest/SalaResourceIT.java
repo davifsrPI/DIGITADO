@@ -25,12 +25,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Integration tests for the {@link SalaResource} REST controller.
- * A sala é identificada pelo código de acesso (chave primária) — não há id numérico.
+ * A sala é identificada pelo código de acesso (chave primária) - não há id numérico.
  */
 @IntegrationTest
 @AutoConfigureMockMvc
 // Executa como ADMIN: o SalaResource aplica regras de dono (professor) que o
-// usuário mock genérico não satisfaz — admin enxerga e edita qualquer sala
+// usuário mock genérico não satisfaz - admin enxerga e edita qualquer sala
 @WithMockUser(authorities = { "ROLE_ADMIN", "ROLE_USER" })
 class SalaResourceIT {
 
@@ -227,7 +227,7 @@ class SalaResourceIT {
 
         long databaseSizeBeforeUpdate = getRepositoryCount();
 
-        // Update the sala — o codigo (PK) permanece o mesmo
+        // Update the sala - o codigo (PK) permanece o mesmo
         Sala updatedSala = salaRepository.findById(sala.getCodigo()).orElseThrow();
         // Disconnect from session so that the updates on updatedSala are not directly saved in db
         em.detach(updatedSala);
@@ -329,7 +329,7 @@ class SalaResourceIT {
 
         long databaseSizeBeforeUpdate = getRepositoryCount();
 
-        // Update the sala using partial update — o codigo (PK) não muda
+        // Update the sala using partial update - o codigo (PK) não muda
         Sala partialUpdatedSala = new Sala();
         partialUpdatedSala.setCodigo(sala.getCodigo());
 

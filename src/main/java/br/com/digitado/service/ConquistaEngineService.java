@@ -25,14 +25,14 @@ import org.springframework.transaction.annotation.Transactional;
  * conquistas e credita o XP da recompensa (que alimenta o Ranking Mundial).
  *
  * Regras dirigidas por tabela, com a META de cada conquista derivada da
- * DESCRIÇÃO do catálogo oficial (conquista_seed.csv) — a chave é o NOME.
+ * DESCRIÇÃO do catálogo oficial (conquista_seed.csv) - a chave é o NOME.
  *
  * O progresso fica em usuario_conquista.progresso; para "Frequência Perfeita"
  * (dias diferentes), o campo dataConquista guarda o último dia contado
- * enquanto a conquista não conclui — vira a data de desbloqueio ao concluir.
+ * enquanto a conquista não conclui - vira a data de desbloqueio ao concluir.
  *
  * Os métodos públicos PARTICIPAM da transação do chamador (como o
- * PalavraEstatisticaService) — transação própria (REQUIRES_NEW) causaria
+ * PalavraEstatisticaService) - transação própria (REQUIRES_NEW) causaria
  * deadlock: o chamador costuma segurar o lock da linha de usuario (crédito de
  * XP) que o desbloqueio de conquista também precisa atualizar. Os CHAMADORES
  * envolvem as chamadas em try/catch para falha de conquista não derrubar o jogo.
@@ -49,7 +49,7 @@ public class ConquistaEngineService {
     // Resposta correta em menos de 3s conta como "rápida" (Raio Veloz etc.)
     private static final long RESPOSTA_RAPIDA_MS = 3000;
 
-    // Metas por conquista — espelham as descrições do conquista_seed.csv
+    // Metas por conquista - espelham as descrições do conquista_seed.csv
     private static final Map<String, Integer> METAS = Map.ofEntries(
         Map.entry("Primeiras Teclas", 1),
         Map.entry("Bem-vindo à Turma", 1),
@@ -229,7 +229,7 @@ public class ConquistaEngineService {
 
     // Regras de XP acumulado e ranking
 
-    // Desbloqueios creditam XP, o que pode atingir a próxima meta de XP — itera
+    // Desbloqueios creditam XP, o que pode atingir a próxima meta de XP - itera
     // até estabilizar (limitado: são poucas conquistas e todas idempotentes)
     private void verificarXpERankingInterno(Usuario usuario) {
         for (int i = 0; i < 3; i++) {
@@ -264,7 +264,7 @@ public class ConquistaEngineService {
         return atualizar(usuario, nome, atual -> METAS.getOrDefault(nome, 1));
     }
 
-    /** Conta no máximo uma vez por dia (fuso do jogo) — usado por "Frequência Perfeita". */
+    /** Conta no máximo uma vez por dia (fuso do jogo) - usado por "Frequência Perfeita". */
     private void incrementarDiaUnico(Usuario usuario, String nome) {
         Optional<UsuarioConquista> ucOpt = obterRegistro(usuario, nome);
         if (ucOpt.isEmpty()) {
@@ -318,7 +318,7 @@ public class ConquistaEngineService {
     private Optional<UsuarioConquista> obterRegistro(Usuario usuario, String nome) {
         Optional<Conquista> conquista = conquistaRepository.findFirstByNome(nome);
         if (conquista.isEmpty()) {
-            LOG.warn("Conquista \"{}\" não encontrada no catálogo — evento ignorado", nome);
+            LOG.warn("Conquista \"{}\" não encontrada no catálogo - evento ignorado", nome);
             return Optional.empty();
         }
         return Optional.of(

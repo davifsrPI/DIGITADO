@@ -12,13 +12,13 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface PalavraDoDiaTentativaRepository extends JpaRepository<PalavraDoDiaTentativa, Long> {
-    // Tentativa do usuário logado no dia — é o que garante "uma chance por conta"
+    // Tentativa do usuário logado no dia - é o que garante "uma chance por conta"
     Optional<PalavraDoDiaTentativa> findByDataAndLogin(LocalDate data, String login);
 
     boolean existsByDataAndLogin(LocalDate data, String login);
 
     // Retenção (LGPD arts. 15/16): o login só é necessário para travar a segunda
-    // tentativa DO DIA; depois do prazo, anonimiza — a estatística agregada fica,
+    // tentativa DO DIA; depois do prazo, anonimiza - a estatística agregada fica,
     // o vínculo com a pessoa desaparece
     @Modifying
     @Query("update PalavraDoDiaTentativa t set t.login = null where t.login is not null and t.data < :corte")

@@ -17,7 +17,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
  * Duas responsabilidades:
  * 1. Remover o jogador da lista de conectados das salas em que estava e avisar quem ficou;
  * 2. Assim que o último participante sai e a sala fica vazia (em qualquer estado: lobby,
- *    em jogo ou encerrada), fechar a sala no banco (ativo = false) — a sala não volta a
+ *    em jogo ou encerrada), fechar a sala no banco (ativo = false) - a sala não volta a
  *    aparecer como aberta nem aceita novas entradas pela listagem; o dono ainda pode
  *    reabri-la em "Minhas Salas".
  */
@@ -57,7 +57,7 @@ public class JogoSalaDisconnectListener {
                         LOG.info("Sala {} fechada automaticamente: ficou sem participantes", codigo);
                     });
             } catch (Exception e) {
-                // Fechar a sala é manutenção — nunca pode derrubar o tratamento da desconexão
+                // Fechar a sala é manutenção - nunca pode derrubar o tratamento da desconexão
                 LOG.error("Falha ao fechar sala {} após desconexão: {}", codigo, e.getMessage(), e);
             }
         }
@@ -65,7 +65,7 @@ public class JogoSalaDisconnectListener {
         // Nas salas que continuam com gente, atualiza a lista de conectados de quem ficou
         for (String codigo : resultado.salasComSaida()) {
             if (resultado.salasVazias().contains(codigo)) {
-                continue; // estado já foi descartado — não há mais ninguém para avisar
+                continue; // estado já foi descartado - não há mais ninguém para avisar
             }
             String nomeSala = salaRepository.findByCodigo(codigo).map(Sala::getNome).orElse(codigo);
             messaging.convertAndSend("/topic/sala/" + codigo, jogoService.getEstado(codigo, nomeSala));

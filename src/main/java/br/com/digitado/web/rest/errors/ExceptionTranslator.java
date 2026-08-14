@@ -73,8 +73,8 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
      * método HTTP, path, status, usuário autenticado e a exceção.
      * O request ID já sai em toda linha via MDC (ver RequestIdFilter).
      *
-     * - 5xx: ERROR com stack trace completo (falha do servidor — precisa de investigação)
-     * - 4xx: WARN sem stack trace (erro do cliente — stack só polui o log)
+     * - 5xx: ERROR com stack trace completo (falha do servidor - precisa de investigação)
+     * - 4xx: WARN sem stack trace (erro do cliente - stack só polui o log)
      */
     private void logWithContext(Throwable ex, NativeWebRequest request, int status) {
         HttpServletRequest nativeRequest = request.getNativeRequest(HttpServletRequest.class);

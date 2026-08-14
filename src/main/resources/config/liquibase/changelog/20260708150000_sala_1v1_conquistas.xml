@@ -6,7 +6,7 @@
 
     <!--
         Modo Duelo 1v1: a sala ganha um tipo (TURMA ou UM_V_UM) e a flag de
-        visibilidade (privada). Salas existentes viram TURMA privada — nada muda
+        visibilidade (privada). Salas existentes viram TURMA privada - nada muda
         para elas. A visibilidade pública só é usada por salas UM_V_UM.
     -->
     <changeSet id="20260708150000-1" author="digitado">

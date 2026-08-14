@@ -106,10 +106,10 @@ public class ApplicationProperties {
 
         /**
          * Origens aceitas no handshake, separadas por vírgula.
-         * - "*": qualquer origem (conveniência de DEV — o front roda em localhost:9000
+         * - "*": qualquer origem (conveniência de DEV - o front roda em localhost:9000
          *   e o backend em localhost:8080; a autenticação real continua sendo o JWT);
          * - vazio/em branco: NENHUM padrão é registrado e vale o default do Spring,
-         *   que só aceita handshake da MESMA origem — é o valor de PRODUÇÃO, já que
+         *   que só aceita handshake da MESMA origem - é o valor de PRODUÇÃO, já que
          *   front e backend são servidos pelo mesmo domínio;
          * - lista explícita (ex.: "https://app.exemplo.com.br"): para front hospedado
          *   em domínio separado.

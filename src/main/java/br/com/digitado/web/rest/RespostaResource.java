@@ -52,7 +52,7 @@ public class RespostaResource {
             throw new BadRequestAlertException("A new resposta cannot already have an ID", ENTITY_NAME, "idexists");
         }
 
-        // Força o aluno a ser o usuário logado — cliente não pode escolher
+        // Força o aluno a ser o usuário logado - cliente não pode escolher
         SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))

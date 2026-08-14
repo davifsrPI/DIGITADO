@@ -48,7 +48,7 @@ class PalavraDoDiaResourceIT {
 
     @BeforeEach
     void setup() {
-        // Desativa todas as palavras e deixa só uma ativa — assim o sorteio
+        // Desativa todas as palavras e deixa só uma ativa - assim o sorteio
         // determinístico do dia cai sempre nela, independente dos dados do faker
         java.util.List<Palavra> todas = palavraRepository.findAll();
         todas.forEach(p -> p.setAtiva(false));

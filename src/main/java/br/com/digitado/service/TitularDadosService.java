@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Direitos do titular (LGPD art. 18): exportação (portabilidade) e exclusão da conta.
  *
- * Tudo aqui parte do LOGIN AUTENTICADO (token) — o frontend não envia id nenhum,
+ * Tudo aqui parte do LOGIN AUTENTICADO (token) - o frontend não envia id nenhum,
  * então é impossível exportar/excluir dados de outra pessoa.
  *
  * Estratégia de exclusão:
@@ -50,7 +50,7 @@ public class TitularDadosService {
         this.em = em;
     }
 
-    /** Confere a senha atual do titular — exigida antes da exclusão (evita que um token roubado apague a conta). */
+    /** Confere a senha atual do titular - exigida antes da exclusão (evita que um token roubado apague a conta). */
     @Transactional(readOnly = true)
     public boolean senhaConfere(String login, String senhaInformada) {
         return userRepository
@@ -171,7 +171,7 @@ public class TitularDadosService {
         em.createQuery("delete from PalavraDoDiaTentativa t where t.login = :login").setParameter("login", login).executeUpdate();
         userRepository.findOneByLogin(login).ifPresent(userRepository::delete);
 
-        // Log SEM dados além do login — trilha de auditoria da exclusão (art. 37)
+        // Log SEM dados além do login - trilha de auditoria da exclusão (art. 37)
         LOG.info("LGPD: conta e dados pessoais do titular '{}' excluídos a pedido do próprio", login);
     }
 

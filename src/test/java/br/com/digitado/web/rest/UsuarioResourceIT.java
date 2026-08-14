@@ -254,7 +254,7 @@ class UsuarioResourceIT {
             .andExpect(jsonPath("$.[*].nome").value(hasItem(DEFAULT_NOME)))
             .andExpect(jsonPath("$.[*].sobrenome").value(hasItem(DEFAULT_SOBRENOME)))
             .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
-            // senha nunca é serializada nas respostas (WRITE_ONLY) — não aparece no JSON
+            // senha nunca é serializada nas respostas (WRITE_ONLY) - não aparece no JSON
             .andExpect(jsonPath("$.[*].tipoUsuario").value(hasItem(DEFAULT_TIPO_USUARIO.toString())))
             .andExpect(jsonPath("$.[*].ativo").value(hasItem(DEFAULT_ATIVO)));
     }
@@ -291,7 +291,7 @@ class UsuarioResourceIT {
             .andExpect(jsonPath("$.nome").value(DEFAULT_NOME))
             .andExpect(jsonPath("$.sobrenome").value(DEFAULT_SOBRENOME))
             .andExpect(jsonPath("$.email").value(DEFAULT_EMAIL))
-            // senha nunca é serializada nas respostas (WRITE_ONLY) — não aparece no JSON
+            // senha nunca é serializada nas respostas (WRITE_ONLY) - não aparece no JSON
             .andExpect(jsonPath("$.tipoUsuario").value(DEFAULT_TIPO_USUARIO.toString()))
             .andExpect(jsonPath("$.ativo").value(DEFAULT_ATIVO));
     }

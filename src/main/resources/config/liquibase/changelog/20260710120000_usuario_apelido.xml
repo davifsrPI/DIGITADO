@@ -6,7 +6,7 @@
 
     <!--
         Apelido público do jogador: nome de exibição usado em todo lugar visível
-        (ranking, placar das salas, pódio, cabeçalho). Opcional — quem não definir
+        (ranking, placar das salas, pódio, cabeçalho). Opcional - quem não definir
         continua aparecendo como nome + inicial do sobrenome.
     -->
     <changeSet id="20260710120000-1" author="digitado">

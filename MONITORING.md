@@ -1,4 +1,4 @@
-# Monitoramento e Debugging — DIGITADO
+# Monitoramento e Debugging - DIGITADO
 
 Como o projeto atende às 10 regras de observabilidade para produção, o que já vem do
 JHipster/Spring Boot e o que foi adicionado.
@@ -22,7 +22,7 @@ JHipster/Spring Boot e o que foi adicionado.
 ## 3. Logs estruturados em JSON
 
 - **Implementação**: `jhipster.logging.use-json-format: true` em
-  [`application-prod.yml`](src/main/resources/config/application-prod.yml) — cada linha vira
+  [`application-prod.yml`](src/main/resources/config/application-prod.yml) - cada linha vira
   um objeto JSON (timestamp, nível, logger, mensagem, stack trace, MDC incluindo `requestId`),
   pronto para Loki/ELK/CloudWatch.
 - Em dev os logs continuam legíveis para humanos, com o `requestId` no padrão do console
@@ -31,19 +31,19 @@ JHipster/Spring Boot e o que foi adicionado.
 
 ## 4. Health check com status detalhado
 
-- `GET /management/health` — agregado; detalhes completos para ADMIN
+- `GET /management/health` - agregado; detalhes completos para ADMIN
   (`show-details: when_authorized`).
-- `GET /management/health/liveness` e `/readiness` — probes para orquestradores
+- `GET /management/health/liveness` e `/readiness` - probes para orquestradores
   (o readiness inclui o banco).
 - **Adicionado**: [`JogoSalaHealthIndicator`](src/main/java/br/com/digitado/service/JogoSalaHealthIndicator.java)
   expõe o estado do domínio: salas em memória, jogos em andamento e alunos conectados.
-  Importante em incidentes: o estado dos jogos é em memória — restart com
+  Importante em incidentes: o estado dos jogos é em memória - restart com
   `jogosEmAndamento > 0` derruba partidas.
 
 ## 5. Query logging com tempo
 
 - **Adicionado**: `hibernate.session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 250` em
-  [`application.yml`](src/main/resources/config/application.yml) — qualquer query acima de
+  [`application.yml`](src/main/resources/config/application.yml) - qualquer query acima de
   250 ms é logada com o tempo de execução (logger `org.hibernate.SQL_SLOW`, em todos os perfis).
 - Em dev, `org.hibernate.SQL: DEBUG` já loga todas as queries.
 - Métricas de tempo por repositório Spring Data já são coletadas
@@ -52,15 +52,15 @@ JHipster/Spring Boot e o que foi adicionado.
 ## 6. Cache hit/miss tracking
 
 - **Estado atual**: a aplicação não tem camada de cache (sem Spring Cache, second-level
-  cache do Hibernate desabilitado) — não há hit/miss a rastrear.
+  cache do Hibernate desabilitado) - não há hit/miss a rastrear.
 - **Quando adicionar cache**: use Spring Cache (`@EnableCaching` + Caffeine/Ehcache);
   o Micrometer registra automaticamente `cache_gets{result="hit|miss"}` por cache,
   visível em `/management/prometheus` sem código extra.
 
 ## 7. Métricas de performance (tempo, memória, CPU)
 
-- `GET /management/jhimetrics` — visão consolidada (ADMIN).
-- `GET /management/prometheus` — formato Prometheus, **habilitado também em prod**
+- `GET /management/jhimetrics` - visão consolidada (ADMIN).
+- `GET /management/prometheus` - formato Prometheus, **habilitado também em prod**
   (estava desligado; corrigido em `application-prod.yml`).
 - Já coletados: latência HTTP com percentis (p50/p75/p95/p99) por endpoint, heap/GC,
   CPU do processo e do sistema, threads, pool Hikari, tempo por repositório.
@@ -97,13 +97,13 @@ JHipster/Spring Boot e o que foi adicionado.
 - O `server.shutdown: graceful` (prod) garante que requisições em andamento terminem
   antes da troca de versão.
 - Em Kubernetes, o equivalente nativo é usar os probes de liveness/readiness (regra 4)
-  com `RollingUpdate` — o kubelet faz o rollback sozinho.
+  com `RollingUpdate` - o kubelet faz o rollback sozinho.
 
 ## Fluxo de debugging em produção (resumo)
 
 1. Alerta dispara (regra 9) → veja qual regra e desde quando no Alertmanager.
 2. Abra o Grafana/Prometheus (regra 7) para dimensionar: latência? erro? recurso?
-3. Filtre os logs JSON (regra 3) por `level=ERROR` na janela do alerta — cada erro tem
+3. Filtre os logs JSON (regra 3) por `level=ERROR` na janela do alerta - cada erro tem
    stack trace e contexto (regra 2) e um `requestId` (regra 1) para reconstruir a requisição.
 4. Se for lentidão, procure `org.hibernate.SQL_SLOW` (regra 5) e o health detalhado (regra 4).
 5. Corrija, rode os testes de regressão (regra 8) e faça deploy com rollback automático (regra 10).

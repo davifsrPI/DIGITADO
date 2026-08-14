@@ -83,7 +83,7 @@ class MinhasConquistasResourceIT {
         );
     }
 
-    // Cria o par User (autenticação) + Usuario (domínio), ligados pelo e-mail —
+    // Cria o par User (autenticação) + Usuario (domínio), ligados pelo e-mail -
     // exatamente como o endpoint resolve a identidade em produção
     private void criarUserEUsuario(String login, String email) {
         User user = new User();

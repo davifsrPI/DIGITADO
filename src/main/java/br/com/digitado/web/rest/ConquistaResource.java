@@ -68,7 +68,7 @@ public class ConquistaResource {
     /**
      * {@code GET /conquistas/minhas} : conquistas do usuário autenticado (estilo Steam).
      *
-     * A identidade vem exclusivamente do token JWT — o frontend não envia nenhum
+     * A identidade vem exclusivamente do token JWT - o frontend não envia nenhum
      * parâmetro nem faz validação: o usuário é resolvido aqui (login -> User -> Usuario
      * pelo e-mail) e a busca no banco é filtrada por ele. Retorna o catálogo completo
      * de conquistas marcando quais o usuário já desbloqueou, com resumo de progresso.
@@ -113,7 +113,7 @@ public class ConquistaResource {
                     desbloqueada ? registro.getDataConquista() : null
                 );
             })
-            // Desbloqueadas primeiro (mais recentes no topo), depois as bloqueadas por nome — como na Steam
+            // Desbloqueadas primeiro (mais recentes no topo), depois as bloqueadas por nome - como na Steam
             .sorted(
                 Comparator.comparing(ConquistaUsuarioVM::desbloqueada, Comparator.reverseOrder())
                     .thenComparing(vm -> vm.dataConquista(), Comparator.nullsLast(Comparator.reverseOrder()))

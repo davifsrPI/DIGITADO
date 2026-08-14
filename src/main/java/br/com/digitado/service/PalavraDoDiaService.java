@@ -14,10 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Lógica da Palavra do Dia — TODA a informação sensível fica aqui no backend:
+ * Lógica da Palavra do Dia - TODA a informação sensível fica aqui no backend:
  *
  * - A palavra é sorteada de forma determinística pelo dia (mesma palavra para todos
- *   durante o dia inteiro); o desafio é um ditado — o cliente recebe o texto apenas
+ *   durante o dia inteiro); o desafio é um ditado - o cliente recebe o texto apenas
  *   para a síntese de voz, sem exibi-lo.
  * - A validação da resposta acontece aqui, com a mesma regra das partidas.
  * - O controle de "uma chance" é do servidor: conta logada é validada contra o banco
@@ -28,7 +28,7 @@ public class PalavraDoDiaService {
 
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(PalavraDoDiaService.class);
 
-    // Fuso oficial do jogo — o "dia" vira à meia-noite de Brasília
+    // Fuso oficial do jogo - o "dia" vira à meia-noite de Brasília
     public static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
 
     private final PalavraRepository palavraRepository;
@@ -57,7 +57,7 @@ public class PalavraDoDiaService {
 
     /**
      * Cache da palavra do dia: a resposta é a MESMA durante o dia inteiro, mas o
-     * endpoint é público e chamado em toda visita à home — sem cache eram duas
+     * endpoint é público e chamado em toda visita à home - sem cache eram duas
      * consultas (COUNT + SELECT paginado) por visita. A chave é a própria data:
      * na virada do dia (fuso de Brasília) o cache expira sozinho; reiniciar o
      * servidor apenas o recomputa. Bônus de estabilidade: ativar/desativar
@@ -82,7 +82,7 @@ public class PalavraDoDiaService {
             int indice = (int) (hoje.toEpochDay() % total);
             palavra = palavraRepository.findByAtivaTrue(PageRequest.of(indice, 1, Sort.by("id"))).stream().findFirst();
         }
-        // Sem palavras ativas o Optional vazio também é cacheado — evita marretar o
+        // Sem palavras ativas o Optional vazio também é cacheado - evita marretar o
         // banco em toda visita de um ambiente ainda sem acervo
         cache = new CachePalavraDoDia(hoje, palavra);
         return palavra;
@@ -93,7 +93,7 @@ public class PalavraDoDiaService {
         return tentativaRepository.findByDataAndLogin(hoje(), login);
     }
 
-    // Valida a resposta, grava a tentativa e atualiza as estatísticas — tudo no backend.
+    // Valida a resposta, grava a tentativa e atualiza as estatísticas - tudo no backend.
     // Mesma regra de comparação das partidas: ignora maiúsculas, acentos contam.
     @Transactional
     public boolean tentar(Palavra palavra, String login, String resposta) {

@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-// Controller restrito a ADMIN — os ITs de CRUD rodam como admin
+// Controller restrito a ADMIN - os ITs de CRUD rodam como admin
 @WithMockUser(authorities = "ROLE_ADMIN")
 class ErroOrtograficoResourceIT {
 

@@ -19,7 +19,7 @@ import org.springframework.stereotype.Repository;
 public interface UsuarioRepository extends UsuarioRepositoryWithBagRelationships, JpaRepository<Usuario, Long> {
     Optional<Usuario> findByEmail(String email);
 
-    // Incremento atômico do XP — único ponto que escreve na coluna (a entidade
+    // Incremento atômico do XP - único ponto que escreve na coluna (a entidade
     // mapeia xp como insertable/updatable = false). Seguro sob concorrência.
     @Modifying
     @Query(value = "update usuario set xp = xp + :delta where id = :usuarioId", nativeQuery = true)
@@ -31,7 +31,7 @@ public interface UsuarioRepository extends UsuarioRepositoryWithBagRelationships
     // Posição do usuário no ranking = quantos têm XP maior + 1
     long countByXpGreaterThan(Long xp);
 
-    // Leitura direta do XP no banco — a entidade mapeia xp como insertable/updatable
+    // Leitura direta do XP no banco - a entidade mapeia xp como insertable/updatable
     // = false, então após incrementarXp o valor em memória fica defasado
     @Query(value = "select xp from usuario where id = :usuarioId", nativeQuery = true)
     Long lerXp(@Param("usuarioId") long usuarioId);

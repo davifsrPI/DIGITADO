@@ -72,4 +72,4 @@ groups:
           severity: critical
         annotations:
           summary: 'Requisições aguardando conexão com o banco'
-          description: 'O pool Hikari está saturado — verifique queries lentas ou vazamento de conexões.'
+          description: 'O pool Hikari está saturado - verifique queries lentas ou vazamento de conexões.'

@@ -39,8 +39,8 @@ public class Usuario implements Serializable {
     private String apelido;
 
     /**
-     * XP acumulado do usuário (palavra do dia, conquistas...) — alimenta o Ranking Mundial.
-     * insertable/updatable = false: o JPA nunca escreve nesta coluna — o incremento é
+     * XP acumulado do usuário (palavra do dia, conquistas...) - alimenta o Ranking Mundial.
+     * insertable/updatable = false: o JPA nunca escreve nesta coluna - o incremento é
      * feito exclusivamente por SQL atômico (UsuarioRepository.incrementarXp), então o
      * CRUD de usuários não zera nem adultera o valor.
      */

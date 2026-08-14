@@ -18,14 +18,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Limite de requisições por identidade em /api/** — proteção contra abuso e ataques
+ * Limite de requisições por identidade em /api/** - proteção contra abuso e ataques
  * (flood de requisições, força bruta de senha, scraping da API).
  *
  * Como funciona:
  * - Janela fixa de 1 minuto por identidade. Usuário autenticado é identificado pelo
  *   LOGIN (o limite acompanha a conta, não a máquina); anônimo é identificado pelo IP.
  * - Endpoints de autenticação (/api/authenticate) têm limite bem mais rígido e são
- *   sempre contados por IP — senha errada em sequência é o padrão típico de força bruta.
+ *   sempre contados por IP - senha errada em sequência é o padrão típico de força bruta.
  * - Estourou o limite: HTTP 429 (Too Many Requests) com Retry-After, corpo JSON e
  *   log WARN com a identidade (o requestId já sai via MDC para rastreabilidade).
  * - Limites configuráveis por ambiente em application.yml ("application.rate-limit").
@@ -33,7 +33,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Roda DEPOIS da cadeia de segurança (ordem 0 > -100 do Spring Security), para que o
  * JWT já tenha sido processado e o login esteja disponível no SecurityContext.
  *
- * Implementação em memória (ConcurrentHashMap) — suficiente para uma instância única,
+ * Implementação em memória (ConcurrentHashMap) - suficiente para uma instância única,
  * sem dependência externa. Se o app escalar horizontalmente, trocar por um contador
  * compartilhado (ex.: Redis) mantendo este filtro como ponto único de aplicação.
  */
@@ -128,7 +128,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     /**
      * IP do cliente. O X-Forwarded-For SÓ é considerado quando a propriedade
-     * application.rate-limit.confiar-x-forwarded-for está ligada — ou seja,
+     * application.rate-limit.confiar-x-forwarded-for está ligada - ou seja,
      * quando existe um proxy reverso confiável na frente que SOBRESCREVE o
      * cabeçalho. Sem proxy, o cliente pode enviar qualquer valor nesse header
      * e ganhar uma identidade nova a cada requisição, anulando o rate limit.

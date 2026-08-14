@@ -51,7 +51,7 @@ public class AtividadeResource {
         if (atividade.getId() != null) {
             throw new BadRequestAlertException("A new atividade cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        // Só o dono da sala (ou admin) pode criar atividade nela — evita criar
+        // Só o dono da sala (ou admin) pode criar atividade nela - evita criar
         // atividade na sala de outro professor
         if (!podeCriarNaSala(atividade)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");

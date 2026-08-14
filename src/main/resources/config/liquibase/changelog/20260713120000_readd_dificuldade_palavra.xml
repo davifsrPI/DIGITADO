@@ -11,12 +11,12 @@
 
         Regra (Palavra.getDificuldade e PalavraRepository.findRandomByDificuldade):
           - total_tentativas >= 15 -> dificuldade CALCULADA pela taxa de acerto
-            (0–35% = DIFICIL, 36–65% = MEDIO, 66%+ = FACIL)
+            (0-35% = DIFICIL, 36-65% = MEDIO, 66%+ = FACIL)
           - total_tentativas < 15  -> usa esta coluna; se nula, cai no
             fallback determinístico por id (MOD(id, 3))
     -->
     <!-- Em ambientes onde a coluna já foi criada à mão (ex: importação direta de
-         palavras no banco de dev), só marca o changeset como aplicado — sem a
+         palavras no banco de dev), só marca o changeset como aplicado - sem a
          precondição o addColumn falha com coluna duplicada e trava a fila de
          migrações seguintes (o Liquibase assíncrono do JHipster apenas loga o erro) -->
     <changeSet id="20260713120000-1" author="digitado">

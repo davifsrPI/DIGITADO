@@ -8,7 +8,7 @@
         A coluna descricao deixa de ser longtext e vira JSON, no formato
         {"descricao": "<texto>", "modo": "1v1" | "normal"}.
         Primeiro embrulha o texto existente de cada sala num objeto JSON (o modo vem da
-        coluna tipo), depois converte o tipo da coluna — a conversão exige que todas as
+        coluna tipo), depois converte o tipo da coluna - a conversão exige que todas as
         linhas já contenham JSON válido.
     -->
     <changeSet id="20260709120000-1" author="digitado">

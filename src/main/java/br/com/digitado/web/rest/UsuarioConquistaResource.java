@@ -24,7 +24,7 @@ import tech.jhipster.web.util.ResponseUtil;
  *
  * Restrito a administradores: estes endpoints leem e gravam conquistas de QUALQUER usuário.
  * O usuário comum consulta as próprias conquistas apenas por GET /api/conquistas/minhas,
- * onde a identidade é resolvida no backend a partir do token — assim ninguém consegue
+ * onde a identidade é resolvida no backend a partir do token - assim ninguém consegue
  * ver ou conceder conquistas de/para outra conta.
  */
 @RestController

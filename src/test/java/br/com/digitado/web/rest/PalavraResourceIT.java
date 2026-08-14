@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-// Curadoria de palavras é restrita a ADMIN — os ITs de CRUD rodam como admin
+// Curadoria de palavras é restrita a ADMIN - os ITs de CRUD rodam como admin
 @WithMockUser(authorities = "ROLE_ADMIN")
 class PalavraResourceIT {
 
@@ -169,7 +169,7 @@ class PalavraResourceIT {
     }
 
     // O teste checkDificuldadeIsRequired foi removido: dificuldade deixou de ser
-    // campo persistido — agora é calculada pela taxa de acerto da palavra
+    // campo persistido - agora é calculada pela taxa de acerto da palavra
 
     @Test
     @Transactional
@@ -177,7 +177,7 @@ class PalavraResourceIT {
         // Initialize the database
         insertedPalavra = palavraRepository.saveAndFlush(palavra);
 
-        // Dificuldade calculada provisória (id % 3) — depende do id gerado
+        // Dificuldade calculada provisória (id % 3) - depende do id gerado
         String dificuldadeEsperada = insertedPalavra.getDificuldade().toString();
 
         // Get all the palavraList

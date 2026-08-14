@@ -47,7 +47,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(request, response);
         } finally {
-            // Sempre limpa o MDC — a thread volta para o pool e será reutilizada
+            // Sempre limpa o MDC - a thread volta para o pool e será reutilizada
             MDC.remove(MDC_KEY);
         }
     }

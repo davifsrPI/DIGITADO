@@ -18,7 +18,7 @@ public interface UsuarioConquistaRepository extends JpaRepository<UsuarioConquis
     @Query("select uc from UsuarioConquista uc left join fetch uc.conquista where uc.aluno.id = :alunoId")
     List<UsuarioConquista> findByAlunoIdWithConquista(@Param("alunoId") Long alunoId);
 
-    // Registro de progresso de UMA conquista para UM aluno — usado pelo motor de
+    // Registro de progresso de UMA conquista para UM aluno - usado pelo motor de
     // conquistas. findFirst tolera eventuais duplicatas históricas.
     Optional<UsuarioConquista> findFirstByAlunoIdAndConquistaId(Long alunoId, Long conquistaId);
 }

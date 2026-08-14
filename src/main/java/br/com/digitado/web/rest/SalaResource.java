@@ -33,7 +33,7 @@ import tech.jhipster.web.util.ResponseUtil;
 
 // REST controller para gerenciar salas de aula.
 // Um professor cria e controla a sala; alunos só podem listar as salas que participam.
-// A sala é identificada pelo código de acesso (PK) — não existe id numérico.
+// A sala é identificada pelo código de acesso (PK) - não existe id numérico.
 @RestController
 @RequestMapping("/api/salas")
 @Transactional
@@ -83,7 +83,7 @@ public class SalaResource {
                 JsonNode texto = node.get("descricao");
                 return texto == null || texto.isNull() ? null : texto.asText();
             } catch (com.fasterxml.jackson.core.JacksonException e) {
-                return valor; // não era JSON válido — trata como texto puro
+                return valor; // não era JSON válido - trata como texto puro
             }
         }
         return valor;
@@ -107,19 +107,19 @@ public class SalaResource {
     @PostMapping("")
     public ResponseEntity<SalaResponseVM> createSala(@Valid @RequestBody Sala sala) throws URISyntaxException {
         LOG.debug("REST request to save Sala : {}", sala);
-        // Impede criação com código duplicado — o código é a chave primária
+        // Impede criação com código duplicado - o código é a chave primária
         if (salaRepository.existsById(sala.getCodigo())) {
             throw new BadRequestAlertException("Código de sala já em uso", ENTITY_NAME, "codigoexists");
         }
-        // Vincula o professor logado à sala — se não houver Usuario correspondente, professor fica null
+        // Vincula o professor logado à sala - se não houver Usuario correspondente, professor fica null
         SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
             .ifPresent(sala::setProfessor);
-        // Data de criação é definida pelo servidor — o cliente não consegue forjar
+        // Data de criação é definida pelo servidor - o cliente não consegue forjar
         sala.setDataCriacao(java.time.Instant.now());
         // Normaliza tipo/visibilidade: sem tipo vira TURMA; a escolha pública/privada
-        // só existe para duelos 1v1 — salas de turma são sempre acessadas pelo código
+        // só existe para duelos 1v1 - salas de turma são sempre acessadas pelo código
         if (sala.getTipo() == null) {
             sala.setTipo(TipoSala.TURMA);
         }
@@ -138,7 +138,7 @@ public class SalaResource {
             .body(vm);
     }
 
-    // Atualiza a sala COMPLETA (PUT) — exclusivo do CRUD administrativo: o corpo
+    // Atualiza a sala COMPLETA (PUT) - exclusivo do CRUD administrativo: o corpo
     // substitui a entidade inteira (inclusive professor, tipo e dataCriacao), o
     // que não pode ficar nas mãos do dono comum (ele poderia, por exemplo,
     // transferir a sala de professor pelo payload). O caminho do professor é o
@@ -167,7 +167,7 @@ public class SalaResource {
             .body(sala);
     }
 
-    // Atualização parcial da sala (PATCH) — apenas campos enviados são alterados.
+    // Atualização parcial da sala (PATCH) - apenas campos enviados são alterados.
     // O código não pode ser alterado: é a chave primária da sala.
     @PatchMapping(value = "/{codigo}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Sala> partialUpdateSala(
@@ -201,7 +201,7 @@ public class SalaResource {
                 if (sala.getAtivo() != null) {
                     existingSala.setAtivo(sala.getAtivo());
                     // Sala fechada em definitivo (ativo=false): libera o estado do jogo
-                    // da memória — placar, palavras e relatório não serão mais consultados
+                    // da memória - placar, palavras e relatório não serão mais consultados
                     if (Boolean.FALSE.equals(sala.getAtivo())) {
                         jogoSalaService.descartarSala(codigo);
                     }
@@ -219,7 +219,7 @@ public class SalaResource {
     // Listagem de salas com controle de visibilidade:
     // admin vê todas (entidade completa, para as telas CRUD); professores e
     // alunos veem apenas as salas que lhes pertencem, já convertidas no VM
-    // público — a entidade crua carrega o vínculo com o professor e, se algum
+    // público - a entidade crua carrega o vínculo com o professor e, se algum
     // dia for serializada inicializada, vazaria o e-mail dele
     @GetMapping("")
     public ResponseEntity<List<?>> getAllSalas(@RequestParam(required = false) Boolean ativo) {
@@ -245,7 +245,7 @@ public class SalaResource {
         return ResponseEntity.ok(salas);
     }
 
-    // Lista global de duelos 1v1 PÚBLICOS abertos — qualquer usuário autenticado pode ver
+    // Lista global de duelos 1v1 PÚBLICOS abertos - qualquer usuário autenticado pode ver
     // e entrar. Duelos privados nunca aparecem aqui: só entra quem tiver o código.
     // Duelos que já estão com 2 jogadores conectados ficam de fora (sala cheia).
     @GetMapping("/1v1/publicas")
@@ -273,7 +273,7 @@ public class SalaResource {
         );
     }
 
-    // Busca uma sala pelo código — sem restrição de acesso (código é público para
+    // Busca uma sala pelo código - sem restrição de acesso (código é público para
     // quem tiver o link). Não-admin recebe o VM público; a entidade completa
     // (com vínculos de professor/alunos) fica restrita às telas CRUD do admin.
     @GetMapping("/{codigo}")
@@ -297,7 +297,7 @@ public class SalaResource {
      * - AO FINAL: vira o relatório completo, junto com o ranking.
      *
      * Restrito ao professor dono da sala (ou admin): o relatório expõe o texto
-     * das palavras e as respostas individuais dos alunos — nenhum aluno pode
+     * das palavras e as respostas individuais dos alunos - nenhum aluno pode
      * consultar este endpoint para colar ou espiar os colegas.
      */
     @GetMapping("/{codigo}/relatorio")
@@ -312,7 +312,7 @@ public class SalaResource {
     }
 
     // O papel de professor vive no estado de navegação do front e se perde ao
-    // recarregar a página da sala — este endpoint permite à tela redescobrir se o
+    // recarregar a página da sala - este endpoint permite à tela redescobrir se o
     // usuário logado é o dono (ou admin) e renderizar a visão de professor de novo.
     @GetMapping("/{codigo}/sou-professor")
     public ResponseEntity<Map<String, Boolean>> souProfessor(@PathVariable("codigo") String codigo) {
@@ -322,7 +322,7 @@ public class SalaResource {
         return ResponseEntity.ok(Map.of("souProfessor", isOwnerOrAdmin(codigo)));
     }
 
-    // Exclui uma sala — apenas o professor dono ou admin podem excluir
+    // Exclui uma sala - apenas o professor dono ou admin podem excluir
     @DeleteMapping("/{codigo}")
     public ResponseEntity<Void> deleteSala(@PathVariable("codigo") String codigo) {
         LOG.debug("REST request to delete Sala : {}", codigo);

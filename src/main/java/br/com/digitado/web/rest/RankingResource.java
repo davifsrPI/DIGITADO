@@ -149,7 +149,7 @@ public class RankingResource {
      *
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of rankings in body.
      */
-    // Entidade Ranking (legada, por sala) exposta só a admin — o ranking visível
+    // Entidade Ranking (legada, por sala) exposta só a admin - o ranking visível
     // aos jogadores é o /api/ranking-mundial, que já filtra os dados públicos
     @Secured(AuthoritiesConstants.ADMIN)
     @GetMapping("")

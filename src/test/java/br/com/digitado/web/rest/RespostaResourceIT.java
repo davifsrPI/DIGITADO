@@ -211,7 +211,7 @@ class RespostaResourceIT {
         // Disconnect from session so that the updates on updatedResposta are not directly saved in db
         em.detach(updatedResposta);
         // correta, pontuacao, aluno e dataResposta são calculados pelo servidor e
-        // preservados no update — o teste só altera os campos realmente editáveis
+        // preservados no update - o teste só altera os campos realmente editáveis
         updatedResposta.respostaDigitada(UPDATED_RESPOSTA_DIGITADA).tempoResposta(UPDATED_TEMPO_RESPOSTA);
 
         restRespostaMockMvc

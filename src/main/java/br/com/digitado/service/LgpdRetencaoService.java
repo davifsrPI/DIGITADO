@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
  * guardados além da finalidade. Roda todo dia de madrugada.
  *
  * Hoje cobre as tentativas da palavra do dia: o login registrado só serve para
- * impedir a segunda tentativa NO PRÓPRIO DIA — depois de DIAS_RETENCAO ele é
+ * impedir a segunda tentativa NO PRÓPRIO DIA - depois de DIAS_RETENCAO ele é
  * anonimizado (vira nulo), preservando apenas a estatística agregada.
  */
 @Service

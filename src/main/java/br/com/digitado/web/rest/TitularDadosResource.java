@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Direitos do titular (LGPD art. 18) — endpoints de autoatendimento.
+ * Direitos do titular (LGPD art. 18) - endpoints de autoatendimento.
  *
  * Segurança:
  * - a identidade vem sempre do token, nenhum id vem do frontend;
@@ -35,7 +35,7 @@ public class TitularDadosResource {
     public record ExclusaoPayload(String senha) {}
 
     /**
-     * {@code GET /api/account/export} : portabilidade (art. 18, V) — devolve todos
+     * {@code GET /api/account/export} : portabilidade (art. 18, V) - devolve todos
      * os dados pessoais do titular autenticado em JSON, para download no navegador.
      */
     @GetMapping("/export")
@@ -50,7 +50,7 @@ public class TitularDadosResource {
 
     /**
      * {@code DELETE /api/account} : exclusão da conta e de todos os dados pessoais
-     * (art. 18, VI). Irreversível — por isso exige a senha atual como confirmação.
+     * (art. 18, VI). Irreversível - por isso exige a senha atual como confirmação.
      */
     @DeleteMapping("")
     public ResponseEntity<Void> excluirConta(@RequestBody ExclusaoPayload payload) {

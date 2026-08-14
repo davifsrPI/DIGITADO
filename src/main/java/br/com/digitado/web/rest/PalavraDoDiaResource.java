@@ -25,13 +25,13 @@ import org.springframework.web.bind.annotation.*;
  * Regras de segurança, todas aplicadas no backend:
  * - A validação da resposta é feita aqui (o front só envia o palpite);
  * - O texto viaja no GET apenas para a síntese de voz do navegador (o desafio é
- *   um ditado) — quem inspecionar a rede consegue lê-lo, mas a chance única e a
+ *   um ditado) - quem inspecionar a rede consegue lê-lo, mas a chance única e a
  *   validação continuam no servidor;
  * - Uma chance por pessoa: conta logada é controlada pelo banco (dia + login);
  *   visitante anônimo é controlado por cookie httpOnly emitido pelo servidor
  *   (JavaScript do front não lê nem escreve esse cookie);
  * - Se o visitante fizer login, o cookie anônimo passa a ser ignorado e vale a
- *   chance da conta — exatamente o comportamento pedido.
+ *   chance da conta - exatamente o comportamento pedido.
  */
 @RestController
 @RequestMapping("/api/public/palavra-do-dia")
@@ -54,7 +54,7 @@ public class PalavraDoDiaResource {
     /**
      * {@code GET /api/public/palavra-do-dia} : estado do desafio de hoje.
      * Retorna o texto para o áudio do ditado e se quem chamou já usou a chance
-     * (banco para logado, cookie para anônimo) — o front apenas renderiza o que vier daqui.
+     * (banco para logado, cookie para anônimo) - o front apenas renderiza o que vier daqui.
      */
     @GetMapping("")
     public PalavraDoDiaVM getPalavraDoDia(@CookieValue(name = COOKIE_TENTATIVA, required = false) String cookie) {
@@ -69,13 +69,13 @@ public class PalavraDoDiaResource {
         ResultadoPalavraDoDiaVM resultado = null;
 
         if (login.isPresent()) {
-            // Logado: a fonte da verdade é o banco (cookie anônimo é ignorado —
+            // Logado: a fonte da verdade é o banco (cookie anônimo é ignorado -
             // entrar na conta dá direito à chance da conta)
             Optional<PalavraDoDiaTentativa> tentativa = palavraDoDiaService.tentativaDoUsuario(login.orElseThrow());
             jaTentou = tentativa.isPresent();
             if (jaTentou) {
                 boolean acertou = tentativa.orElseThrow().getAcertou();
-                // Acerto de logado rendeu XP hoje — reexibe o valor ao recarregar a página
+                // Acerto de logado rendeu XP hoje - reexibe o valor ao recarregar a página
                 resultado = montarResultado(palavra, acertou, acertou ? XpService.XP_ACERTO_PALAVRA_DIA : 0);
             }
         } else {
@@ -94,7 +94,7 @@ public class PalavraDoDiaResource {
             palavra.getTexto(),
             palavra.getDificuldade() != null ? palavra.getDificuldade().name() : null,
             palavra.getCategoria(),
-            // Dica cadastrada no banco (coluna dica da tabela palavra) — pista para o jogador
+            // Dica cadastrada no banco (coluna dica da tabela palavra) - pista para o jogador
             palavra.getDica(),
             jaTentou,
             resultado
@@ -122,7 +122,7 @@ public class PalavraDoDiaResource {
 
         Optional<String> login = loginAutenticado();
 
-        // Bloqueio de segunda tentativa — sempre validado no servidor
+        // Bloqueio de segunda tentativa - sempre validado no servidor
         if (login.isPresent()) {
             if (palavraDoDiaService.tentativaDoUsuario(login.orElseThrow()).isPresent()) {
                 throw new BadRequestAlertException("Você já usou sua chance de hoje", "palavraDoDia", "jatentou");
@@ -132,10 +132,10 @@ public class PalavraDoDiaResource {
         }
 
         boolean acertou = palavraDoDiaService.tentar(palavra, login.orElse(null), payload.resposta());
-        LOG.info("Palavra do dia: tentativa de {} — {}", login.orElse("anônimo"), acertou ? "acerto" : "erro");
+        LOG.info("Palavra do dia: tentativa de {} - {}", login.orElse("anônimo"), acertou ? "acerto" : "erro");
 
         // Marca a tentativa no navegador via cookie httpOnly (anônimos); para logados
-        // também não faz mal — mas quem manda é o registro no banco
+        // também não faz mal - mas quem manda é o registro no banco
         response.addHeader(HttpHeaders.SET_COOKIE, cookieDeTentativa(acertou).toString());
 
         // O XP foi creditado dentro de tentar(); aqui só informamos o valor para a UI
@@ -159,7 +159,7 @@ public class PalavraDoDiaResource {
                 return Optional.of("1".equals(partes[1]));
             }
         } catch (Exception e) {
-            // cookie corrompido — trata como inexistente
+            // cookie corrompido - trata como inexistente
         }
         return Optional.empty();
     }

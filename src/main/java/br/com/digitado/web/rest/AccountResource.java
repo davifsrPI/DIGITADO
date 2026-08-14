@@ -132,7 +132,7 @@ public class AccountResource {
             userDTO.getLangKey(),
             userDTO.getImageUrl()
         );
-        // Persiste o apelido no Usuario (perfil do jogo) — apelido em branco limpa o campo
+        // Persiste o apelido no Usuario (perfil do jogo) - apelido em branco limpa o campo
         // e a pessoa volta a aparecer como nome + inicial do sobrenome
         user
             .flatMap(u -> usuarioRepository.findByEmail(u.getEmail()))
@@ -194,7 +194,7 @@ public class AccountResource {
     }
 
     // Política de senha centralizada em PasswordPolicy (mínimo 8 caracteres com
-    // maiúscula, minúscula, número e especial) — validada aqui no servidor para
+    // maiúscula, minúscula, número e especial) - validada aqui no servidor para
     // registro, troca e redefinição; o frontend replica a regra só como UX.
     private static boolean isPasswordInvalid(String password) {
         return PasswordPolicy.isInvalid(password);

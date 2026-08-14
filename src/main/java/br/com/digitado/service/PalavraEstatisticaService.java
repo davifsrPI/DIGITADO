@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
  * - JogoSalaService.responder (partidas via WebSocket)
  * - PalavraDoDiaService.tentar (palavra do dia)
  *
- * O frontend nunca envia contadores — só a resposta digitada.
+ * O frontend nunca envia contadores - só a resposta digitada.
  */
 @Service
 public class PalavraEstatisticaService {
@@ -28,7 +28,7 @@ public class PalavraEstatisticaService {
     }
 
     // Incrementa os contadores da palavra (update atômico). Falha aqui não pode
-    // derrubar a partida — estatística é acessória, então o erro é só logado.
+    // derrubar a partida - estatística é acessória, então o erro é só logado.
     @Transactional
     public void registrarTentativa(Long palavraId, boolean acertou) {
         if (palavraId == null) {

@@ -10,11 +10,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Concessão de XP ao usuário — alimenta o Ranking Mundial.
+ * Concessão de XP ao usuário - alimenta o Ranking Mundial.
  *
  * O XP fica numa coluna persistente (usuario.xp) em vez de ser calculado das
  * tentativas, porque os logins de palavra_do_dia_tentativa são anonimizados
- * após o prazo de retenção (LGPD) — o XP precisa sobreviver a isso.
+ * após o prazo de retenção (LGPD) - o XP precisa sobreviver a isso.
  *
  * Chamado apenas pelo backend, nos pontos onde o acerto já foi validado.
  */
@@ -36,9 +36,9 @@ public class XpService {
 
     /**
      * Credita o XP da palavra do dia ao usuário do login informado.
-     * Retorna o XP concedido (0 se o login não tiver Usuario correspondente —
+     * Retorna o XP concedido (0 se o login não tiver Usuario correspondente -
      * ex.: conta de admin sem cadastro de aluno). Falha aqui não pode derrubar
-     * o fluxo da tentativa — XP é acessório, então o erro é só logado.
+     * o fluxo da tentativa - XP é acessório, então o erro é só logado.
      */
     @Transactional
     public long premiarAcertoPalavraDoDia(String login) {
@@ -58,7 +58,7 @@ public class XpService {
     }
 
     /**
-     * Crédito genérico de XP (update atômico) — usado pela palavra do dia e pelo
+     * Crédito genérico de XP (update atômico) - usado pela palavra do dia e pelo
      * motor de conquistas ao desbloquear uma conquista.
      */
     @Transactional

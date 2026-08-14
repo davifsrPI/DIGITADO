@@ -8,8 +8,8 @@ import java.text.Normalizer;
 /**
  * Converte a coluna dificuldade (texto) no enum Dificuldade tolerando dados
  * importados fora do padrão: caixa ('dificil'), acentos ('difícil') e o feminino
- * 'media' (→ MEDIO). Um valor irreconhecível vira null — a palavra cai no
- * fallback do Palavra.getDificuldade() — em vez de derrubar a consulta inteira
+ * 'media' (→ MEDIO). Um valor irreconhecível vira null - a palavra cai no
+ * fallback do Palavra.getDificuldade() - em vez de derrubar a consulta inteira
  * com IllegalArgumentException (foi o que tirou a Palavra do Dia do ar).
  *
  * Na escrita o valor gravado é sempre o nome canônico do enum (FACIL/MEDIO/DIFICIL).

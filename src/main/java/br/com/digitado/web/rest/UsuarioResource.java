@@ -53,7 +53,7 @@ public class UsuarioResource {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Cria um novo usuário — restrito a administradores.
+    // Cria um novo usuário - restrito a administradores.
     // A senha é obrigatória na criação (mas nunca é retornada pela API por causa do @JsonIgnore).
     @Secured(AuthoritiesConstants.ADMIN)
     @PostMapping("")
@@ -66,7 +66,7 @@ public class UsuarioResource {
         if (usuario.getSenha() == null || usuario.getSenha().isBlank()) {
             throw new BadRequestAlertException("Senha é obrigatória", ENTITY_NAME, "senhanull");
         }
-        // Nunca persistir a senha em texto puro — armazena só o hash (bcrypt).
+        // Nunca persistir a senha em texto puro - armazena só o hash (bcrypt).
         // Este campo é legado (a autenticação usa o User do JHipster), mas mesmo
         // assim não deve guardar segredo em claro no banco.
         usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
@@ -78,7 +78,7 @@ public class UsuarioResource {
 
     // Atualiza os dados de um usuário.
     // A senha nunca vem no body (está com @JsonIgnore), então sempre preserva a senha atual do banco.
-    // tipoUsuario e ativo só podem ser alterados por admin — outros usuários não podem se "promover".
+    // tipoUsuario e ativo só podem ser alterados por admin - outros usuários não podem se "promover".
     @PutMapping("/{id}")
     public ResponseEntity<Usuario> updateUsuario(
         @PathVariable(value = "id", required = false) final Long id,
@@ -115,7 +115,7 @@ public class UsuarioResource {
             .body(usuario);
     }
 
-    // Atualização parcial (PATCH) — altera apenas os campos enviados, mantém o restante intacto
+    // Atualização parcial (PATCH) - altera apenas os campos enviados, mantém o restante intacto
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
     public ResponseEntity<Usuario> partialUpdateUsuario(
         @PathVariable(value = "id", required = false) final Long id,
@@ -147,7 +147,7 @@ public class UsuarioResource {
                 if (usuario.getEmail() != null) {
                     existingUsuario.setEmail(usuario.getEmail());
                 }
-                // Senha é imutável via update (não se altera por PATCH) — nunca grava
+                // Senha é imutável via update (não se altera por PATCH) - nunca grava
                 // senha em claro nem permite troca por este endpoint genérico.
                 // tipoUsuario e ativo só podem ser alterados por administrador
                 if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
@@ -184,7 +184,7 @@ public class UsuarioResource {
             .orElse(List.of());
     }
 
-    // Busca um usuário pelo ID — verifica permissão antes de retornar
+    // Busca um usuário pelo ID - verifica permissão antes de retornar
     @GetMapping("/{id}")
     public ResponseEntity<Usuario> getUsuario(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Usuario : {}", id);
@@ -195,7 +195,7 @@ public class UsuarioResource {
         return ResponseUtil.wrapOrNotFound(usuario);
     }
 
-    // Exclui um usuário — apenas o próprio ou admin podem excluir
+    // Exclui um usuário - apenas o próprio ou admin podem excluir
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUsuario(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Usuario : {}", id);
@@ -215,15 +215,15 @@ public class UsuarioResource {
     public record AlterarSenhaVM(String senhaAtual, String novaSenha) {}
 
     /**
-     * Troca a senha do PRÓPRIO Usuario — único caminho para alterar a senha
+     * Troca a senha do PRÓPRIO Usuario - único caminho para alterar a senha
      * (os updates PUT/PATCH a preservam sempre). A conta alvo é resolvida
-     * exclusivamente pelo token JWT (sem id na URL — imune a IDOR) e a senha
+     * exclusivamente pelo token JWT (sem id na URL - imune a IDOR) e a senha
      * atual é conferida via bcrypt antes de aceitar a nova.
      */
     @PostMapping("/alterar-senha")
     public ResponseEntity<Void> alterarSenha(@RequestBody AlterarSenhaVM vm) {
         // Mesma política forte da conta principal (PasswordPolicy): esta senha
-        // também confirma a exclusão LGPD da conta — não pode ser mais fraca
+        // também confirma a exclusão LGPD da conta - não pode ser mais fraca
         if (vm == null || PasswordPolicy.isInvalid(vm.novaSenha())) {
             throw new BadRequestAlertException(
                 "Nova senha inválida: mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial",

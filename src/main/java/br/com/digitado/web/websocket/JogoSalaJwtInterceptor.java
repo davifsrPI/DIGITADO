@@ -37,13 +37,13 @@ public class JogoSalaJwtInterceptor implements ChannelInterceptor {
             return message;
         }
 
-        // CONNECT: handshake do STOMP — o JWT é OBRIGATÓRIO. Sem token válido a
+        // CONNECT: handshake do STOMP - o JWT é OBRIGATÓRIO. Sem token válido a
         // conexão é rejeitada aqui (frame ERROR + fechamento), impedindo inclusive
         // SUBSCRIBE anônimo nos tópicos da sala (o estado do jogo é broadcast neles).
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             String authHeader = accessor.getFirstNativeHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                LOG.warn("WebSocket CONNECT sem token — conexão rejeitada");
+                LOG.warn("WebSocket CONNECT sem token - conexão rejeitada");
                 throw new MessagingException("Autenticação obrigatória para conectar ao WebSocket");
             }
             String token = authHeader.substring(7);
@@ -68,7 +68,7 @@ public class JogoSalaJwtInterceptor implements ChannelInterceptor {
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(jwt.getSubject(), null, authorities);
                 accessor.setUser(auth);
             } catch (Exception e) {
-                LOG.warn("WebSocket JWT inválido — conexão rejeitada: {}", e.getMessage());
+                LOG.warn("WebSocket JWT inválido - conexão rejeitada: {}", e.getMessage());
                 throw new MessagingException("Token inválido ou expirado");
             }
         }
@@ -77,7 +77,7 @@ public class JogoSalaJwtInterceptor implements ChannelInterceptor {
         // (não deveria acontecer, já que o CONNECT sem token é rejeitado acima)
         if ((StompCommand.SUBSCRIBE.equals(accessor.getCommand()) || StompCommand.SEND.equals(accessor.getCommand()))) {
             if (accessor.getUser() == null) {
-                LOG.warn("WebSocket {} sem sessão autenticada — bloqueado", accessor.getCommand());
+                LOG.warn("WebSocket {} sem sessão autenticada - bloqueado", accessor.getCommand());
                 throw new MessagingException("Sessão WebSocket não autenticada");
             }
         }

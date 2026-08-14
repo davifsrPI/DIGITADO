@@ -7,7 +7,7 @@
     <!--
         Palavra do Dia e estatísticas por palavra.
 
-        Colunas novas na tabela palavra: contadores agregados — quantas pessoas
+        Colunas novas na tabela palavra: contadores agregados - quantas pessoas
         tentaram a palavra (na palavra do dia ou nas partidas) e quantas acertaram.
         Atualizadas somente pelo backend, por SQL direto, na validação da resposta.
 

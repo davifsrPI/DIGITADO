@@ -8,7 +8,7 @@
         Normaliza os valores da coluna dificuldade para os NOMES DO ENUM
         (FACIL/MEDIO/DIFICIL). Palavras importadas direto no banco chegaram com
         'facil'/'media'/'dificil' (minúsculas e "media" no feminino), o que quebrava
-        o mapeamento JPA com IllegalArgumentException — derrubando a Palavra do Dia
+        o mapeamento JPA com IllegalArgumentException - derrubando a Palavra do Dia
         e qualquer endpoint que serializasse uma Palavra.
 
         Idempotente: valores já normalizados são mapeados para eles mesmos;

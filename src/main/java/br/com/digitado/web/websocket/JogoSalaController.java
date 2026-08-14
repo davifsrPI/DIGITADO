@@ -52,7 +52,7 @@ public class JogoSalaController {
     }
 
     // Nome público do jogador no placar: o APELIDO cadastrado no perfil vence o nome
-    // enviado pelo cliente (que fica só como fallback) — resolvido no servidor, um
+    // enviado pelo cliente (que fica só como fallback) - resolvido no servidor, um
     // cliente adulterado não escolhe como aparece para os outros
     private String nomeExibicao(String login, String nomeEnviado) {
         return userRepository
@@ -77,7 +77,7 @@ public class JogoSalaController {
         if (duelo) {
             boolean entrou = jogoService.registrarNoDuelo(codigo, login, nome);
             if (!entrou) {
-                LOG.warn("Duelo {} cheio — entrada negada para {}", codigo, login);
+                LOG.warn("Duelo {} cheio - entrada negada para {}", codigo, login);
                 messaging.convertAndSendToUser(
                     login,
                     "/queue/sala/" + codigo + "/erro",
@@ -88,7 +88,7 @@ public class JogoSalaController {
         } else {
             jogoService.registrarAluno(codigo, login, nome);
         }
-        // Conquista "Bem-vindo à Turma" (primeira sala) — nunca derruba a conexão
+        // Conquista "Bem-vindo à Turma" (primeira sala) - nunca derruba a conexão
         try {
             conquistaEngine.aoEntrarNaSala(login);
         } catch (Exception e) {
@@ -103,7 +103,7 @@ public class JogoSalaController {
     @MessageMapping("/sala/{codigo}/iniciar")
     public void iniciar(@DestinationVariable String codigo, @Payload IniciarPayload payload, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
-            LOG.warn("Iniciar negado para sala {} — usuário: {}", codigo, principal != null ? principal.getName() : "anônimo");
+            LOG.warn("Iniciar negado para sala {} - usuário: {}", codigo, principal != null ? principal.getName() : "anônimo");
             if (principal != null) {
                 // Manda o erro direto para o usuário que tentou iniciar sem permissão
                 messaging.convertAndSendToUser(
@@ -136,7 +136,7 @@ public class JogoSalaController {
         if (estado != null) broadcast(codigo, estado);
     }
 
-    // Pausa o jogo — restrito ao professor
+    // Pausa o jogo - restrito ao professor
     @MessageMapping("/sala/{codigo}/pausar")
     public void pausar(@DestinationVariable String codigo, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
@@ -148,7 +148,7 @@ public class JogoSalaController {
         if (estado != null) broadcast(codigo, estado);
     }
 
-    // Encerra o jogo antes do tempo — restrito ao professor
+    // Encerra o jogo antes do tempo - restrito ao professor
     @MessageMapping("/sala/{codigo}/encerrar")
     public void encerrar(@DestinationVariable String codigo, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
@@ -191,7 +191,7 @@ public class JogoSalaController {
     }
 
     // Nome da sala com cache em memória (EstadoJogo): o banco só é consultado na
-    // primeira mensagem de cada sala — antes era um SELECT por mensagem WebSocket,
+    // primeira mensagem de cada sala - antes era um SELECT por mensagem WebSocket,
     // inclusive um por resposta de aluno durante a rodada. Fallback: o próprio código.
     private String getNomeSala(String codigo) {
         return jogoService.nomeSalaCacheado(codigo, () -> salaRepository.findByCodigo(codigo).map(s -> s.getNome()).orElse(codigo));
@@ -213,7 +213,7 @@ public class JogoSalaController {
                         if (isAdmin) return true;
 
                         if (sala.getProfessor() == null) {
-                            LOG.warn("Sala {} não tem professor definido — acesso negado para {}", codigoSala, user.getLogin());
+                            LOG.warn("Sala {} não tem professor definido - acesso negado para {}", codigoSala, user.getLogin());
                             return false;
                         }
 

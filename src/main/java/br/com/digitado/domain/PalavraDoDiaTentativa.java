@@ -9,7 +9,7 @@ import java.time.LocalDate;
  * Registro de cada tentativa na Palavra do Dia.
  *
  * - Usuário logado: o login é gravado e a constraint única (data, login) garante
- *   UMA tentativa por conta por dia — validada no backend, não no navegador.
+ *   UMA tentativa por conta por dia - validada no backend, não no navegador.
  * - Visitante anônimo: a linha é gravada com login nulo (para contabilizar) e o
  *   bloqueio de repetição é feito por cookie httpOnly emitido pelo servidor.
  */
@@ -35,7 +35,7 @@ public class PalavraDoDiaTentativa implements Serializable {
     @Column(name = "acertou", nullable = false)
     private Boolean acertou;
 
-    // Palavra sorteada no dia — referencia palavra.id
+    // Palavra sorteada no dia - referencia palavra.id
     @Column(name = "palavra_id", nullable = false)
     private Long palavraId;
 

@@ -24,7 +24,7 @@ public class Sala implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    // O código de acesso (ex: "8H4XEZ") é a chave primária da sala — não existe id numérico
+    // O código de acesso (ex: "8H4XEZ") é a chave primária da sala - não existe id numérico
     @Id
     @NotNull
     @Column(name = "codigo", nullable = false)
@@ -48,7 +48,7 @@ public class Sala implements Serializable {
 
     /**
      * Data/hora em que a sala foi criada. Junto com o código (que tem constraint
-     * única no banco — ux_sala__codigo), identifica a sala sem ambiguidade.
+     * única no banco - ux_sala__codigo), identifica a sala sem ambiguidade.
      * updatable = false: uma vez criada, a data nunca muda (nem via PUT).
      */
     @Column(name = "data_criacao", updatable = false)
@@ -60,7 +60,7 @@ public class Sala implements Serializable {
     private TipoSala tipo = TipoSala.TURMA;
 
     /**
-     * Visibilidade — só faz sentido para salas UM_V_UM: privada exige o código
+     * Visibilidade - só faz sentido para salas UM_V_UM: privada exige o código
      * para entrar; pública aparece na lista global de duelos abertos.
      * Salas TURMA são sempre "privadas" (acesso apenas pelo código).
      */

@@ -10,7 +10,7 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.StompWebSocketEndpointRegistration;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-// Configuração do WebSocket com STOMP — habilita comunicação em tempo real entre servidor e clientes
+// Configuração do WebSocket com STOMP - habilita comunicação em tempo real entre servidor e clientes
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
@@ -35,7 +35,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     // Registra o endpoint SockJS em /websocket/sala.
     // Origens aceitas no handshake vêm de application.websocket.allowed-origins:
-    // "*" no dev (front em localhost:9000), VAZIO em produção — sem padrão
+    // "*" no dev (front em localhost:9000), VAZIO em produção - sem padrão
     // registrado vale o default do Spring, que só aceita a MESMA origem do site.
     // Defesa em profundidade: o JWT no interceptor abaixo continua obrigatório.
     @Override

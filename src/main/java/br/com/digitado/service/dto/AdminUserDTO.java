@@ -30,7 +30,7 @@ public class AdminUserDTO implements Serializable {
     private String lastName;
 
     /**
-     * Apelido público do jogador — mora na tabela usuario (perfil do jogo), não na
+     * Apelido público do jogador - mora na tabela usuario (perfil do jogo), não na
      * jhi_user; este DTO só o transporta: o AccountResource preenche no GET /account
      * e persiste no Usuario no POST /account e no cadastro.
      */

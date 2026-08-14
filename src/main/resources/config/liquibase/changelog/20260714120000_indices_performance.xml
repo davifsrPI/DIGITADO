@@ -5,21 +5,21 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <!--
-        Auditoria de performance (2026-07-14) — três correções de banco:
+        Auditoria de performance (2026-07-14) - três correções de banco:
 
         1) Palavras DUPLICADAS (mesmo texto importado 2x): desativa as cópias
-           mantendo ATIVA apenas a mais antiga (menor id). Não apaga nada — as
+           mantendo ATIVA apenas a mais antiga (menor id). Não apaga nada - as
            cópias podem ter estatísticas e FKs (tentativas da Palavra do Dia);
            inativas, saem dos sorteios, da busca (que filtra ativas nos
            semelhantes) e da Palavra do Dia.
 
         2) Índice em usuario.xp: o Ranking Mundial (endpoint público da home)
-           ordena por xp e conta quantos têm xp maior — sem índice, cada visita
+           ordena por xp e conta quantos têm xp maior - sem índice, cada visita
            faz filesort e varredura completa da tabela de usuários.
 
         3) Índice em palavra.texto: a busca exata da tela de criação de sala e a
            checagem de duplicata do cadastro rápido consultam por texto a cada
-           digitação (com debounce) — sem índice, é varredura completa.
+           digitação (com debounce) - sem índice, é varredura completa.
            NÃO é único de propósito: o histórico pode conter textos repetidos
            (item 1 os desativa, mas mantém as linhas).
     -->

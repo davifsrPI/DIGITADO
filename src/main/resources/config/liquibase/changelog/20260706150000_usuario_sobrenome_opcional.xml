@@ -7,7 +7,7 @@
     <!--
         Torna o sobrenome do Usuario OPCIONAL.
         Antes era NOT NULL, o que obrigava o admin a preencher um sobrenome ao
-        validar/ativar a conta de um aluno — o registro público nem coleta esse campo.
+        validar/ativar a conta de um aluno - o registro público nem coleta esse campo.
     -->
     <changeSet id="20260706150000-1" author="digitado">
         <dropNotNullConstraint tableName="usuario" columnName="sobrenome" columnDataType="varchar(255)"/>

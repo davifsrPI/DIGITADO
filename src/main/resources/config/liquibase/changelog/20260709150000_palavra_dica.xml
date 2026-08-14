@@ -5,7 +5,7 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <!--
-        Coluna dica na tabela palavra — texto opcional exibido como pista na Palavra do Dia.
+        Coluna dica na tabela palavra - texto opcional exibido como pista na Palavra do Dia.
         A coluna foi criada manualmente no banco de desenvolvimento, então a precondição
         MARK_RAN pula o changeset onde ela já existe; bancos novos (testes, produção)
         ganham a coluna normalmente.

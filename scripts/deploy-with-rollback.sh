@@ -95,7 +95,7 @@ if [[ -f "$PREVIOUS_JAR" ]]; then
   cp -f "$PREVIOUS_JAR" "$CURRENT_JAR"
   start_app "$CURRENT_JAR"
   if wait_healthy; then
-    log "↩️ Rollback concluído — versão anterior restaurada e saudável."
+    log "↩️ Rollback concluído - versão anterior restaurada e saudável."
     exit 1
   fi
   log "🔥 Rollback subiu, mas o health check da versão anterior também falhou. Intervenção manual necessária."
