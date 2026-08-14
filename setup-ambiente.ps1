@@ -48,6 +48,10 @@ $COMPOSE_MYSQL = 'src/main/docker/mysql.yml'
 # conquistas em vez de um banco vazio.
 $ARQUIVO_DUMP = 'dados\banco-digitado.sql'
 
+# Reserva para quem clonou do GitHub e nao tem o dump do pendrive: a semente
+# vem no repositorio com palavras, listas e conquistas, sem dado de usuario.
+$ARQUIVO_SEMENTE = 'dados\seed-digitado.sql'
+
 # Portas liberadas no firewall para que outras maquinas da rede local alcancem
 # a aplicacao: 8080 e o back-end (Spring Boot) e 9000 e o front-end de
 # desenvolvimento. O MySQL nao entra na lista de proposito: o compose publica a
@@ -315,6 +319,16 @@ if (Porta-Ocupada 3306) {
 Escrever "`n[3/6] Dados do banco" Cyan
 
 $dump = Join-Path $PSScriptRoot $ARQUIVO_DUMP
+
+# Sem o dump do pendrive, cai na semente do repositorio em vez de comecar zerado.
+if (-not (Test-Path $dump)) {
+    $semente = Join-Path $PSScriptRoot $ARQUIVO_SEMENTE
+    if (Test-Path $semente) {
+        $dump = $semente
+        $ARQUIVO_DUMP = $ARQUIVO_SEMENTE
+        Escrever "  Sem dump do pendrive: usando a semente $ARQUIVO_SEMENTE." DarkGray
+    }
+}
 
 if (-not (Test-Path $dump)) {
     Escrever "  Nenhum dump em $ARQUIVO_DUMP - o banco comeca vazio," DarkGray

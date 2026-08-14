@@ -152,15 +152,16 @@ Desktop.ini
 coverage/
 .nyc_output/
 
-# Credenciais locais de teste do perfil prod — nunca commitar
+# Credenciais locais de teste do perfil prod - nunca commitar
 *.local.ps1
 
 # Dump do banco gerado por exportar-banco.ps1: contém e-mails e hashes de senha
 # dos usuários. Viaja por pendrive junto com o projeto, nunca pelo repositório.
-dados/
+# A exceção é a semente pública, liberada no fim deste arquivo.
+dados/*
 
 ######################
-# Segredos e dados sensíveis — este repositório é público
+# Segredos e dados sensíveis - este repositório é público
 ######################
 # Dumps e backups de banco, em qualquer pasta
 *.sql
@@ -183,3 +184,14 @@ dados/
 *.pfx
 *.jks
 *.keystore
+
+######################
+# Semente pública do banco
+######################
+# Precisa vir depois das regras acima: no .gitignore vale o último padrão que
+# casa, então esta linha reabre o que 'dados/*' e '*.sql' tinham fechado.
+#
+# O seed-digitado.sql traz só as 305 palavras, as 10 listas, as 39 conquistas e
+# as contas padrão admin/user. Nenhum dado de usuário real: é o que faz um
+# clone novo já nascer utilizável. Regenerar com sanitizar-banco.ps1.
+!dados/seed-digitado.sql

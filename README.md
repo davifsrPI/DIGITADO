@@ -174,6 +174,20 @@ Para instalar em outra máquina copiando por pendrive, em vez de clonar:
 
 > O arquivo `dados\banco-digitado.sql` contém e-mails e hashes de senha, por isso está no `.gitignore`: ele viaja no pendrive, nunca no repositório.
 
+#### A semente do banco (para quem clonou do GitHub)
+
+Quem chega pelo `git clone` não tem o dump do pendrive, e um banco vazio deixa o projeto sem graça: sem palavras, não há o que ditar. Por isso o repositório traz `dados/seed-digitado.sql`, com as **305 palavras**, as 10 listas, as 39 conquistas e as contas padrão `admin` e `user`. Nenhum dado de usuário real entra nele.
+
+Os dois caminhos de instalação usam a semente sozinhos: tanto o `setup-ambiente.ps1` quanto o `iniciar-container.ps1` procuram primeiro o `dados\banco-digitado.sql` e, se ele não existir, caem na semente. Não há passo extra.
+
+Depois de cadastrar palavras novas e querer atualizar a semente publicada, use o [`sanitizar-banco.ps1`](sanitizar-banco.ps1):
+
+```bash
+powershell -ExecutionPolicy Bypass -File .\sanitizar-banco.ps1
+```
+
+Ele importa o seu dump pessoal em um MySQL descartável, apaga usuários, salas, respostas e ranking, e grava o resultado em `dados/seed-digitado.sql`. O banco de desenvolvimento da sua máquina não é tocado, e o script se recusa a terminar se sobrar algum e-mail na saída.
+
 #### Tudo em container (sem instalar Java nem Node)
 
 Alternativa ao `setup-ambiente.ps1` para quando a outra máquina só pode ter o Docker. O [`Dockerfile`](Dockerfile) compila back-end e front-end, e o [`docker-compose.yml`](docker-compose.yml) sobe a aplicação junto com um MySQL já carregado com `dados\banco-digitado.sql`:
