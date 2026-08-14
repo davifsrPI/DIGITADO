@@ -17,14 +17,17 @@ interface Props {
   onLetra: (letra: string) => void;
   onApagar: () => void;
   disabled?: boolean;
+  // Quem decide é o EntradaPalavra, no mesmo lugar em que decide suprimir o teclado
+  // do sistema: as duas coisas precisam concordar, senão sobra campo sem teclado nenhum
+  visivel?: boolean;
 }
 
-// Teclado na tela para o celular (só aparece em telas touch, via CSS pointer:coarse).
+// Teclado na tela para o celular (só aparece em telas de toque).
 // Como o teclado nativo fica suprimido pelo inputMode="none" do campo, este é o
 // único jeito de digitar no touch - sem corretor ortográfico no caminho.
 // As teclas ´ ` ^ ~ funcionam como teclas mortas do ABNT2: toca o acento
 // (fica marcado como pendente) e depois a vogal para compor á, ã, ê...
-export const TecladoVirtual: React.FC<Props> = ({ onLetra, onApagar, disabled }) => {
+export const TecladoVirtual: React.FC<Props> = ({ onLetra, onApagar, disabled, visivel }) => {
   const [acentoPendente, setAcentoPendente] = useState<string | null>(null);
 
   // pointerdown com preventDefault: a tecla não rouba o foco do input
@@ -55,7 +58,7 @@ export const TecladoVirtual: React.FC<Props> = ({ onLetra, onApagar, disabled })
   );
 
   return (
-    <div className="ep-teclado" role="group" aria-label="Teclado virtual">
+    <div className={`ep-teclado${visivel ? '' : ' ep-teclado--oculto'}`} role="group" aria-label="Teclado virtual">
       <div className="ep-linha">{LINHA1.map(renderLetra)}</div>
       <div className="ep-linha">
         {LINHA2.map(renderLetra)}

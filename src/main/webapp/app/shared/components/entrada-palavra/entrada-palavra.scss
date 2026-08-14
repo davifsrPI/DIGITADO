@@ -8,10 +8,12 @@
   }
 }
 
-/* Teclado virtual: escondido por padrão, aparece apenas em telas touch -
-   onde o inputMode="none" do campo suprime o teclado nativo (e o corretor) */
+/* Teclado virtual: aparece apenas em telas de toque, onde o inputMode="none" do
+   campo suprime o teclado nativo (e o corretor). Quem esconde é o componente, que
+   decide as duas coisas juntas - se o CSS decidisse sozinho, uma tela de toque fora
+   do padrão ficaria sem teclado nenhum */
 .ep-teclado {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 6px;
   margin-top: 12px;
@@ -19,10 +21,8 @@
   touch-action: manipulation;
 }
 
-@media (pointer: coarse) {
-  .ep-teclado {
-    display: flex;
-  }
+.ep-teclado--oculto {
+  display: none;
 }
 
 .ep-linha {
