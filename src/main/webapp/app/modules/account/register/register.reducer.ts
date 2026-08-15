@@ -7,6 +7,7 @@ const initialState = {
   loading: false,
   registrationSuccess: false,
   registrationFailure: false,
+  registrationBloqueada: false,
   errorMessage: null,
   successMessage: null,
 };
@@ -35,11 +36,19 @@ export const RegisterSlice = createSlice({
       .addCase(handleRegister.pending, state => {
         state.loading = true;
       })
-      .addCase(handleRegister.rejected, (state, action) => ({
-        ...initialState,
-        registrationFailure: true,
-        errorMessage: action.error.message,
-      }))
+      .addCase(handleRegister.rejected, (state, action) => {
+        // 429 vem do RateLimitFilter, e precisa de aviso próprio: dizer "erro no
+        // cadastro" faria a pessoa tentar de novo, o que renova o bloqueio.
+        const erro = action.error as { message?: string; response?: { status?: number } };
+        const status = erro?.response?.status ?? Number(/\b(\d{3})\b\s*$/.exec(erro?.message ?? '')?.[1]);
+
+        return {
+          ...initialState,
+          registrationFailure: true,
+          registrationBloqueada: status === 429,
+          errorMessage: erro?.message,
+        };
+      })
       .addCase(handleRegister.fulfilled, () => ({
         ...initialState,
         registrationSuccess: true,

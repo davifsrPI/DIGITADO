@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
-import { Button } from 'reactstrap';
+import { Alert, Button } from 'reactstrap';
 import { toast } from 'react-toastify';
 import { Link as RouterLink } from 'react-router-dom';
 import axios from 'axios';
@@ -56,6 +56,8 @@ export const RegisterPage = () => {
   };
 
   const successMessage = useAppSelector(state => state.register.successMessage);
+  const registrationFailure = useAppSelector(state => state.register.registrationFailure);
+  const registrationBloqueada = useAppSelector(state => state.register.registrationBloqueada);
 
   useEffect(() => {
     if (successMessage) {
@@ -80,6 +82,21 @@ export const RegisterPage = () => {
         <div className="register-card">
           <h2>Criar conta</h2>
           <p className="register-sub">Preencha seus dados para se cadastrar</p>
+
+          {/* Antes a tela não mostrava nada quando o cadastro falhava: a pessoa
+              clicava, não acontecia nada visível, e ia tentar entrar com uma conta
+              que nunca chegou a existir. */}
+          {registrationBloqueada ? (
+            <Alert color="warning" className="register-alert">
+              Muitas tentativas seguidas. Espere um minuto e envie o cadastro de novo.
+            </Alert>
+          ) : (
+            registrationFailure && (
+              <Alert color="danger" className="register-alert">
+                Não foi possível criar a conta. Confira se o usuário e o e-mail já não estão cadastrados.
+              </Alert>
+            )
+          )}
 
           <ValidatedForm id="register-form" onSubmit={handleValidSubmit}>
             <ValidatedField
