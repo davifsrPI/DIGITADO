@@ -13,6 +13,11 @@ export const initialState = {
   isAuthenticated: false,
   loginSuccess: false,
   loginError: false, // Errors returned from server side
+  // Separado do loginError porque a causa e outra: o RateLimitFilter devolve 429
+  // depois de 10 tentativas por minuto vindas do mesmo IP. Tratar isso como
+  // "senha errada" faz o usuario tentar de novo, e cada tentativa renova o
+  // bloqueio - foi assim que o login virou uma parede.
+  loginBloqueado: false,
   showModalLogin: false,
   account: {} as any,
   errorMessage: null as unknown as string, // Errors returned from server side
@@ -118,12 +123,22 @@ export const AuthenticationSlice = createSlice({
   },
   extraReducers(builder) {
     builder
-      .addCase(authenticate.rejected, (state, action) => ({
-        ...initialState,
-        errorMessage: action.error.message,
-        showModalLogin: true,
-        loginError: true,
-      }))
+      .addCase(authenticate.rejected, (state, action) => {
+        // serializeAxiosError devolve o proprio AxiosError, entao o status vem
+        // em response.status. A mensagem padrao do axios ("Request failed with
+        // status code 429") fica de reserva, caso alguma serializacao futura
+        // deixe passar so o texto.
+        const erro = action.error as { message?: string; response?: { status?: number } };
+        const status = erro?.response?.status ?? Number(/\b(\d{3})\b\s*$/.exec(erro?.message ?? '')?.[1]);
+
+        return {
+          ...initialState,
+          errorMessage: erro?.message,
+          showModalLogin: true,
+          loginError: true,
+          loginBloqueado: status === 429,
+        };
+      })
       .addCase(authenticate.fulfilled, state => ({
         ...state,
         loading: false,

@@ -7,9 +7,10 @@ import { useBodyClass } from 'app/shared/util/use-body-class';
 interface ILoginPageProps {
   handleLogin: (username: string, password: string, rememberMe: boolean) => void;
   loginError: boolean;
+  loginBloqueado: boolean;
 }
 
-const LoginPage = ({ handleLogin, loginError }: ILoginPageProps) => {
+const LoginPage = ({ handleLogin, loginError, loginBloqueado }: ILoginPageProps) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -39,10 +40,16 @@ const LoginPage = ({ handleLogin, loginError }: ILoginPageProps) => {
           <h2>Bem-vindo de volta</h2>
           <p className="login-sub">Entre com seus dados para continuar</p>
 
-          {loginError && (
-            <Alert color="danger" className="login-alert">
-              Usuário ou senha incorretos. Verifique seus dados.
+          {loginBloqueado ? (
+            <Alert color="warning" className="login-alert">
+              Muitas tentativas seguidas. Espere um minuto antes de tentar de novo: insistir agora renova o bloqueio.
             </Alert>
+          ) : (
+            loginError && (
+              <Alert color="danger" className="login-alert">
+                Usuário ou senha incorretos. Verifique seus dados.
+              </Alert>
+            )
           )}
 
           <form onSubmit={handleSubmit} className="login-form">
