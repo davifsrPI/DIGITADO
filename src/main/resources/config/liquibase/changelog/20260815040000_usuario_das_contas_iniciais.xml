@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Cria a linha em 'usuario' das contas que não nasceram pelo cadastro do site.
+
+        O app guarda pessoa em duas tabelas: jhi_user é a conta de login, e usuario é o
+        jogador (apelido, XP, salas, listas, conquistas). O cadastro cria as duas de uma
+        vez, em UserService.createUsuarioForUser. Já as contas iniciais admin e user vêm
+        dos dados do Liquibase e existiam só em jhi_user.
+
+        Faltar a linha em usuario não impede entrar, e é por isso que passava despercebido:
+        o problema só aparece quando a pessoa vai jogar. O caso concreto é criar uma sala -
+        ela nasce sem professor e, logo depois, o JogoSalaController nega o controle ao
+        próprio dono. O admin escapava por ser ADMIN, que controla qualquer sala; o 'user'
+        ficava travado sem explicação.
+
+        O vínculo entre as duas tabelas é o e-mail, então é por ele que se procura o que
+        falta. Contas que já têm o par ficam intactas, o que torna este changeset seguro
+        em bancos que já estavam corretos.
+    -->
+    <changeSet id="20260815040000-1" author="digitado">
+        <sql>
+            INSERT INTO usuario (nome, sobrenome, email, senha, tipo_usuario, ativo)
+            SELECT
+                COALESCE(NULLIF(TRIM(u.first_name), ''), u.login),
+                COALESCE(u.last_name, ''),
+                u.email,
+                u.password_hash,
+                'ALUNO',
+                1
+            FROM jhi_user u
+            WHERE u.email IS NOT NULL
+              AND NOT EXISTS (SELECT 1 FROM usuario existente WHERE existente.email = u.email)
+        </sql>
+    </changeSet>
+</databaseChangeLog>
