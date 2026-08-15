@@ -63,6 +63,13 @@ public class ApplicationProperties {
         // errando a senha não atrapalha os colegas que saem do mesmo IP da escola.
         private int autenticacaoPorMinuto = 10;
 
+        // Consultas de "este e-mail já existe?" por minuto, por IP. Teto próprio e
+        // mais alto porque a tela de cadastro consulta a cada pausa na digitação do
+        // e-mail: com o mesmo teto do resto, só de preencher o formulário a pessoa
+        // gastava o orçamento e o cadastro (ou o login seguinte) era recusado.
+        // Ainda limita enumeração de contas, que é o motivo de o endpoint ser contado.
+        private int verificacaoEmailPorMinuto = 30;
+
         // Teto de chamadas ao login por IP, independente de acertar ou errar.
         // Existe porque o contador acima só sobe na falha: sem este limite, quem
         // tem uma conta válida poderia martelar /api/authenticate à vontade, e
@@ -97,6 +104,14 @@ public class ApplicationProperties {
 
         public void setAutenticacaoPorMinuto(int autenticacaoPorMinuto) {
             this.autenticacaoPorMinuto = autenticacaoPorMinuto;
+        }
+
+        public int getVerificacaoEmailPorMinuto() {
+            return verificacaoEmailPorMinuto;
+        }
+
+        public void setVerificacaoEmailPorMinuto(int verificacaoEmailPorMinuto) {
+            this.verificacaoEmailPorMinuto = verificacaoEmailPorMinuto;
         }
 
         public int getAutenticacaoTotalPorMinuto() {

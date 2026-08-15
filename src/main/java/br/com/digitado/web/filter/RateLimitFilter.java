@@ -85,18 +85,29 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        boolean sensivel = isEndpointSensivel(request.getRequestURI());
+        String grupo = grupoSensivel(request.getRequestURI());
 
-        int limite = sensivel
-            ? applicationProperties.getRateLimit().getAutenticacaoPorMinuto()
-            : applicationProperties.getRateLimit().getRequisicoesPorMinuto();
+        int limite;
+        String identidade;
 
-        // Endpoints sensíveis contam sempre por IP (quem tenta registro/reset ainda
-        // não tem login); o resto conta pela conta logada, ou pelo IP se anônimo.
-        // Aqui toda requisição conta, inclusive a bem-sucedida: no cadastro o abuso
-        // é justamente criar muita conta COM sucesso, então contar só falha
-        // deixaria passar o que se quer barrar.
-        String identidade = sensivel ? "ip:" + ipDoCliente(request) : identidadeDoChamador(request);
+        if (grupo != null) {
+            // Cada endpoint sensível tem o SEU contador. Antes todos dividiam uma
+            // chave só por IP, e o efeito era absurdo: a tela de cadastro consulta
+            // /api/public/verificar-email a cada pausa na digitação do e-mail, o que
+            // gastava o orçamento inteiro antes de a pessoa clicar em "Criar conta" -
+            // e o cadastro morria com 429 sem nunca criar a conta.
+            //
+            // Contam por IP porque quem se cadastra ou pede reset ainda não tem login,
+            // e contam TODA requisição, inclusive a bem-sucedida: aqui o abuso é fazer
+            // a coisa dar certo muitas vezes (criar contas em massa, varrer e-mails).
+            limite = "email".equals(grupo)
+                ? applicationProperties.getRateLimit().getVerificacaoEmailPorMinuto()
+                : applicationProperties.getRateLimit().getAutenticacaoPorMinuto();
+            identidade = grupo + ":" + ipDoCliente(request);
+        } else {
+            limite = applicationProperties.getRateLimit().getRequisicoesPorMinuto();
+            identidade = identidadeDoChamador(request);
+        }
 
         if (janela(identidade, minutoAtual).contador().incrementAndGet() > limite) {
             bloquear(request, response, identidade, limite);
@@ -195,16 +206,27 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return uri.startsWith("/api/authenticate");
     }
 
-    // Endpoints não autenticados que são alvo típico de força bruta/flood:
-    // login (senha), registro em massa de contas, disparo de e-mails de reset
-    // e a checagem de e-mail do cadastro (enumeração de contas existentes)
-    private boolean isEndpointSensivel(String uri) {
-        return (
-            uri.startsWith("/api/authenticate") ||
-            uri.startsWith("/api/register") ||
-            uri.startsWith("/api/account/reset-password") ||
-            uri.startsWith("/api/public/verificar-email")
-        );
+    /**
+     * Grupo de contagem dos endpoints não autenticados que são alvo típico de abuso:
+     * registro em massa de contas, disparo de e-mails de reset e a checagem de e-mail
+     * do cadastro (enumeração de contas). O login tem tratamento próprio, em isLogin.
+     *
+     * Devolver um grupo por endpoint, e não um rótulo único, é o que dá a cada um o
+     * SEU orçamento. Enquanto dividiam a mesma chave, a checagem de e-mail - que a
+     * tela dispara a cada pausa na digitação - derrubava o cadastro e o login logo
+     * em seguida, e a pessoa via só "usuário ou senha incorretos".
+     */
+    private String grupoSensivel(String uri) {
+        if (uri.startsWith("/api/register")) {
+            return "registro";
+        }
+        if (uri.startsWith("/api/account/reset-password")) {
+            return "reset";
+        }
+        if (uri.startsWith("/api/public/verificar-email")) {
+            return "email";
+        }
+        return null;
     }
 
     // Usuário logado conta pelo login (o limite segue a conta); anônimo, pelo IP
