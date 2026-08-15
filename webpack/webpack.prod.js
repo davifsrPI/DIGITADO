@@ -35,8 +35,11 @@ module.exports = async () =>
               },
             },
             {
+              // Mesmo motivo do webpack.dev.js: com url: false as fontes da
+              // Poppins nao eram copiadas para o build. O publicPath '../'
+              // acima ja corrige o caminho, porque o CSS extraido fica em
+              // content/ e as fontes em content/fonts/.
               loader: 'css-loader',
-              options: { url: false },
             },
             {
               loader: 'postcss-loader',

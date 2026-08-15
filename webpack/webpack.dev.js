@@ -30,8 +30,13 @@ module.exports = async options =>
           use: [
             'style-loader',
             {
+              // url() processado (o padrao do css-loader). Precisa ficar
+              // ligado para as fontes da Poppins virem do @fontsource: com
+              // url: false o ./files/poppins-*.woff2 saia intacto no CSS e o
+              // navegador pedia /files/... na raiz do site, dando 404.
+              // O projeto nao tem url() de asset em CSS proprio, so os do
+              // @fontsource, entao ligar isso nao afeta mais nada.
               loader: 'css-loader',
-              options: { url: false },
             },
             {
               loader: 'postcss-loader',

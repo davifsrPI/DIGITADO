@@ -81,6 +81,18 @@ module.exports = async options => {
             include: [utils.root('./src/main/webapp/app')],
             exclude: [utils.root('node_modules')],
           },
+          {
+            // Fontes da Poppins auto-hospedada (@fontsource, importada em
+            // app.scss). O css-loader transforma o url() de cada @font-face em
+            // um pedido de modulo, e esta regra manda o webpack copiar o
+            // arquivo para o build e reescrever a URL com o caminho final.
+            // Sem ela, a compilacao para com "Module parse failed" no .woff2.
+            test: /\.(woff2?|eot|ttf|otf)$/i,
+            type: 'asset/resource',
+            generator: {
+              filename: 'content/fonts/[name][ext]',
+            },
+          },
           /*
        ,
        Disabled due to https://github.com/jhipster/generator-jhipster/issues/16116
