@@ -233,7 +233,13 @@ application:
   rate-limit:
     enabled: true
     requisicoes-por-minuto: 100
+    # No login valem dois tetos. Este conta só SENHA ERRADA, por conta + IP:
+    # trava força bruta contra uma conta sem que um aluno que errou a senha
+    # bloqueie a turma inteira, que sai toda do mesmo IP da escola.
     autenticacao-por-minuto: 10
+    # E este conta TODA chamada ao login por IP, acertando ou errando, contra
+    # flood (cada tentativa gasta um BCrypt do servidor). Folgado para uma turma.
+    autenticacao-total-por-minuto: 60
     # SÓ ligue atrás de proxy reverso confiável que sobrescreve o X-Forwarded-For
     # (nginx/Caddy/Cloudflare). Direto na internet, o cliente forja o cabeçalho
     # e escapa do limite. Veja o comentário em RateLimitFilter.ipDoCliente.

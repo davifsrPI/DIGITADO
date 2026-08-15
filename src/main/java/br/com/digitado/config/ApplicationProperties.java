@@ -58,8 +58,17 @@ public class ApplicationProperties {
         // Requisições por minuto em /api/** para cada identidade (login ou IP)
         private int requisicoesPorMinuto = 100;
 
-        // Limite mais rígido para autenticação (barra força bruta de senha)
+        // Senhas erradas por minuto, contadas por CONTA + IP (barra força bruta
+        // contra uma conta específica). Como a chave inclui a conta, um aluno
+        // errando a senha não atrapalha os colegas que saem do mesmo IP da escola.
         private int autenticacaoPorMinuto = 10;
+
+        // Teto de chamadas ao login por IP, independente de acertar ou errar.
+        // Existe porque o contador acima só sobe na falha: sem este limite, quem
+        // tem uma conta válida poderia martelar /api/authenticate à vontade, e
+        // cada chamada gasta um BCrypt (lento de propósito) do servidor.
+        // Folgado para uma turma inteira, apertado para um flood.
+        private int autenticacaoTotalPorMinuto = 60;
 
         // só liga se estiver atrás de um proxy confiável (nginx/Caddy) que
         // reescreve o X-Forwarded-For. Direto na internet dá pra forjar o header
@@ -88,6 +97,14 @@ public class ApplicationProperties {
 
         public void setAutenticacaoPorMinuto(int autenticacaoPorMinuto) {
             this.autenticacaoPorMinuto = autenticacaoPorMinuto;
+        }
+
+        public int getAutenticacaoTotalPorMinuto() {
+            return autenticacaoTotalPorMinuto;
+        }
+
+        public void setAutenticacaoTotalPorMinuto(int autenticacaoTotalPorMinuto) {
+            this.autenticacaoTotalPorMinuto = autenticacaoTotalPorMinuto;
         }
 
         public boolean isConfiarXForwardedFor() {
