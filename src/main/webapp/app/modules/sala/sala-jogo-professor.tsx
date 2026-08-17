@@ -507,7 +507,17 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   const respondidas = placarAlunos.filter(p => p.statusAtual === 'ACERTOU' || p.statusAtual === 'ERROU').length;
   const acertosAoVivo = placarAlunos.filter(p => p.statusAtual === 'ACERTOU').length;
   const pctAoVivo = respondidas > 0 ? Math.round((acertosAoVivo / respondidas) * 100) : 0;
-  const totalAlunos = estado.alunosConectados.filter(a => a.login !== meuLogin).length;
+  const alunosConectados = estado.alunosConectados.filter(a => a.login !== meuLogin);
+  const totalAlunos = alunosConectados.length;
+  // Todos os alunos conectados já responderam esta palavra? Só então liberamos o
+  // professor a passar de palavra antes do tempo acabar (mesma leitura do placar
+  // que o WebSocket já entrega; robusto a quem saiu no meio da rodada).
+  const todosResponderam =
+    totalAlunos > 0 &&
+    alunosConectados.every(a => {
+      const p = estado.placar.find(pl => pl.login === a.login);
+      return p && (p.statusAtual === 'ACERTOU' || p.statusAtual === 'ERROU');
+    });
 
   return (
     <div className="sj-game-centered">
@@ -582,6 +592,12 @@ export const SalaJogoProfessor: React.FC<Props> = ({
             <div className="sj-timer-bar-fill" style={{ width: `${pct}%`, background: timerDanger ? '#E24B4A' : '#1D9E75' }} />
           </div>
         </div>
+
+        {/* Passar de palavra sem esperar o tempo acabar: liberado só quando TODOS
+            os alunos conectados já responderam. Antes disso mostra o progresso. */}
+        <button type="button" className="sj-proxima-btn" onClick={() => onProxima()} disabled={!todosResponderam}>
+          {todosResponderam ? 'Todos responderam · Próxima palavra →' : `Aguardando respostas · ${respondidas}/${totalAlunos}`}
+        </button>
 
         {/* Palavras da partida: as já jogadas com % consolidado (do relatório) e a
             atual com os números ao vivo (do placar) - nunca antecipa as próximas */}

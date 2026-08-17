@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { EstadoJogo, FeedbackAluno } from './hooks/useSalaWebSocket';
-import { MENSAGEM_ERRO, validarResposta } from './utils/validarResposta';
+import { compararLetras, MENSAGEM_ERRO, validarResposta } from './utils/validarResposta';
 import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
 import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
@@ -186,11 +186,12 @@ export const SalaJogoAluno: React.FC<Props> = ({
     return () => clearInterval(id);
   }, [estado?.timestampInicio, estado?.tempoLimite, estado?.tipo]);
 
-  // Reproduz a palavra ao clicar no botão de áudio e atualiza o ícone enquanto fala
+  // Reproduz a palavra ao clicar no botão de áudio e atualiza o ícone enquanto fala.
+  // pausaMs: 0 - reouvir toca na hora, sem a espera de 1s da palavra da rodada
   const handleFalar = useCallback(() => {
     if (!estado?.palavraAtual) return;
     setFalando(true);
-    falarPalavra(estado.palavraAtual.texto, { onEnd: () => setFalando(false) });
+    falarPalavra(estado.palavraAtual.texto, { pausaMs: 0, onEnd: () => setFalando(false) });
   }, [estado?.palavraAtual]);
 
   // Envia a resposta: faz validação local para feedback imediato antes de receber o do servidor
@@ -223,14 +224,17 @@ export const SalaJogoAluno: React.FC<Props> = ({
     }
   }, [tempoRestante, ativo, estado]);
 
-  // APENAS no duelo 1v1: se TODOS os conectados já responderam a palavra, vai
-  // direto para a tela de correção - não faz sentido os dois ficarem olhando o
-  // relógio depois de já terem digitado. Nas salas de turma o comportamento não
-  // muda (a rodada corre até o fim para quem ainda está digitando).
+  // Se TODOS os conectados já responderam a palavra, vai direto para a tela de
+  // correção/ranking - não faz sentido ficar olhando o relógio depois de todo
+  // mundo já ter digitado. Vale para o duelo 1v1 (2 jogadores) e para a sala de
+  // turma (a partir de 1 aluno): assim, quando a turma termina, cada aluno já vê
+  // o próprio resultado enquanto o professor decide quando passar a palavra.
   useEffect(() => {
-    if (!duelo1v1 || !ativo || !estado?.palavraAtual || rankingTriggeredRef.current) return;
+    if (!ativo || !estado?.palavraAtual || rankingTriggeredRef.current) return;
     const jogadores = estado.alunosConectados;
-    if (jogadores.length < 2) return;
+    // Duelo exige os 2 jogadores; sala de turma vale a partir de 1 aluno conectado
+    const minimo = duelo1v1 ? 2 : 1;
+    if (jogadores.length < minimo) return;
     const todosResponderam = jogadores.every(j => {
       const p = estado.placar.find(pl => pl.login === j.login);
       return p && (p.statusAtual === 'ACERTOU' || p.statusAtual === 'ERROU');
@@ -321,14 +325,28 @@ export const SalaJogoAluno: React.FC<Props> = ({
           <div className="sj-palavra-correta">
             <span className="sj-palavra-correta-label">Palavra correta</span>
             <span className="sj-palavra-correta-val">{estado.palavraAtual.texto}</span>
-            {/* Só o aluno vê a própria similaridade */}
+            {/* Só o aluno vê o próprio resultado - revelado agora, no fim da rodada */}
             {jaRespondeu && validacaoLocal ? (
               validacaoLocal.correta ? (
                 <span className="sj-similaridade sj-similaridade--ok">✓ Você acertou!</span>
               ) : (
-                <span className="sj-similaridade sj-similaridade--err">
-                  ✗ Você errou · similaridade: {Math.round(validacaoLocal.similaridade * 100)}%
-                </span>
+                <>
+                  <span className="sj-similaridade sj-similaridade--err">
+                    ✗ Você errou · você acertou {Math.round(validacaoLocal.similaridade * 100)}% da palavra
+                    {validacaoLocal.tipoErro ? ` · ${MENSAGEM_ERRO[validacaoLocal.tipoErro]}` : ''}
+                  </span>
+                  {/* Mostra O QUE o aluno errou: a resposta dele com as letras
+                      trocadas ou a mais destacadas em vermelho (a palavra certa
+                      aparece inteira logo acima, para ele comparar) */}
+                  <span className="sj-diff">
+                    <span className="sj-diff-label">Você escreveu:</span>{' '}
+                    {compararLetras(resposta, estado.palavraAtual.texto).digitado.map((l, idx) => (
+                      <span key={idx} className={l.ok ? 'sj-diff-ok' : 'sj-diff-err'}>
+                        {l.ch}
+                      </span>
+                    ))}
+                  </span>
+                </>
               )
             ) : (
               <span className="sj-similaridade sj-similaridade--warn">Você não respondeu a tempo</span>
@@ -414,8 +432,10 @@ export const SalaJogoAluno: React.FC<Props> = ({
         </form>
 
         {feedback && (
-          <div className={`sj-feedback${feedback.correta ? ' sj-feedback--ok' : ' sj-feedback--err'}`}>
-            <span className="sj-feedback-icon">{feedback.correta ? '✓' : '✗'}</span>
+          // No acerto celebramos na hora; no erro ficamos NEUTROS (nada de ✗ vermelho):
+          // o resultado só é revelado no fim da rodada, junto do % e do que errou
+          <div className={`sj-feedback${feedback.correta ? ' sj-feedback--ok' : ' sj-feedback--warn'}`}>
+            <span className="sj-feedback-icon">✓</span>
             <div className="sj-feedback-body">
               {feedback.correta ? (
                 <>
@@ -423,9 +443,9 @@ export const SalaJogoAluno: React.FC<Props> = ({
                 </>
               ) : (
                 <>
-                  <strong>Errou</strong> ·{' '}
-                  {feedback.tipoErro ? MENSAGEM_ERRO[feedback.tipoErro as keyof typeof MENSAGEM_ERRO] : 'Resposta incorreta'}
-                  {validacaoLocal && <> · similaridade: {Math.round(validacaoLocal.similaridade * 100)}%</>}
+                  {/* Ao enviar mostramos só que errou - o quanto acertou (%) e o
+                      que errou aparecem no fim da rodada, quando o tempo acaba */}
+                  <strong>Resposta enviada</strong> · veja o resultado quando o tempo acabar
                 </>
               )}
             </div>
@@ -435,10 +455,10 @@ export const SalaJogoAluno: React.FC<Props> = ({
 
         {validacaoLocal && !validacaoLocal.correta && jaRespondeu && !feedback && (
           <div className="sj-feedback sj-feedback--warn">
-            <span className="sj-feedback-icon">⚠</span>
+            <span className="sj-feedback-icon">✓</span>
             <div className="sj-feedback-body">
-              {MENSAGEM_ERRO[validacaoLocal.tipoErro]}
-              {' · '}similaridade: {Math.round(validacaoLocal.similaridade * 100)}%
+              {/* Sem revelar acerto/erro nem % aqui - o resultado só sai no fim da rodada */}
+              Resposta enviada · veja o resultado quando o tempo acabar
             </div>
           </div>
         )}

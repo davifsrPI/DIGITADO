@@ -84,6 +84,62 @@ export function validarResposta(digitado: string, correto: string): ResultadoVal
   return { correta: false, tipoErro: 'OUTRO', similaridade };
 }
 
+// Uma letra na comparação visual: o caractere e se ele bate com a palavra correta
+export interface LetraDiff {
+  ch: string;
+  ok: boolean;
+}
+
+// Compara o que o aluno digitou com a palavra correta e devolve, letra a letra,
+// o que bateu e o que não bateu - em CADA lado. Usa o mesmo alinhamento do
+// Levenshtein (backtrace) para casar letras mesmo quando falta ou sobra uma:
+//   - digitado: cada letra marcada ok=false é uma letra trocada ou a mais
+//   - correto:  cada letra marcada ok=false é uma letra que o aluno errou/esqueceu
+// A comparação ignora maiúsculas/minúsculas, mas devolve os caracteres originais
+// (acentos aparecem como diferença, que é o certo para um ditado).
+export function compararLetras(digitado: string, correto: string): { digitado: LetraDiff[]; correto: LetraDiff[] } {
+  const a = digitado.trim();
+  const b = correto.trim();
+  const al = a.toLowerCase();
+  const bl = b.toLowerCase();
+  const m = a.length;
+  const n = b.length;
+
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const custo = al[i - 1] === bl[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j - 1] + custo, dp[i - 1][j] + 1, dp[i][j - 1] + 1);
+    }
+  }
+
+  const dig: LetraDiff[] = [];
+  const cor: LetraDiff[] = [];
+  let i = m;
+  let j = n;
+  while (i > 0 || j > 0) {
+    const custo = i > 0 && j > 0 ? (al[i - 1] === bl[j - 1] ? 0 : 1) : Infinity;
+    if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + custo) {
+      const ok = custo === 0;
+      dig.unshift({ ch: a[i - 1], ok });
+      cor.unshift({ ch: b[j - 1], ok });
+      i--;
+      j--;
+    } else if (i > 0 && dp[i][j] === dp[i - 1][j] + 1) {
+      // letra a mais no que o aluno digitou
+      dig.unshift({ ch: a[i - 1], ok: false });
+      i--;
+    } else {
+      // letra que faltou na resposta do aluno
+      cor.unshift({ ch: b[j - 1], ok: false });
+      j--;
+    }
+  }
+  return { digitado: dig, correto: cor };
+}
+
 // Mensagens amigáveis exibidas ao aluno para cada tipo de erro detectado
 export const MENSAGEM_ERRO: Record<TipoErro, string> = {
   ACENTUACAO: 'Atenção com os acentos!',

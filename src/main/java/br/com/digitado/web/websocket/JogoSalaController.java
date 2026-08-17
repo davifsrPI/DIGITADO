@@ -85,7 +85,11 @@ public class JogoSalaController {
                 );
                 return;
             }
-        } else {
+        } else if (!isProfessorDaSala(codigo, principal)) {
+            // O criador conduz a sala mas nao joga: fica de fora do placar e da
+            // contagem de alunos, para nao aparecer no ranking. O estado do jogo
+            // e criado mesmo assim pelo getEstado abaixo (computeIfAbsent), entao
+            // o professor continua recebendo o broadcast normalmente.
             jogoService.registrarAluno(codigo, login, nome);
         }
         // Conquista "Bem-vindo à Turma" (primeira sala) - nunca derruba a conexão

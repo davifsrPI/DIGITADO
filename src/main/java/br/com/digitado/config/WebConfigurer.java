@@ -59,6 +59,12 @@ public class WebConfigurer implements ServletContextInitializer, WebServerFactor
         if (server instanceof ConfigurableServletWebServerFactory servletWebServer) {
             File root;
             String prefixPath = resolvePathPrefix();
+            // When running from a packaged jar (Spring Boot uses the "nested:"/"jar:" URL scheme),
+            // the static assets are served from the classpath, so there is no filesystem document
+            // root to set. Skip to avoid building an illegal path (e.g. "nested:target/classes/static/").
+            if (prefixPath.contains(":")) {
+                return;
+            }
             root = Path.of(prefixPath + "target/classes/static/").toFile();
             if (root.exists() && root.isDirectory()) {
                 servletWebServer.setDocumentRoot(root);

@@ -59,9 +59,15 @@ export interface OpcoesFala {
   rate?: number;
   /** Chamado quando a fala termina (ou falha) - útil para estados visuais */
   onEnd?: () => void;
+  /**
+   * Pausa (ms) antes de começar a falar. Padrão 1000ms na palavra da rodada,
+   * para o jogador se preparar. Ao REOUVIR (botão de áudio) passamos 0: o
+   * jogador já está pronto e qualquer espera aqui parece travamento.
+   */
+  pausaMs?: number;
 }
 
-/** Fala o texto em pt-BR com a melhor voz disponível, após 1s de pausa. */
+/** Fala o texto em pt-BR com a melhor voz disponível, após a pausa configurada (1s por padrão). */
 export const falarPalavra = (texto: string, opcoes: OpcoesFala = {}) => {
   if (!window.speechSynthesis || !texto) {
     opcoes.onEnd?.();
@@ -73,7 +79,7 @@ export const falarPalavra = (texto: string, opcoes: OpcoesFala = {}) => {
   window.speechSynthesis.cancel();
   if (timerPausa) clearTimeout(timerPausa);
 
-  timerPausa = setTimeout(() => {
+  const falar = () => {
     const utter = new SpeechSynthesisUtterance(texto);
     utter.lang = 'pt-BR';
     utter.rate = opcoes.rate ?? 0.85;
@@ -84,7 +90,16 @@ export const falarPalavra = (texto: string, opcoes: OpcoesFala = {}) => {
       utter.onerror = opcoes.onEnd;
     }
     window.speechSynthesis.speak(utter);
-  }, PAUSA_ANTES_DE_FALAR_MS);
+  };
+
+  const pausa = opcoes.pausaMs ?? PAUSA_ANTES_DE_FALAR_MS;
+  // pausa 0 = fala na hora, sem agendar timer (o reouvir precisa ser instantâneo)
+  if (pausa <= 0) {
+    timerPausa = null;
+    falar();
+    return;
+  }
+  timerPausa = setTimeout(falar, pausa);
 };
 
 export default falarPalavra;
