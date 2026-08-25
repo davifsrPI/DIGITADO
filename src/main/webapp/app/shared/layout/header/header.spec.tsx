@@ -104,7 +104,9 @@ describe('Header', () => {
     expect(html).not.toContain('admin-menu');
     // Not find EntitiesMenu component
     expect(html).not.toContain('entity-menu');
-    // Find AccountMenu component
-    expect(html).toContain('account-menu');
+    // Visitante NAO ve o menu de conta: no lugar do dropdown do JHipster, este
+    // projeto mostra um botao "Entrar" direto para o login (ver AccountMenu).
+    expect(html).not.toContain('account-menu');
+    expect(html).toContain('login-item');
   });
 });

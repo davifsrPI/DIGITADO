@@ -3,7 +3,9 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
 import { serializeAxiosError } from 'app/shared/reducers/reducer.utils';
 
-const initialState = {
+// Exportado para o spec nao precisar manter uma copia: foi por essa copia
+// desatualizada que os testes quebraram quando registrationBloqueada entrou.
+export const initialState = {
   loading: false,
   registrationSuccess: false,
   registrationFailure: false,

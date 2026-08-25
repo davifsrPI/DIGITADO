@@ -3,17 +3,9 @@ import sinon from 'sinon';
 import { configureStore } from '@reduxjs/toolkit';
 import { TranslatorContext } from 'react-jhipster';
 
-import register, { handleRegister, reset } from './register.reducer';
+import register, { handleRegister, initialState, reset } from './register.reducer';
 
 describe('Creating account tests', () => {
-  const initialState = {
-    loading: false,
-    registrationSuccess: false,
-    registrationFailure: false,
-    errorMessage: null,
-    successMessage: null,
-  };
-
   beforeAll(() => {
     TranslatorContext.registerTranslations('pt-br', {});
   });
@@ -33,7 +25,17 @@ describe('Creating account tests', () => {
 
   it('should handle RESET', () => {
     expect(
-      register({ loading: true, registrationSuccess: true, registrationFailure: true, errorMessage: '', successMessage: '' }, reset()),
+      register(
+        {
+          loading: true,
+          registrationSuccess: true,
+          registrationFailure: true,
+          registrationBloqueada: true,
+          errorMessage: '',
+          successMessage: '',
+        },
+        reset(),
+      ),
     ).toEqual({
       ...initialState,
     });
@@ -64,6 +66,26 @@ describe('Creating account tests', () => {
       registrationFailure: true,
       errorMessage: error.message,
     });
+  });
+
+  // O 429 do RateLimitFilter tem aviso proprio na tela: sem esta flag a pessoa
+  // leria "erro no cadastro", tentaria de novo e renovaria o bloqueio.
+  it('should mark CREATE_ACCOUNT failure as blocked on 429', () => {
+    const resultado = register(undefined, {
+      type: handleRegister.rejected.type,
+      error: { message: 'Request failed with status code 429' },
+    });
+    expect(resultado.registrationBloqueada).toBe(true);
+    expect(resultado.registrationFailure).toBe(true);
+  });
+
+  it('should not mark other failures as blocked', () => {
+    const resultado = register(undefined, {
+      type: handleRegister.rejected.type,
+      error: { message: 'Request failed with status code 500' },
+    });
+    expect(resultado.registrationBloqueada).toBe(false);
+    expect(resultado.registrationFailure).toBe(true);
   });
 
   describe('Actions', () => {
