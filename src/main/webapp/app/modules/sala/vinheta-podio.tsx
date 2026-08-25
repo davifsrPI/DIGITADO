@@ -5,9 +5,9 @@ import { PlacarEntry } from './hooks/useSalaWebSocket';
 
 interface Props {
   placar: PlacarEntry[];
-  // Login do usuário atual - destaca a coluna dele no pódio; omitido na visão do professor
+  // Login do usuário atual, destaca a coluna dele no pódio; omitido na visão do professor
   meuLogin?: string;
-  // Chamado quando a vinheta termina - o pai então mostra o placar final completo
+  // Chamado quando a vinheta termina, o pai então mostra o placar final completo
   onFim: () => void;
 }
 
@@ -38,7 +38,7 @@ const CORES_CONFETE = ['#fbbf24', '#6366f1', '#4ade80', '#f87171', '#38bdf8'];
 export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
   const top3 = placar.slice(0, 3);
   const [fase, setFase] = useState(FASE_SLAM);
-  // Ref para o callback - a linha do tempo é agendada uma única vez na montagem
+  // Ref para o callback, a linha do tempo é agendada uma única vez na montagem
   const onFimRef = useRef(onFim);
   onFimRef.current = onFim;
 
@@ -53,12 +53,12 @@ export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
   ).current;
 
   useEffect(() => {
-    // Sem ninguém no placar não há o que revelar - encerra logo após o "fim de jogo"
+    // Sem ninguém no placar não há o que revelar, encerra logo após o "fim de jogo"
     if (top3.length === 0) {
       const id = setTimeout(() => onFimRef.current(), 1400);
       return () => clearTimeout(id);
     }
-    // Linha do tempo da vinheta - pula a revelação de posições que não existem.
+    // Linha do tempo da vinheta, pula a revelação de posições que não existem.
     // Depois do campeão a vinheta fica em festa até o clique em "Continuar".
     const passos: Array<{ t: number; fase: number }> = [];
     let t = 1100;

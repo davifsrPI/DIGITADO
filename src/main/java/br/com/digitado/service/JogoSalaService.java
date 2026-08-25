@@ -1,5 +1,6 @@
 package br.com.digitado.service;
 
+import br.com.digitado.domain.HistoricoResposta;
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.enumeration.Dificuldade;
 import br.com.digitado.repository.PalavraRepository;
@@ -34,6 +35,8 @@ public class JogoSalaService {
     private final PalavraRepository palavraRepository;
     private final PalavraEstatisticaService palavraEstatisticaService;
     private final ConquistaEngineService conquistaEngine;
+    private final EstatisticaPartidaService estatisticaPartidaService;
+    private final HistoricoRespostaService historicoRespostaService;
 
     // Mapa em memória: código da sala → estado do jogo
     private final Map<String, EstadoJogo> jogos = new ConcurrentHashMap<>();
@@ -41,11 +44,15 @@ public class JogoSalaService {
     public JogoSalaService(
         PalavraRepository palavraRepository,
         PalavraEstatisticaService palavraEstatisticaService,
-        ConquistaEngineService conquistaEngine
+        ConquistaEngineService conquistaEngine,
+        EstatisticaPartidaService estatisticaPartidaService,
+        HistoricoRespostaService historicoRespostaService
     ) {
         this.palavraRepository = palavraRepository;
         this.palavraEstatisticaService = palavraEstatisticaService;
         this.conquistaEngine = conquistaEngine;
+        this.estatisticaPartidaService = estatisticaPartidaService;
+        this.historicoRespostaService = historicoRespostaService;
     }
 
     // Registra um participante na sala (cria o estado da sala se ainda não existir)
@@ -99,13 +106,36 @@ public class JogoSalaService {
                 }
             }
         });
-        salasVazias.forEach(jogos::remove);
+        // sala vazia = estado descartado, mas o que foi jogado é gravado antes
+        salasVazias.forEach(this::descartarSala);
         return new ResultadoDesconexao(salasComSaida, salasVazias);
     }
 
-    // tira a sala do mapa quando o professor encerra/exclui, senão o estado
-    // ficaria na memória até reiniciar o servidor
+    /**
+     * Tira a sala do mapa quando o professor a fecha ou o último participante
+     * sai - senão o estado ficaria na memória até reiniciar o servidor.
+     *
+     * ANTES de soltar o estado, grava o snapshot do que foi jogado. Sem isto, só
+     * a partida levada até o fim (botão "Encerrar" ou última palavra) era salva:
+     * fechar a sala no meio do jogo, ou todo mundo sair da tela, apagava o
+     * desempenho da turma - e a sala reaberta voltava zerada, sem nada para ver.
+     */
     public void descartarSala(String codigoSala) {
+        EstadoJogo jogo = jogos.remove(codigoSala);
+        // Só grava o que tem conteúdo: uma partida recém-iniciada, sem nenhuma
+        // resposta, não pode substituir o snapshot da partida anterior - que é
+        // justamente o que o professor quer rever. O caminho do encerramento
+        // normal (botão "Encerrar" / última palavra) grava sempre: ali o
+        // professor decidiu que a partida acabou.
+        if (jogo != null && jogo.temPartida() && jogo.temRespostas()) {
+            salvarEstatisticas(codigoSala, jogo, jogo.getLoginProfessor());
+        }
+    }
+
+    // Descarta o estado SEM gravar nada: usado quando a sala é excluída do banco.
+    // Salvar aqui criaria um snapshot órfão (a FK aponta para uma sala que não
+    // existe mais) logo depois do DELETE.
+    public void descartarSalaSemSalvar(String codigoSala) {
         jogos.remove(codigoSala);
     }
 
@@ -122,9 +152,12 @@ public class JogoSalaService {
     }
 
     // Inicia o jogo: sorteia as palavras conforme a configuração escolhida pelo professor,
-    // adiciona quaisquer palavras extras selecionadas manualmente e embaralha tudo
-    public EstadoJogoDTO iniciar(String codigoSala, String nomeSala, IniciarPayload payload) {
+    // adiciona quaisquer palavras extras selecionadas manualmente e embaralha tudo.
+    // loginProfessor: quem comanda a sala - guardado no estado para que o snapshot
+    // saiba quem excluir do ranking mesmo se a sala for fechada no meio da partida.
+    public EstadoJogoDTO iniciar(String codigoSala, String nomeSala, IniciarPayload payload, String loginProfessor) {
         EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
+        jogo.setLoginProfessor(loginProfessor);
         // Palavras da PARTIDA ANTERIOR desta sala ficam fora do sorteio - evita que
         // duas partidas seguidas repitam as mesmas palavras
         List<Long> recentes = jogo.getIdsPalavras();
@@ -185,6 +218,7 @@ public class JogoSalaService {
         boolean temProxima = jogo.avancar();
         if (!temProxima) {
             premiarFimDePartida(jogo);
+            salvarEstatisticas(codigoSala, jogo, loginProfessor);
         }
         String tipo = temProxima ? "NOVA_PALAVRA" : "ENCERRADA";
         return buildEstado(codigoSala, nomeSala, jogo, tipo);
@@ -205,7 +239,44 @@ public class JogoSalaService {
         contabilizarSilenciosos(jogo, loginProfessor);
         jogo.encerrar();
         premiarFimDePartida(jogo);
+        salvarEstatisticas(codigoSala, jogo, loginProfessor);
         return buildEstado(codigoSala, nomeSala, jogo, "ENCERRADA");
+    }
+
+    /**
+     * Grava o consolidado da partida que acabou de encerrar (ranking final +
+     * relatório por palavra) para a tela "Ver estatísticas" do professor.
+     *
+     * Sem este snapshot o desempenho da turma vivia só no EstadoJogo em memória:
+     * fechar a sala chamava descartarSala e apagava tudo, e reabri-la devolvia
+     * uma sala zerada.
+     *
+     * O professor fica FORA do ranking gravado - ele comanda a partida, não
+     * compete (mesma regra da tela e de contabilizarSilenciosos). No duelo 1v1
+     * não há isenção: o criador joga como qualquer participante.
+     */
+    private void salvarEstatisticas(String codigoSala, EstadoJogo jogo, String loginProfessor) {
+        // Fixa quem comanda esta sala: se ela for fechada depois (sem passar por
+        // aqui de novo), o descarte ainda sabe quem deixar fora do ranking
+        jogo.setLoginProfessor(loginProfessor);
+        List<EstatisticaPartidaService.RankingEntrada> ranking = jogo
+            .getPlacar()
+            .entrySet()
+            .stream()
+            .filter(e -> jogo.isModo1v1() || !e.getKey().equals(loginProfessor))
+            .sorted(
+                Map.Entry.<String, EstadoJogo.AlunoInfo>comparingByValue(Comparator.comparingInt(EstadoJogo.AlunoInfo::pontos).reversed())
+            )
+            .map(e ->
+                new EstatisticaPartidaService.RankingEntrada(
+                    e.getKey(),
+                    e.getValue().nome(),
+                    e.getValue().pontos(),
+                    jogo.getAlertas(e.getKey())
+                )
+            )
+            .toList();
+        estatisticaPartidaService.salvar(codigoSala, jogo.getTotalPalavras(), ranking, jogo.gerarRelatorio());
     }
 
     // Quem estava conectado e NÃO respondeu a palavra da rodada conta como
@@ -379,6 +450,20 @@ public class JogoSalaService {
             palavraEstatisticaService.registrarTentativa(jogo.getPalavraAtual().getId(), correta);
         }
 
+        // Histórico PESSOAL da resposta - é o que alimenta o painel "Meu Desempenho"
+        // do jogador (quais palavras ele mais erra, como a taxa dele evoluiu). Os
+        // contadores da palavra são do acervo inteiro e não sabem quem respondeu.
+        // Grava sempre, inclusive em sala de professor: aqui não há risco de
+        // distorcer a dificuldade da palavra - o número é só do jogador.
+        historicoRespostaService.registrar(
+            login,
+            jogo.getPalavraAtual(),
+            correta,
+            tipoErro,
+            (int) decorrido,
+            jogo.isModo1v1() ? HistoricoResposta.Origem.DUELO : HistoricoResposta.Origem.PARTIDA
+        );
+
         // Registra a resposta e guarda a ordem de acerto (1º, 2º, 3º...)
         int ordem = jogo.registrarResposta(login, correta);
         // guarda o que o aluno digitou de fato, pro relatório do professor
@@ -536,6 +621,12 @@ public class JogoSalaService {
         // JogoSalaService.nomeSalaCacheado. volatile: escrito por uma mensagem
         // WebSocket e lido pelas seguintes, possivelmente em threads diferentes.
         private volatile String nomeSala;
+
+        // Login de quem comanda a sala, guardado desde o início da partida: é
+        // quem fica FORA do ranking gravado. Sem isto, o snapshot feito no
+        // descarte da sala (fechamento no meio do jogo) não teria como saber
+        // quem é o professor - a mensagem que fecha a sala não passa por aqui.
+        private volatile String loginProfessor;
 
         /**
          * Registro DETALHADO da partida para o relatório do professor:
@@ -724,6 +815,29 @@ public class JogoSalaService {
 
         void setNomeSala(String nomeSala) {
             this.nomeSala = nomeSala;
+        }
+
+        String getLoginProfessor() {
+            return loginProfessor;
+        }
+
+        // Nunca apaga um dono já conhecido: chamadas sem o login (descarte da sala)
+        // não podem zerar quem foi gravado no início da partida
+        void setLoginProfessor(String loginProfessor) {
+            if (loginProfessor != null) {
+                this.loginProfessor = loginProfessor;
+            }
+        }
+
+        // Já houve partida nesta sala? (palavras sorteadas e pelo menos a 1ª rodada
+        // aberta) - só assim o descarte da sala tem o que gravar
+        boolean temPartida() {
+            return !palavras.isEmpty() && indiceAtual >= 0;
+        }
+
+        // Alguém chegou a responder nesta partida?
+        boolean temRespostas() {
+            return !respostasDetalhadas.isEmpty();
         }
 
         boolean isModo1v1() {

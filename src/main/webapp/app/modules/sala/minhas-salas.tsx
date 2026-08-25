@@ -13,15 +13,18 @@ interface DescricaoSala {
   modo?: '1v1' | 'normal';
 }
 
-// O código de acesso identifica a sala - é a chave primária no banco
+// O código de acesso identifica a sala, é a chave primária no banco
 interface Sala {
   codigo: string;
   nome: string;
   descricao?: DescricaoSala | string | null;
   ativo: boolean;
+  // A sala já teve uma partida encerrada e guardada? É o que libera o botão
+  // "Ver estatísticas", fechar a sala não apaga mais o desempenho da turma
+  temEstatisticas?: boolean;
 }
 
-// Texto exibível da descrição - tolera o formato antigo (string pura) e o novo (objeto)
+// Texto exibível da descrição, tolera o formato antigo (string pura) e o novo (objeto)
 const textoDescricao = (d: Sala['descricao']): string | null => (typeof d === 'string' ? d : (d?.descricao ?? null));
 
 // A sala é de duelo 1v1? (lido do JSON da descrição)
@@ -38,10 +41,13 @@ export const MinhasSalas = () => {
   // Adiciona classe ao body para aplicar o fundo específico desta página
   useBodyClass('minhas-salas-page');
 
-  // Busca as salas do professor sempre que o filtro muda - passa o parâmetro ativo quando necessário
+  // Busca as salas do professor sempre que o filtro muda, passa o parâmetro ativo quando necessário
   useEffect(() => {
     setLoading(true);
-    const params: Record<string, string> = {};
+    // meus=true: esta tela lista as salas DO USUÁRIO logado. Sem o parâmetro o
+    // backend devolve ao admin a listagem crua das telas CRUD, sem o campo
+    // temEstatisticas, e o botão "Ver estatísticas" some do card
+    const params: Record<string, string> = { meus: 'true' };
     if (filtro === 'abertas') params.ativo = 'true';
     if (filtro === 'fechadas') params.ativo = 'false';
     axios
@@ -124,6 +130,13 @@ export const MinhasSalas = () => {
                 >
                   {sala.ativo ? 'Entrar como professor →' : 'Sala fechada'}
                 </button>
+                {/* Desempenho da última partida, lido do snapshot no banco, então
+                    a sala não precisa ser reaberta (reabrir a devolve zerada) */}
+                {sala.temEstatisticas && (
+                  <button className="ms-estatisticas-btn" onClick={() => navigate(`/sala/${sala.codigo}/estatisticas`)}>
+                    📊 Ver estatísticas
+                  </button>
+                )}
               </div>
             ))}
           </div>

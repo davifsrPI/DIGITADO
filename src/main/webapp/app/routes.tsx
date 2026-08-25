@@ -16,7 +16,9 @@ import Duelo from 'app/modules/duelo/duelo';
 import CriarSala from 'app/modules/sala/criar-sala';
 import SalaJogo from 'app/modules/sala/sala-jogo';
 import MinhasSalas from 'app/modules/sala/minhas-salas';
+import SalaEstatisticas from 'app/modules/sala/sala-estatisticas';
 import Conquistas from 'app/modules/conquistas/conquistas';
+import MeuDesempenho from 'app/modules/desempenho/meu-desempenho';
 import Ranking from 'app/modules/ranking/ranking';
 import PoliticaPrivacidade from 'app/modules/privacidade/politica-privacidade';
 import EntitiesRoutes from 'app/entities/routes';
@@ -71,6 +73,16 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        {/* Painel pessoal de desempenho. O backend só devolve o histórico de quem
+            está no token, não existe rota que aceite o login de outra pessoa. */}
+        <Route
+          path="meu-desempenho"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+              <MeuDesempenho />
+            </PrivateRoute>
+          }
+        />
         {/* pública: qualquer visitante pode ver o ranking (o backend só manda
             os nomes de exibição, nunca e-mail ou login) */}
         <Route path="ranking" element={<Ranking />} />
@@ -79,6 +91,17 @@ const AppRoutes = () => {
           element={
             <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <CriarSala />
+            </PrivateRoute>
+          }
+        />
+        {/* Estatísticas da última partida da sala, vem ANTES de sala/:codigo
+            para o React Router casar o caminho mais específico primeiro.
+            O backend restringe ao professor dono (ou admin). */}
+        <Route
+          path="sala/:codigo/estatisticas"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+              <SalaEstatisticas />
             </PrivateRoute>
           }
         />
@@ -118,7 +141,7 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
-        {/* Telas CRUD de entidades (JHipster) - restritas ao admin; usuários comuns
+        {/* Telas CRUD de entidades (JHipster), restritas ao admin; usuários comuns
             usam apenas as telas do jogo (lobby, salas, ranking, conquistas) */}
         <Route
           path="*"

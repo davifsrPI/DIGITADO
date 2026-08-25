@@ -91,7 +91,7 @@ describe('EntradaPalavra', () => {
   });
 
   // Sem teclado virtual na tela, suprimir o teclado do sistema deixaria o aluno
-  // sem nenhuma forma de digitar - era o que travava o campo na sala
+  // sem nenhuma forma de digitar, era o que travava o campo na sala
   it('não suprime o teclado do sistema em dispositivo sem tela de toque', () => {
     simularDispositivo(false);
     render(<Harness />);

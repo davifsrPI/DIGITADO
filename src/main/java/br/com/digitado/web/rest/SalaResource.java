@@ -7,6 +7,7 @@ import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.security.SecurityUtils;
+import br.com.digitado.service.EstatisticaPartidaService;
 import br.com.digitado.service.JogoSalaService;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import br.com.digitado.web.rest.vm.SalaResponseVM;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,6 +52,7 @@ public class SalaResource {
     private final UserRepository userRepository;
     private final UsuarioRepository usuarioRepository;
     private final JogoSalaService jogoSalaService;
+    private final EstatisticaPartidaService estatisticaPartidaService;
     private final ObjectMapper objectMapper;
 
     public SalaResource(
@@ -57,12 +60,14 @@ public class SalaResource {
         UserRepository userRepository,
         UsuarioRepository usuarioRepository,
         JogoSalaService jogoSalaService,
+        EstatisticaPartidaService estatisticaPartidaService,
         ObjectMapper objectMapper
     ) {
         this.salaRepository = salaRepository;
         this.userRepository = userRepository;
         this.usuarioRepository = usuarioRepository;
         this.jogoSalaService = jogoSalaService;
+        this.estatisticaPartidaService = estatisticaPartidaService;
         this.objectMapper = objectMapper;
     }
 
@@ -188,6 +193,15 @@ public class SalaResource {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
 
+        // Sala fechada em definitivo (ativo=false): libera o estado do jogo da
+        // memória - o descarte GRAVA antes o snapshot da partida, para o botão
+        // "Ver estatísticas" continuar tendo o que mostrar depois.
+        // Fica ANTES da atualização de propósito: a gravação roda em transação
+        // própria e não pode esbarrar no lock da linha da sala sendo alterada.
+        if (Boolean.FALSE.equals(sala.getAtivo())) {
+            jogoSalaService.descartarSala(codigo);
+        }
+
         Optional<Sala> result = salaRepository
             .findById(sala.getCodigo())
             .map(existingSala -> {
@@ -200,11 +214,6 @@ public class SalaResource {
                 }
                 if (sala.getAtivo() != null) {
                     existingSala.setAtivo(sala.getAtivo());
-                    // Sala fechada em definitivo (ativo=false): libera o estado do jogo
-                    // da memória - placar, palavras e relatório não serão mais consultados
-                    if (Boolean.FALSE.equals(sala.getAtivo())) {
-                        jogoSalaService.descartarSala(codigo);
-                    }
                 }
                 return existingSala;
             })
@@ -221,28 +230,45 @@ public class SalaResource {
     // alunos veem apenas as salas que lhes pertencem, já convertidas no VM
     // público - a entidade crua carrega o vínculo com o professor e, se algum
     // dia for serializada inicializada, vazaria o e-mail dele
+    //
+    // meus=true: quem pede é a tela "Minhas Salas", que precisa SEMPRE do VM.
+    // Sem este parâmetro o admin caía na listagem crua de entidades acima - que
+    // não tem temEstatisticas - e o botão "Ver estatísticas" nunca aparecia no
+    // card: a sala fechada parecia ter perdido a partida. O conjunto de salas
+    // que cada um enxerga continua o mesmo de antes (o admin, todas).
     @GetMapping("")
-    public ResponseEntity<List<?>> getAllSalas(@RequestParam(required = false) Boolean ativo) {
+    public ResponseEntity<List<?>> getAllSalas(
+        @RequestParam(required = false) Boolean ativo,
+        @RequestParam(required = false) Boolean meus
+    ) {
         LOG.debug("REST request to get all Salas");
         boolean isAdmin = SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN);
-        if (isAdmin) {
+        if (isAdmin && !Boolean.TRUE.equals(meus)) {
             if (ativo != null) return ResponseEntity.ok(salaRepository.findByAtivo(ativo));
             return ResponseEntity.ok(salaRepository.findAll());
         }
-        // Para usuários comuns: une as salas onde é professor com as salas onde é aluno
-        List<SalaResponseVM> salas = SecurityUtils.getCurrentUserLogin()
-            .flatMap(userRepository::findOneByLogin)
-            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
-            .map(usuario -> {
-                List<Sala> minhas = new java.util.ArrayList<>(usuario.getSalas());
-                minhas.addAll(usuario.getSalasAlunos());
-                if (ativo != null) {
-                    minhas.removeIf(s -> !ativo.equals(s.getAtivo()));
-                }
-                return minhas.stream().map(this::toVM).toList();
-            })
-            .orElse(List.of());
-        return ResponseEntity.ok(salas);
+        List<Sala> minhas;
+        if (isAdmin) {
+            minhas = ativo != null ? salaRepository.findByAtivo(ativo) : salaRepository.findAll();
+        } else {
+            // Para usuários comuns: une as salas onde é professor com as salas onde é aluno
+            minhas = SecurityUtils.getCurrentUserLogin()
+                .flatMap(userRepository::findOneByLogin)
+                .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+                .map(usuario -> {
+                    List<Sala> doUsuario = new java.util.ArrayList<>(usuario.getSalas());
+                    doUsuario.addAll(usuario.getSalasAlunos());
+                    if (ativo != null) {
+                        doUsuario.removeIf(s -> !ativo.equals(s.getAtivo()));
+                    }
+                    return doUsuario;
+                })
+                .orElse(List.of());
+        }
+        // Quais destas salas guardam estatísticas de uma partida encerrada, numa
+        // consulta só - é o que decide o botão "Ver estatísticas" no card
+        Set<String> comEstatisticas = estatisticaPartidaService.salasComEstatisticas(minhas.stream().map(Sala::getCodigo).toList());
+        return ResponseEntity.ok(minhas.stream().map(s -> toVM(s, comEstatisticas.contains(s.getCodigo()))).toList());
     }
 
     // Lista global de duelos 1v1 PÚBLICOS abertos - qualquer usuário autenticado pode ver
@@ -259,8 +285,14 @@ public class SalaResource {
             .toList();
     }
 
-    // Converte a entidade para o VM público, anexando quantos jogadores estão conectados agora
+    // Converte a entidade para o VM público, anexando quantos jogadores estão conectados agora.
+    // temEstatisticas fica em false: só a listagem "Minhas Salas" precisa do dado e
+    // ela usa a sobrecarga abaixo, com o resultado de UMA consulta para todas as salas.
     private SalaResponseVM toVM(Sala sala) {
+        return toVM(sala, false);
+    }
+
+    private SalaResponseVM toVM(Sala sala, boolean temEstatisticas) {
         return new SalaResponseVM(
             sala.getCodigo(),
             sala.getNome(),
@@ -269,7 +301,8 @@ public class SalaResource {
             sala.getAtivo(),
             sala.getTipo() != null ? sala.getTipo().name() : TipoSala.TURMA.name(),
             sala.getPrivada(),
-            jogoSalaService.conectadosNaSala(sala.getCodigo())
+            jogoSalaService.conectadosNaSala(sala.getCodigo()),
+            temEstatisticas
         );
     }
 
@@ -311,6 +344,29 @@ public class SalaResource {
         return ResponseEntity.ok(jogoSalaService.gerarRelatorio(codigo));
     }
 
+    /**
+     * Estatísticas da ÚLTIMA partida encerrada da sala: ranking final e relatório
+     * por palavra, lidos do snapshot gravado no banco quando a partida acabou.
+     *
+     * É a tela "Ver estatísticas" do professor. Diferente de /relatorio (que lê o
+     * jogo em memória e some quando a sala é fechada ou esvazia), este endpoint
+     * responde com a sala aberta ou fechada, e depois de reiniciar o servidor.
+     *
+     * Restrito ao professor dono (ou admin): expõe as respostas individuais dos
+     * alunos, como o relatório ao vivo.
+     */
+    @GetMapping("/{codigo}/estatisticas")
+    public ResponseEntity<EstatisticaPartidaService.EstatisticasPartida> getEstatisticas(@PathVariable("codigo") String codigo) {
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
+        }
+        if (!isOwnerOrAdmin(codigo)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        // Sem partida encerrada ainda: 404 e a tela mostra o estado vazio
+        return ResponseUtil.wrapOrNotFound(estatisticaPartidaService.buscar(codigo));
+    }
+
     // O papel de professor vive no estado de navegação do front e se perde ao
     // recarregar a página da sala - este endpoint permite à tela redescobrir se o
     // usuário logado é o dono (ou admin) e renderizar a visão de professor de novo.
@@ -333,8 +389,10 @@ public class SalaResource {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         salaRepository.deleteById(codigo);
-        // Sala excluída do banco: o estado em memória do jogo também não tem mais dono
-        jogoSalaService.descartarSala(codigo);
+        // Sala excluída do banco: o estado em memória do jogo também não tem mais
+        // dono. Aqui o descarte NÃO grava estatísticas - a sala não existe mais,
+        // o snapshot ficaria órfão (a FK cascata já levou o antigo junto)
+        jogoSalaService.descartarSalaSemSalvar(codigo);
         return ResponseEntity.noContent().headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, codigo)).build();
     }
 

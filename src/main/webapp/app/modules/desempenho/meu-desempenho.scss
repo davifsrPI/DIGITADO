@@ -1,0 +1,197 @@
+/* Tela "Meu Desempenho", mesmo padrão visual do lobby/conquistas:
+   fundo escuro no body, manchas coloridas borradas e conteúdo centralizado. */
+body.meu-desempenho-page {
+  background: #0f172a !important;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+
+  .jh-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .view-container {
+    padding: 0 !important;
+  }
+}
+
+.md-wrapper {
+  font-family: 'Poppins', sans-serif;
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+/* BACKGROUND */
+
+.md-bg {
+  position: fixed;
+  width: 100%;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.md-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: 0.32;
+}
+
+.md-shape.one {
+  width: 500px;
+  height: 500px;
+  background: #6366f1;
+  top: -180px;
+  left: -140px;
+}
+
+.md-shape.two {
+  width: 420px;
+  height: 420px;
+  background: #22c55e;
+  bottom: -140px;
+  right: -110px;
+}
+
+.md-shape.three {
+  width: 320px;
+  height: 320px;
+  background: #f59e0b;
+  top: 42%;
+  right: 38%;
+}
+
+/* CONTEÚDO */
+
+.md-center {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 880px;
+  padding: 48px 24px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.md-back {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.md-back:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+}
+
+.md-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.md-title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+  color: white;
+}
+
+.md-subtitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.md-subtitle strong {
+  color: #a5b4fc;
+}
+
+/* O acelerador ganha um card mais alto e centralizado */
+.md-acelerador-card {
+  align-items: center;
+}
+
+.md-acelerador-card .dp-card-titulo {
+  align-self: flex-start;
+}
+
+.md-loading {
+  text-align: center;
+  padding: 60px 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.md-empty {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.md-empty-icon {
+  font-size: 46px;
+}
+
+.md-empty p {
+  margin: 0;
+  max-width: 460px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.md-cta {
+  padding: 11px 26px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.md-cta:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .md-title {
+    font-size: 26px;
+  }
+
+  .md-center {
+    padding: 32px 16px 64px;
+  }
+}

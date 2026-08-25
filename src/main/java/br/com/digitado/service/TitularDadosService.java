@@ -131,6 +131,39 @@ public class TitularDadosService {
                 .toList()
         );
 
+        // Histórico de respostas (base do painel "Meu Desempenho"): é dado pessoal
+        // do titular e por isso entra na portabilidade, resposta por resposta
+        dados.put(
+            "historicoRespostas",
+            em
+                .createQuery(
+                    "select h.dataResposta, p.texto, h.correta, h.dificuldade, h.origem, h.tipoErro " +
+                    "from HistoricoResposta h, Palavra p " +
+                    "where p.id = h.palavraId and h.login = :login order by h.dataResposta",
+                    Object[].class
+                )
+                .setParameter("login", login)
+                .getResultList()
+                .stream()
+                .map(l ->
+                    Map.of(
+                        "data",
+                        String.valueOf(l[0]),
+                        "palavra",
+                        String.valueOf(l[1]),
+                        "correta",
+                        String.valueOf(l[2]),
+                        "dificuldade",
+                        String.valueOf(l[3]),
+                        "origem",
+                        String.valueOf(l[4]),
+                        "tipoErro",
+                        String.valueOf(l[5])
+                    )
+                )
+                .toList()
+        );
+
         return dados;
     }
 
@@ -167,8 +200,11 @@ public class TitularDadosService {
             usuarioRepository.delete(u);
         });
 
-        // 5. Tentativas da palavra do dia (chaveadas por login) e a conta de autenticação
+        // 5. Dados chaveados por LOGIN (não pelo Usuario): tentativas da palavra do
+        //    dia e o histórico de respostas do painel de desempenho. Ficam fora do
+        //    bloco acima de propósito - existem mesmo para conta sem perfil no domínio.
         em.createQuery("delete from PalavraDoDiaTentativa t where t.login = :login").setParameter("login", login).executeUpdate();
+        em.createQuery("delete from HistoricoResposta h where h.login = :login").setParameter("login", login).executeUpdate();
         userRepository.findOneByLogin(login).ifPresent(userRepository::delete);
 
         // Log SEM dados além do login - trilha de auditoria da exclusão (art. 37)

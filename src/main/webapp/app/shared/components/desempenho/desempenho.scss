@@ -1,0 +1,316 @@
+/* ==========================================================================
+   Painéis de desempenho, estilos compartilhados entre "Meu Desempenho" (o
+   titular) e o painel do administrador. As duas telas mostram os mesmos tipos
+   de bloco (acelerador, linha do tempo, ranking de palavras), então o visual
+   mora aqui e não é copiado em cada página.
+
+   Prefixo dp- (desempenho). O fundo escuro e o layout de cada página ficam nos
+   arquivos próprios delas.
+   ========================================================================== */
+
+/* ---------- Cartão base ---------- */
+
+.dp-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dp-card-titulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dp-card-sub {
+  margin: -10px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.5;
+}
+
+.dp-vazio {
+  margin: 0;
+  padding: 18px 0;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ---------- Acelerador (velocímetro) ---------- */
+
+.dp-acelerador {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.dp-acelerador-svg {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+}
+
+.dp-acelerador-valor {
+  font-family: 'Poppins', sans-serif;
+  font-size: 40px;
+  font-weight: 800;
+}
+
+.dp-acelerador-legenda {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dp-acelerador-escala {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+}
+
+.dp-acelerador-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.dp-nivel-chip {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+
+.dp-tendencia {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dp-tendencia--sobe {
+  color: #4ade80;
+}
+
+.dp-tendencia--desce {
+  color: #f87171;
+}
+
+.dp-acelerador-msg {
+  margin: 0;
+  max-width: 460px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- Números grandes ---------- */
+
+.dp-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.dp-kpi {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dp-kpi-valor {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.dp-kpi-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+/* ---------- Gráfico de evolução ---------- */
+
+.dp-grafico {
+  width: 100%;
+  height: auto;
+}
+
+.dp-grafico-eixo {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+}
+
+/* ---------- Barras horizontais (dificuldade, tipos de erro) ---------- */
+
+.dp-barras {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dp-barra-linha {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dp-barra-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.dp-barra-nome {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dp-barra-ponto {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dp-barra-valor {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+}
+
+.dp-barra-trilho {
+  height: 9px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.dp-barra-preenchida {
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.5s ease;
+}
+
+/* ---------- Ranking de palavras ---------- */
+
+.dp-palavras {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dp-palavra {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dp-palavra-pos {
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.3);
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.dp-palavra-texto {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  word-break: break-word;
+}
+
+.dp-palavra-dif {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.dp-palavra-num {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dp-palavra-taxa {
+  font-size: 14px;
+  font-weight: 800;
+  width: 48px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ---------- Chips ---------- */
+
+.dp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dp-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dp-chip strong {
+  color: #fff;
+}
+
+/* ---------- Grade de duas colunas (colapsa no celular) ---------- */
+
+.dp-duas-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .dp-card {
+    padding: 18px;
+  }
+
+  .dp-palavra {
+    flex-wrap: wrap;
+  }
+}

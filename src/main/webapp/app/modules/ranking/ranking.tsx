@@ -30,9 +30,9 @@ const CORES_MEDALHAS = ['#fbbf24', '#94a3b8', '#b45309'];
 const MEDALHAS = CORES_MEDALHAS.map((cor, i) => <FontAwesomeIcon key={i} icon={faMedal} style={{ color: cor }} />);
 
 // Ranking Mundial: classificação de todos os usuários pelo XP acumulado
-// (hoje alimentado pelos acertos na Palavra do Dia - 300 XP cada)
+// (hoje alimentado pelos acertos na Palavra do Dia, 300 XP cada)
 export const Ranking = () => {
-  // A página é PÚBLICA (visitante sem conta pode ver o ranking) - o login só
+  // A página é PÚBLICA (visitante sem conta pode ver o ranking), o login só
   // muda o destino do botão de voltar e o destaque da própria posição
   const account = useAppSelector(state => state.authentication.account);
   const logado = Boolean(account?.login);
@@ -50,7 +50,7 @@ export const Ranking = () => {
       .catch(() => setErro(true));
   }, []);
 
-  // Busca a próxima página do backend e ANEXA as posições às já exibidas -
+  // Busca a próxima página do backend e ANEXA as posições às já exibidas,
   // assim dá para navegar até o fim e ver todas as pessoas do ranking
   const carregarMais = () => {
     if (carregandoMais || !dados?.temMais) return;
@@ -140,7 +140,7 @@ export const Ranking = () => {
 
             {dados.top.length === 0 && (
               <p className="rk-vazio">
-                Ninguém pontuou ainda - acerte a palavra do dia e seja o primeiro! <FontAwesomeIcon icon={faRocket} />
+                Ninguém pontuou ainda. Acerte a palavra do dia e seja o primeiro! <FontAwesomeIcon icon={faRocket} />
               </p>
             )}
 

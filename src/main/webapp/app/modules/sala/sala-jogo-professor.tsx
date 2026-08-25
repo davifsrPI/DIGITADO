@@ -7,6 +7,7 @@ import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
 import { VinhetaPodio } from './vinheta-podio';
 import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
+import { PosicaoRanking, RankingPartida, RelatorioPalavra, RelatorioPorPalavra } from './relatorio-partida';
 import { CORES_DIFICULDADE, LABELS_DIFICULDADE } from 'app/shared/util/dificuldade-constants';
 
 // Configuração do jogo escolhida pelo professor: quantidade de palavras e
@@ -19,7 +20,7 @@ interface GameConfig {
   qtdMedio: number;
   qtdDificil: number;
   palavrasExtrasIds: number[];
-  // Palavras já sorteadas na tela de criação da sala - quando presentes, a 1ª
+  // Palavras já sorteadas na tela de criação da sala, quando presentes, a 1ª
   // partida usa exatamente essas em vez de sortear na hora
   palavrasIds?: number[];
 }
@@ -35,35 +36,18 @@ interface Props {
   onResponder: (resposta: string) => void;
   initialGameConfig?: GameConfig;
   // Login do próprio professor: usado para EXCLUÍ-LO das contagens ao vivo e do
-  // ranking - ele comanda a partida, não compete com os alunos
+  // ranking, ele comanda a partida, não compete com os alunos
   meuLogin?: string;
 }
 
-// Relatório da partida (visão do professor)
-// Espelhos dos records RespostaDetalhe/RelatorioPalavra do JogoSalaService,
-// servidos por GET /api/salas/{codigo}/relatorio (restrito ao dono da sala):
-// cada palavra já jogada com as respostas digitadas e os totais de acerto.
+// Relatório da partida (visão do professor): espelho dos records
+// RespostaDetalhe/RelatorioPalavra do JogoSalaService, servidos por
+// GET /api/salas/{codigo}/relatorio (restrito ao dono da sala), cada palavra já
+// jogada com as respostas digitadas e os totais de acerto. O tipo e os blocos
+// que o renderizam vivem em relatorio-partida, compartilhados com a tela
+// "Ver estatísticas".
 
-// Uma resposta individual: quem respondeu, o texto exato digitado e o resultado
-interface RespostaDetalhe {
-  login: string;
-  nome: string;
-  texto: string;
-  correta: boolean;
-  ordem: number;
-}
-
-// Consolidado de uma palavra da partida (o % de acerto é calculado aqui no front)
-interface RelatorioPalavra {
-  indice: number;
-  texto: string;
-  dificuldade: string | null;
-  totalRespostas: number;
-  totalAcertos: number;
-  respostas: RespostaDetalhe[];
-}
-
-// Cores/rótulos por dificuldade - paleta compartilhada de todas as telas
+// Cores/rótulos por dificuldade, paleta compartilhada de todas as telas
 // (COR_/LABEL_ mantêm os nomes usados no JSX; a fonte é dificuldade-constants)
 const COR_DIFICULDADE: Record<string, string> = CORES_DIFICULDADE;
 const LABEL_DIFICULDADE: Record<string, string> = LABELS_DIFICULDADE;
@@ -94,6 +78,22 @@ const TEMPOS: Array<{ key: 'tempoFacil' | 'tempoMedio' | 'tempoDificil'; label: 
 const DEFAULT_CFG: Cfg = { tempoFacil: 20, tempoMedio: 30, tempoDificil: 45, qtdFacil: 5, qtdMedio: 5, qtdDificil: 5 };
 const RANKING_DURATION = 8;
 
+// Snapshot da ÚLTIMA partida da sala, de GET /api/salas/{codigo}/estatisticas
+// (mesmo formato da tela "Ver estatísticas")
+interface UltimaPartida {
+  dataEncerramento: string;
+  totalPalavras: number;
+  ranking: PosicaoRanking[];
+  relatorio: RelatorioPalavra[];
+}
+
+// Data/hora do encerramento no formato brasileiro (ex: 24/08/2026 às 14:32)
+const formatarDataPartida = (iso: string): string => {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+};
+
 // Tela do professor durante a partida: lobby de espera com configurações, tela de jogo com timer,
 // ranking entre palavras com contagem regressiva de 8s, e tela de encerramento com placar final
 export const SalaJogoProfessor: React.FC<Props> = ({
@@ -122,13 +122,20 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   // o relatório completo na tela de encerramento.
   const [relatorio, setRelatorio] = useState<RelatorioPalavra[]>([]);
 
+  // Desempenho da ÚLTIMA partida desta sala, lido do snapshot gravado no banco.
+  // É o que impede a sala reaberta de parecer uma sala nova: o jogo em si vive
+  // só na memória do servidor e é descartado quando a sala fecha, mas o lobby
+  // continua mostrando (e abrindo) o que a turma fez na partida anterior.
+  const [ultimaPartida, setUltimaPartida] = useState<UltimaPartida | null>(null);
+  const [verUltimaPartida, setVerUltimaPartida] = useState(false);
+
   // Fechamento definitivo da sala ao fim da partida (botão "Encerrar e fechar"):
-  // true enquanto o PATCH está em andamento - trava o botão contra clique duplo
+  // true enquanto o PATCH está em andamento, trava o botão contra clique duplo
   const [fechandoSala, setFechandoSala] = useState(false);
   const [erroFecharSala, setErroFecharSala] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Fecha a sala DE VEZ: marca ativo=false no banco via PATCH - o endpoint já é
+  // Fecha a sala DE VEZ: marca ativo=false no banco via PATCH, o endpoint já é
   // restrito ao professor dono (ou admin). Sala inativa sai das listagens e não
   // recebe novas entradas. Com a sala fechada, o professor volta ao lobby;
   // o relatório da partida continua disponível até ele sair da tela.
@@ -140,18 +147,18 @@ export const SalaJogoProfessor: React.FC<Props> = ({
       await axios.patch(`/api/salas/${codigoSala}`, { codigo: codigoSala, ativo: false });
       navigate('/lobby');
     } catch {
-      // Falhou (ex.: rede) - reabilita o botão e avisa; nada foi alterado no banco
+      // Falhou (ex.: rede), reabilita o botão e avisa; nada foi alterado no banco
       setFechandoSala(false);
       setErroFecharSala('Não foi possível fechar a sala. Tente novamente.');
     }
   };
 
   const rankingTriggeredRef = useRef(false);
-  // Posições da rodada anterior no top 5 - usado pela animação de ultrapassagem
+  // Posições da rodada anterior no top 5, usado pela animação de ultrapassagem
   const posRef = useRef<Map<string, number>>(new Map());
 
   // Busca o relatório no endpoint restrito ao dono da sala. Chamado a cada troca
-  // de palavra e no encerramento - NÃO a cada resposta: o consolidado das rodadas
+  // de palavra e no encerramento, NÃO a cada resposta: o consolidado das rodadas
   // anteriores não muda no meio de uma rodada, e os números ao vivo da rodada em
   // curso são derivados do placar que o WebSocket já entrega de graça.
   const carregarRelatorio = useCallback(() => {
@@ -159,7 +166,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
       .get<RelatorioPalavra[]>(`/api/salas/${codigoSala}/relatorio`)
       .then(res => setRelatorio(res.data))
       .catch(() => {
-        // Sem relatório (ex.: servidor reiniciou no meio) - o painel segue com o que tem
+        // Sem relatório (ex.: servidor reiniciou no meio), o painel segue com o que tem
       });
   }, [codigoSala]);
 
@@ -171,6 +178,17 @@ export const SalaJogoProfessor: React.FC<Props> = ({
       carregarRelatorio();
     }
   }, [estado?.indiceAtual, estado?.tipo, carregarRelatorio]);
+
+  // Carrega o snapshot da partida anterior ao abrir a sala. Só no lobby: é o
+  // único lugar onde o bloco aparece, e assim não há requisição a cada rodada.
+  // 404 (sala sem partida encerrada) simplesmente não mostra nada.
+  useEffect(() => {
+    if (estado && estado.tipo !== 'AGUARDANDO') return;
+    axios
+      .get<UltimaPartida>(`/api/salas/${codigoSala}/estatisticas`)
+      .then(res => setUltimaPartida(res.data))
+      .catch(() => setUltimaPartida(null));
+  }, [codigoSala, estado?.tipo]);
 
   // Incrementa/decrementa a quantidade de palavras de uma dificuldade, entre 0 e 30
   const adj = (campo: keyof Cfg, delta: number) => setCfg(prev => ({ ...prev, [campo]: Math.max(0, Math.min(30, prev[campo] + delta)) }));
@@ -204,7 +222,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     }
   }, [estado?.palavraAtual?.id]);
 
-  // Conta o tempo restante da rodada - recalcula a cada 500ms a partir do timestampInicio
+  // Conta o tempo restante da rodada, recalcula a cada 500ms a partir do timestampInicio
   useEffect(() => {
     const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
     if (!ativo) {
@@ -230,7 +248,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     }
   }, [tempoRestante]);
 
-  // Conta regressiva do ranking (8s) - ao chegar a zero avança para a próxima palavra
+  // Conta regressiva do ranking (8s), ao chegar a zero avança para a próxima palavra
   useEffect(() => {
     if (!showRanking) return;
     if (rankingTimer <= 0) {
@@ -263,6 +281,34 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           <span className="sj-codigo-copy">{copied ? '✓ Copiado!' : 'clique para copiar'}</span>
         </button>
 
+        {/* Partida anterior desta sala (snapshot no banco): a sala reaberta não
+            volta em branco, o professor abre aqui mesmo o ranking e o relatório
+            da última turma, sem sair da sala nem precisar reabrir nada */}
+        {ultimaPartida && (
+          <div className="sj-ultima-partida">
+            <div className="sj-ultima-topo">
+              <div className="sj-ultima-info">
+                <span className="sj-ultima-titulo">Última partida desta sala</span>
+                <span className="sj-ultima-sub">
+                  {ultimaPartida.totalPalavras} palavra{ultimaPartida.totalPalavras === 1 ? '' : 's'} · {ultimaPartida.ranking.length}{' '}
+                  participante{ultimaPartida.ranking.length === 1 ? '' : 's'} · {formatarDataPartida(ultimaPartida.dataEncerramento)}
+                </span>
+              </div>
+              <button type="button" className="sj-ultima-btn" onClick={() => setVerUltimaPartida(v => !v)}>
+                {verUltimaPartida ? 'Ocultar' : '📊 Ver desempenho'}
+              </button>
+            </div>
+            {verUltimaPartida && (
+              <div className="sj-ultima-corpo">
+                <h3 className="sj-rel-secao">Ranking da partida</h3>
+                <RankingPartida posicoes={ultimaPartida.ranking} />
+                <h3 className="sj-rel-secao">Relatório por palavra</h3>
+                <RelatorioPorPalavra relatorio={ultimaPartida.relatorio} />
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="sj-lobby-cols">
           <div className="sj-cfg-card">
             <h3 className="sj-cfg-title">Configurar atividade</h3>
@@ -270,7 +316,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
             {TEMPOS.map(({ key, label, cor }) => (
               <div className="sj-cfg-field" key={key}>
                 <div className="sj-cfg-field-label">
-                  <span className="sj-cfg-diff-dot" style={{ background: cor }} /> Tempo - {label} <strong>{cfg[key]}s</strong>
+                  <span className="sj-cfg-diff-dot" style={{ background: cor }} /> Tempo · {label} <strong>{cfg[key]}s</strong>
                 </div>
                 <input
                   type="range"
@@ -333,7 +379,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           }
           // Preserva as palavras extras e as palavras pré-sorteadas na tela de criação.
           // Se o professor mudou as QUANTIDADES aqui no lobby, a lista pré-sorteada não
-          // corresponde mais à configuração - descarta e deixa o servidor sortear na hora.
+          // corresponde mais à configuração, descarta e deixa o servidor sortear na hora.
           onClick={() => {
             const qtdsIntactas =
               !!initialGameConfig &&
@@ -353,7 +399,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     );
   }
 
-  // Placar sem o próprio professor: ele comanda a partida, não compete - não deve
+  // Placar sem o próprio professor: ele comanda a partida, não compete, não deve
   // aparecer no pódio nem no ranking que os alunos disputam
   const placarAlunos = estado.placar.filter(p => p.login !== meuLogin);
 
@@ -369,82 +415,25 @@ export const SalaJogoProfessor: React.FC<Props> = ({
 
         {/* Ranking completo da partida */}
         <h3 className="sj-rel-secao">Ranking da partida</h3>
-        {placarAlunos.length === 0 ? (
-          <p className="sj-no-alunos">Nenhum aluno participou desta partida.</p>
-        ) : (
-          <div className="sj-final-placar">
-            {placarAlunos.map((p, i) => (
-              <div key={p.login} className="sj-final-row">
-                <span className="sj-final-rank">{i + 1}º</span>
-                <span className="sj-final-nome">
-                  {p.nome || p.login}
-                  {p.alertas > 0 && (
-                    <span className="sj-alerta-burla" title={`${p.alertas} resposta(s) suspeita(s) de colar/corretor nesta partida`}>
-                      ⚠ {p.alertas}
-                    </span>
-                  )}
-                </span>
-                <span className="sj-final-pts">{p.pontos} pts</span>
-              </div>
-            ))}
-          </div>
-        )}
+        <RankingPartida posicoes={placarAlunos} />
 
         {/* Relatório da partida: cada palavra com quem escreveu o quê
             Os dados vêm do endpoint restrito ao dono da sala (carregados no
             useEffect quando o estado vira ENCERRADA) */}
         <h3 className="sj-rel-secao">Relatório por palavra</h3>
-        {relatorio.length === 0 ? (
-          <p className="sj-no-alunos">Sem respostas registradas nesta partida.</p>
-        ) : (
-          <div className="sj-rel-lista">
-            {relatorio.map(r => {
-              const pctAcerto = r.totalRespostas > 0 ? Math.round((r.totalAcertos / r.totalRespostas) * 100) : 0;
-              return (
-                <div key={r.indice} className="sj-rel-card">
-                  <div className="sj-rel-header">
-                    <span className="sj-rel-num">{r.indice + 1}</span>
-                    <span className="sj-rel-palavra">{r.texto}</span>
-                    {r.dificuldade && (
-                      <span className="sj-rel-dif" style={{ color: COR_DIFICULDADE[r.dificuldade] }}>
-                        {LABEL_DIFICULDADE[r.dificuldade] ?? r.dificuldade}
-                      </span>
-                    )}
-                    <span className="sj-rel-stats">
-                      {r.totalRespostas} resposta{r.totalRespostas === 1 ? '' : 's'} · {pctAcerto}% de acerto
-                    </span>
-                  </div>
-                  {r.respostas.length === 0 ? (
-                    <p className="sj-rel-vazio">Ninguém respondeu esta palavra.</p>
-                  ) : (
-                    <ul className="sj-rel-respostas">
-                      {/* Cada linha: quem respondeu e o texto LITERAL que digitou */}
-                      {r.respostas.map(resp => (
-                        <li key={resp.login} className={`sj-rel-resp${resp.correta ? ' sj-rel-resp--certa' : ' sj-rel-resp--errada'}`}>
-                          <span className="sj-rel-resp-icone">{resp.correta ? '✓' : '✗'}</span>
-                          <span className="sj-rel-resp-nome">{resp.nome || resp.login}</span>
-                          <span className="sj-rel-resp-texto">&ldquo;{resp.texto}&rdquo;</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <RelatorioPorPalavra relatorio={relatorio} />
 
         {/* Encerrar e fechar a sala
             Fecha a sala em definitivo (ativo=false no banco): ela some das
             listagens e não aceita novas entradas. Ação exclusiva do professor,
-            disponível só aqui - depois que a partida terminou. */}
+            disponível só aqui, depois que a partida terminou. */}
         {erroFecharSala && <div className="sj-fechar-erro">{erroFecharSala}</div>}
         <button type="button" className="sj-fechar-sala-btn" onClick={() => void fecharSala()} disabled={fechandoSala}>
           {fechandoSala ? (
             'Fechando sala...'
           ) : (
             <>
-              {/* Cadeado em SVG (nada de emoji - mesma decisão do ícone de áudio):
+              {/* Cadeado em SVG (nada de emoji, mesma decisão do ícone de áudio):
                   herda a cor do botão e escala nítido em qualquer tela */}
               <svg className="sj-fechar-icone" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="5" y="10.5" width="14" height="9" rx="2.2" fill="currentColor" />
@@ -470,7 +459,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           </h2>
         </div>
 
-        {/* Palavra correta da rodada - visível para todos ao fim do tempo */}
+        {/* Palavra correta da rodada, visível para todos ao fim do tempo */}
         {estado.palavraAtual && (
           <div className="sj-palavra-correta">
             <span className="sj-palavra-correta-label">Palavra correta</span>
@@ -495,9 +484,9 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     );
   }
 
-  /* EM JOGO - painel do professor
+  /* EM JOGO, painel do professor
      O professor não digita respostas: ele acompanha a rodada. O painel mostra
-     a palavra atual (só ele vê o texto - os alunos recebem apenas o áudio nos
+     a palavra atual (só ele vê o texto, os alunos recebem apenas o áudio nos
      seus aparelhos), os números ao vivo da rodada e a lista de palavras já
      jogadas com a taxa de acerto de cada uma. */
 
@@ -536,7 +525,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
           palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
         </p>
 
-        {/* Palavra atual em destaque - visível apenas nesta tela do professor */}
+        {/* Palavra atual em destaque, visível apenas nesta tela do professor */}
         {estado.palavraAtual && (
           <div className="sj-dash-atual">
             <span className="sj-dash-atual-label">Palavra atual</span>
@@ -600,7 +589,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
         </button>
 
         {/* Palavras da partida: as já jogadas com % consolidado (do relatório) e a
-            atual com os números ao vivo (do placar) - nunca antecipa as próximas */}
+            atual com os números ao vivo (do placar), nunca antecipa as próximas */}
         {relatorio.length > 0 && (
           <div className="sj-dash-list">
             <span className="sj-dash-list-title">Palavras da partida</span>

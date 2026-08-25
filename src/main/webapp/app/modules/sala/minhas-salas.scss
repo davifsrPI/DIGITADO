@@ -314,3 +314,29 @@ body.minhas-salas-page .view-container {
   color: rgba(255, 255, 255, 0.3);
   cursor: not-allowed;
 }
+
+/* "Ver estatísticas", ação secundária do card (contorno, sem preenchimento):
+   o botão principal continua sendo entrar na sala. Aparece só quando a sala já
+   tem uma partida encerrada, inclusive nas fechadas. */
+.ms-estatisticas-btn {
+  width: 100%;
+  padding: 9px;
+  border-radius: 12px;
+  border: 1px solid rgba(165, 180, 252, 0.4);
+  background: rgba(99, 102, 241, 0.08);
+  color: #c7d2fe;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
+}
+
+.ms-estatisticas-btn:hover {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(165, 180, 252, 0.7);
+  transform: translateY(-1px);
+}

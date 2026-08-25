@@ -62,7 +62,7 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* PALAVRA DO DIA - desafio público, uma chance por pessoa (controle no backend) */}
+      {/* PALAVRA DO DIA, desafio público, uma chance por pessoa (controle no backend) */}
       <PalavraDoDia />
 
       {/* COMO FUNCIONA */}
@@ -101,7 +101,7 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* RANKING MUNDIAL - top 5 público, com link para o ranking completo */}
+      {/* RANKING MUNDIAL, top 5 público, com link para o ranking completo */}
       <RankingTop5 />
     </div>
   );

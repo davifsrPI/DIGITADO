@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Snapshot das estatísticas da última partida de cada sala.
+
+        O estado do jogo (placar e respostas de cada rodada) só existia em memória,
+        no JogoSalaService: fechar a sala chamava descartarSala e o relatório sumia
+        junto - reabrir a sala devolvia uma sala zerada, sem como rever o desempenho
+        da turma. Esta tabela guarda o consolidado no momento em que a partida
+        encerra, para a tela "Ver estatísticas" do professor.
+
+        UMA linha por sala (ux_...__sala_codigo): a partida seguinte substitui o
+        snapshot anterior. FK com ON DELETE CASCADE - sala excluída leva junto o
+        seu snapshot, sem deixar órfão nem travar o DELETE da sala.
+    -->
+    <changeSet id="20260824120000-1" author="digitado">
+        <createTable tableName="estatistica_partida">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="sala_codigo" type="varchar(255)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="ux_estatistica_partida__sala_codigo"/>
+            </column>
+            <column name="data_encerramento" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_palavras" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ranking + relatório por palavra serializados (mesmo formato do
+                 endpoint /relatorio, para a tela reaproveitar a renderização) -->
+            <column name="dados" type="json">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20260824120000-2" author="digitado">
+        <addForeignKeyConstraint baseColumnNames="sala_codigo"
+                                 baseTableName="estatistica_partida"
+                                 constraintName="fk_estatistica_partida__sala_codigo"
+                                 referencedColumnNames="codigo"
+                                 referencedTableName="sala"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

@@ -1,5 +1,6 @@
 package br.com.digitado.service;
 
+import br.com.digitado.domain.HistoricoResposta;
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.PalavraDoDiaTentativa;
 import br.com.digitado.repository.PalavraDoDiaTentativaRepository;
@@ -36,19 +37,22 @@ public class PalavraDoDiaService {
     private final PalavraEstatisticaService estatisticaService;
     private final XpService xpService;
     private final ConquistaEngineService conquistaEngine;
+    private final HistoricoRespostaService historicoRespostaService;
 
     public PalavraDoDiaService(
         PalavraRepository palavraRepository,
         PalavraDoDiaTentativaRepository tentativaRepository,
         PalavraEstatisticaService estatisticaService,
         XpService xpService,
-        ConquistaEngineService conquistaEngine
+        ConquistaEngineService conquistaEngine,
+        HistoricoRespostaService historicoRespostaService
     ) {
         this.palavraRepository = palavraRepository;
         this.tentativaRepository = tentativaRepository;
         this.estatisticaService = estatisticaService;
         this.xpService = xpService;
         this.conquistaEngine = conquistaEngine;
+        this.historicoRespostaService = historicoRespostaService;
     }
 
     public LocalDate hoje() {
@@ -101,6 +105,11 @@ public class PalavraDoDiaService {
 
         tentativaRepository.save(new PalavraDoDiaTentativa().data(hoje()).login(login).acertou(acertou).palavraId(palavra.getId()));
         estatisticaService.registrarTentativa(palavra.getId(), acertou);
+        // Entra também no histórico pessoal do jogador (painel "Meu Desempenho").
+        // Visitante anônimo tem login nulo e o registro é ignorado lá dentro.
+        // Sem tipo de erro nem tempo: a palavra do dia não classifica o erro e
+        // não cronometra a digitação.
+        historicoRespostaService.registrar(login, palavra, acertou, null, null, HistoricoResposta.Origem.PALAVRA_DO_DIA);
         // Acerto de usuário logado vale XP no Ranking Mundial (anônimo não tem conta para creditar)
         if (acertou && login != null) {
             xpService.premiarAcertoPalavraDoDia(login);

@@ -6,7 +6,23 @@ import { NavLink as Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { NavDropdown } from './menu-components';
 
-const accountMenuItemsAuthenticated = () => (
+// O item de desempenho tem destino diferente conforme quem está logado:
+// o aluno vê a evolução DELE; o administrador vê o resumo de TODOS os usuários.
+// Admin não tem painel pessoal de propósito, ele joga para testar o sistema, e
+// esses números não medem aprendizado nenhum (o backend, aliás, já exclui as
+// respostas de quem tem ROLE_ADMIN do relatório da turma).
+const itemDesempenho = (isAdmin: boolean) =>
+  isAdmin ? (
+    <MenuItem icon="chart-line" to="/admin/desempenho" data-cy="desempenhoGeral">
+      Desempenho de Todos
+    </MenuItem>
+  ) : (
+    <MenuItem icon="chart-line" to="/meu-desempenho" data-cy="meuDesempenho">
+      Meu Desempenho
+    </MenuItem>
+  );
+
+const accountMenuItemsAuthenticated = (isAdmin: boolean) => (
   <>
     <MenuItem icon="door-open" to="/minhas-salas" data-cy="minhasSalas">
       Minhas Salas
@@ -14,6 +30,7 @@ const accountMenuItemsAuthenticated = () => (
     <MenuItem icon="trophy" to="/conquistas" data-cy="conquistas">
       Minhas Conquistas
     </MenuItem>
+    {itemDesempenho(isAdmin)}
     <MenuItem icon="wrench" to="/account/settings" data-cy="settings">
       <Translate contentKey="global.menu.account.settings">Settings</Translate>
     </MenuItem>
@@ -40,10 +57,15 @@ const rotuloDoMenu = (displayName?: string, acertouPalavraDoDia?: boolean) => (
 );
 
 // Logado: menu suspenso de perfil. Visitante: botão "Entrar" direto para o login.
-export const AccountMenu = ({ isAuthenticated = false, displayName = undefined as string | undefined, acertouPalavraDoDia = false }) =>
+export const AccountMenu = ({
+  isAuthenticated = false,
+  displayName = undefined as string | undefined,
+  acertouPalavraDoDia = false,
+  isAdmin = false,
+}) =>
   isAuthenticated ? (
     <NavDropdown icon="user" name={rotuloDoMenu(displayName, acertouPalavraDoDia)} id="account-menu" data-cy="accountMenu">
-      {accountMenuItemsAuthenticated()}
+      {accountMenuItemsAuthenticated(isAdmin)}
     </NavDropdown>
   ) : (
     <NavItem id="login-item">

@@ -119,7 +119,7 @@ public class JogoSalaController {
             return;
         }
         String nomeSala = getNomeSala(codigo);
-        EstadoJogoDTO estado = jogoService.iniciar(codigo, nomeSala, payload);
+        EstadoJogoDTO estado = jogoService.iniciar(codigo, nomeSala, payload, principal.getName());
         broadcast(codigo, estado);
     }
 

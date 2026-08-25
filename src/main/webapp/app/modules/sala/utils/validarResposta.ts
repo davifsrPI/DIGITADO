@@ -8,13 +8,13 @@ export interface ResultadoValidacao {
   similaridade: number;
 }
 
-// Remove acentos da string usando decomposição Unicode (NFD) - permite comparar sem diferenciar versões acentuadas
+// Remove acentos da string usando decomposição Unicode (NFD), permite comparar sem diferenciar versões acentuadas
 function removerAcentos(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 // Algoritmo de Levenshtein: calcula quantas edições (inserção, remoção, substituição) são necessárias
-// para transformar a string "a" na string "b" - base para medir similaridade entre palavras
+// para transformar a string "a" na string "b", base para medir similaridade entre palavras
 function levenshtein(a: string, b: string): number {
   const m = a.length,
     n = b.length;
@@ -44,7 +44,7 @@ const FONETICO: [RegExp, string][] = [
   [/[sz]/g, 'z'],
 ];
 
-// Aplica todas as substituições fonéticas da tabela acima - duas palavras foneticamente equivalentes
+// Aplica todas as substituições fonéticas da tabela acima, duas palavras foneticamente equivalentes
 // terão o mesmo resultado, permitindo detectar erros de som vs. grafia
 function fonetizar(s: string): string {
   let r = s;
@@ -91,10 +91,10 @@ export interface LetraDiff {
 }
 
 // Compara o que o aluno digitou com a palavra correta e devolve, letra a letra,
-// o que bateu e o que não bateu - em CADA lado. Usa o mesmo alinhamento do
+// o que bateu e o que não bateu, em CADA lado. Usa o mesmo alinhamento do
 // Levenshtein (backtrace) para casar letras mesmo quando falta ou sobra uma:
-//   - digitado: cada letra marcada ok=false é uma letra trocada ou a mais
-//   - correto:  cada letra marcada ok=false é uma letra que o aluno errou/esqueceu
+//  - digitado: cada letra marcada ok=false é uma letra trocada ou a mais
+//  - correto:  cada letra marcada ok=false é uma letra que o aluno errou/esqueceu
 // A comparação ignora maiúsculas/minúsculas, mas devolve os caracteres originais
 // (acentos aparecem como diferença, que é o certo para um ditado).
 export function compararLetras(digitado: string, correto: string): { digitado: LetraDiff[]; correto: LetraDiff[] } {

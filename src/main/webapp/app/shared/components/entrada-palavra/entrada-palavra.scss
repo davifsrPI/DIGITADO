@@ -10,7 +10,7 @@
 
 /* Teclado virtual: aparece apenas em telas de toque, onde o inputMode="none" do
    campo suprime o teclado nativo (e o corretor). Quem esconde é o componente, que
-   decide as duas coisas juntas - se o CSS decidisse sozinho, uma tela de toque fora
+   decide as duas coisas juntas, se o CSS decidisse sozinho, uma tela de toque fora
    do padrão ficaria sem teclado nenhum */
 .ep-teclado {
   display: flex;

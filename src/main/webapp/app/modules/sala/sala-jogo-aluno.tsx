@@ -9,7 +9,7 @@ import { AmpulhetaAnimada } from './ampulheta-animada';
 import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
 import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
 
-// Configuração enviada ao iniciar a partida - mesmo shape usado pela tela do professor
+// Configuração enviada ao iniciar a partida, mesmo shape usado pela tela do professor
 interface GameConfig {
   tempoFacil: number;
   tempoMedio: number;
@@ -58,7 +58,7 @@ interface Props {
 
 // Tela de espera do CRIADOR do duelo 1v1 (componente próprio para não inflar a
 // função principal): compartilha o código, mostra a configuração que valerá na
-// partida, vê o oponente chegar e inicia o duelo - jogando junto
+// partida, vê o oponente chegar e inicia o duelo, jogando junto
 const EsperaCriadorDuelo: React.FC<{
   estado: EstadoJogo | null;
   conectado: boolean;
@@ -127,10 +127,10 @@ export const SalaJogoAluno: React.FC<Props> = ({
   const [validacaoLocal, setValidacaoLocal] = useState<ReturnType<typeof validarResposta> | null>(null);
   // Ranking exibido quando o tempo da rodada acaba (mesma tela que o professor vê)
   const [showRanking, setShowRanking] = useState(false);
-  // Contagem regressiva do ranking - usada SÓ pelo criador do duelo, cujo cliente
+  // Contagem regressiva do ranking, usada SÓ pelo criador do duelo, cujo cliente
   // avança para a próxima palavra (nas salas de turma quem avança é o professor)
   const [rankingTimer, setRankingTimer] = useState(0);
-  // Pontuação/posição "congeladas" no início da rodada - só atualizam quando o tempo acaba,
+  // Pontuação/posição "congeladas" no início da rodada, só atualizam quando o tempo acaba,
   // para o aluno não descobrir o resultado dos colegas pelo placar enquanto digita
   const [scoreCongelado, setScoreCongelado] = useState<{ pontos: number; posicao: number }>({ pontos: 0, posicao: -1 });
   // Vinheta de suspense com o pódio, exibida uma única vez quando a partida encerra
@@ -140,10 +140,10 @@ export const SalaJogoAluno: React.FC<Props> = ({
   const burlasRef = useRef(0);
   const palavraAtualId = useRef<number | null>(null);
   const rankingTriggeredRef = useRef(false);
-  // Posições da rodada anterior no top 5 - usado pela animação de ultrapassagem
+  // Posições da rodada anterior no top 5, usado pela animação de ultrapassagem
   const posRef = useRef<Map<string, number>>(new Map());
 
-  // Detecta mudança de palavra e reseta o estado de resposta - fala a palavra automaticamente
+  // Detecta mudança de palavra e reseta o estado de resposta, fala a palavra automaticamente
   useEffect(() => {
     if (!estado) return;
     if (estado.tipo === 'NOVA_PALAVRA' || estado.tipo === 'INICIADA') {
@@ -187,7 +187,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
   }, [estado?.timestampInicio, estado?.tempoLimite, estado?.tipo]);
 
   // Reproduz a palavra ao clicar no botão de áudio e atualiza o ícone enquanto fala.
-  // pausaMs: 0 - reouvir toca na hora, sem a espera de 1s da palavra da rodada
+  // pausaMs: 0, reouvir toca na hora, sem a espera de 1s da palavra da rodada
   const handleFalar = useCallback(() => {
     if (!estado?.palavraAtual) return;
     setFalando(true);
@@ -225,7 +225,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
   }, [tempoRestante, ativo, estado]);
 
   // Se TODOS os conectados já responderam a palavra, vai direto para a tela de
-  // correção/ranking - não faz sentido ficar olhando o relógio depois de todo
+  // correção/ranking, não faz sentido ficar olhando o relógio depois de todo
   // mundo já ter digitado. Vale para o duelo 1v1 (2 jogadores) e para a sala de
   // turma (a partir de 1 aluno): assim, quando a turma termina, cada aluno já vê
   // o próprio resultado enquanto o professor decide quando passar a palavra.
@@ -247,7 +247,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
   }, [duelo1v1, ativo, estado, criadorDuelo]);
 
   // Avanço automático do duelo: o cliente do CRIADOR conta os segundos do ranking
-  // e pede a próxima palavra ao servidor - o oponente só recebe o broadcast
+  // e pede a próxima palavra ao servidor, o oponente só recebe o broadcast
   useEffect(() => {
     if (!criadorDuelo || !showRanking) return;
     if (rankingTimer <= 0) {
@@ -325,7 +325,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
           <div className="sj-palavra-correta">
             <span className="sj-palavra-correta-label">Palavra correta</span>
             <span className="sj-palavra-correta-val">{estado.palavraAtual.texto}</span>
-            {/* Só o aluno vê o próprio resultado - revelado agora, no fim da rodada */}
+            {/* Só o aluno vê o próprio resultado, revelado agora, no fim da rodada */}
             {jaRespondeu && validacaoLocal ? (
               validacaoLocal.correta ? (
                 <span className="sj-similaridade sj-similaridade--ok">✓ Você acertou!</span>
@@ -354,7 +354,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Só o criador do duelo vê a contagem - é o cliente dele que avança a rodada */}
+        {/* Só o criador do duelo vê a contagem, é o cliente dele que avança a rodada */}
         {criadorDuelo && (
           <div className="sj-ranking-countdown">
             <span className="sj-ranking-next-label">Próxima palavra em</span>
@@ -382,7 +382,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
             palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
           </div>
         </div>
-        {/* Pontuação congelada no início da rodada - só atualiza quando o tempo acaba */}
+        {/* Pontuação congelada no início da rodada, só atualiza quando o tempo acaba */}
         <div className="sj-score-block">
           <div className="sj-score-pts">{scoreCongelado.pontos} pts</div>
           {scoreCongelado.posicao >= 0 && <div className="sj-score-pos">{scoreCongelado.posicao + 1}º lugar</div>}
@@ -443,7 +443,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
                 </>
               ) : (
                 <>
-                  {/* Ao enviar mostramos só que errou - o quanto acertou (%) e o
+                  {/* Ao enviar mostramos só que errou, o quanto acertou (%) e o
                       que errou aparecem no fim da rodada, quando o tempo acaba */}
                   <strong>Resposta enviada</strong> · veja o resultado quando o tempo acabar
                 </>
@@ -457,7 +457,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
           <div className="sj-feedback sj-feedback--warn">
             <span className="sj-feedback-icon">✓</span>
             <div className="sj-feedback-body">
-              {/* Sem revelar acerto/erro nem % aqui - o resultado só sai no fim da rodada */}
+              {/* Sem revelar acerto/erro nem % aqui, o resultado só sai no fim da rodada */}
               Resposta enviada · veja o resultado quando o tempo acabar
             </div>
           </div>

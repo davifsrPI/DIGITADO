@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Histórico de TODAS as respostas de um jogador logado, de todos os modos
+        (partida de sala, duelo 1v1 e palavra do dia).
+
+        Até aqui nada disso era guardado por pessoa: a partida vivia só na memória
+        do JogoSalaService e as colunas total_tentativas/total_acertos da palavra
+        são agregadas do acervo inteiro, sem dizer quem errou o quê. Sem esta
+        tabela não existe "desde quando comecei até como estou hoje".
+
+        Chaveada pelo LOGIN (mesma identidade de palavra_do_dia_tentativa), não
+        pelo usuario.id: o login é o que o WebSocket e a palavra do dia têm em mãos
+        na hora de responder, e é por ele que a exclusão de conta apaga tudo.
+
+        RETENÇÃO (LGPD): esta tabela NÃO entra na anonimização de 30 dias do
+        LgpdRetencaoService. Lá o login é acessório (só trava a segunda tentativa
+        do dia); aqui o vínculo com a pessoa é a própria finalidade - o histórico
+        existe para o titular ver o próprio desempenho. Vive enquanto a conta
+        viver e é apagado junto com ela (TitularDadosService.excluirConta).
+    -->
+    <changeSet id="20260824140000-1" author="digitado">
+        <createTable tableName="historico_resposta">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="login" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="palavra_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="correta" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Dificuldade EFETIVA no instante da resposta (Palavra.getDificuldade,
+                 que é calculada e muda com o tempo) - congelada aqui para o
+                 histórico não se reescrever sozinho -->
+            <column name="dificuldade" type="varchar(20)">
+                <constraints nullable="true"/>
+            </column>
+            <!-- PARTIDA | DUELO | PALAVRA_DO_DIA -->
+            <column name="origem" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ACENTUACAO | TROCA_LETRA | ... - só quando a resposta está errada -->
+            <column name="tipo_erro" type="varchar(30)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="tempo_ms" type="int">
+                <constraints nullable="true"/>
+            </column>
+            <column name="data_resposta" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!--
+        Índices: as três consultas do painel de desempenho.
+        1) linha do tempo e totais do titular  -> (login, data_resposta)
+        2) palavras mais erradas/acertadas dele -> (login, palavra_id)
+        3) relatório mensal do admin, sobre todo mundo -> (data_resposta)
+    -->
+    <changeSet id="20260824140000-2" author="digitado">
+        <createIndex tableName="historico_resposta" indexName="ix_historico_resposta__login_data">
+            <column name="login"/>
+            <column name="data_resposta"/>
+        </createIndex>
+        <createIndex tableName="historico_resposta" indexName="ix_historico_resposta__login_palavra">
+            <column name="login"/>
+            <column name="palavra_id"/>
+        </createIndex>
+        <createIndex tableName="historico_resposta" indexName="ix_historico_resposta__data">
+            <column name="data_resposta"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260824140000-3" author="digitado">
+        <addForeignKeyConstraint baseColumnNames="palavra_id"
+                                 baseTableName="historico_resposta"
+                                 constraintName="fk_historico_resposta__palavra_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="palavra"/>
+    </changeSet>
+
+    <!--
+        Carga inicial: as tentativas da palavra do dia que já estão no banco viram
+        histórico, para quem já joga não abrir o painel zerado. Só entram as que
+        ainda têm login (as anonimizadas pela retenção não pertencem a ninguém) e
+        cuja palavra ainda existe. Sem tipo_erro nem tempo: a tabela de origem
+        nunca guardou essa informação.
+    -->
+    <changeSet id="20260824140000-4" author="digitado">
+        <sql>
+            INSERT INTO historico_resposta (login, palavra_id, correta, dificuldade, origem, tipo_erro, tempo_ms, data_resposta)
+            SELECT t.login, t.palavra_id, t.acertou, p.dificuldade, 'PALAVRA_DO_DIA', NULL, NULL, t.criado_em
+            FROM palavra_do_dia_tentativa t
+            JOIN palavra p ON p.id = t.palavra_id
+            WHERE t.login IS NOT NULL
+        </sql>
+    </changeSet>
+</databaseChangeLog>

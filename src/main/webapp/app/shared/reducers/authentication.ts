@@ -16,7 +16,7 @@ export const initialState = {
   // Separado do loginError porque a causa e outra: o RateLimitFilter devolve 429
   // depois de 10 tentativas por minuto vindas do mesmo IP. Tratar isso como
   // "senha errada" faz o usuario tentar de novo, e cada tentativa renova o
-  // bloqueio - foi assim que o login virou uma parede.
+  // bloqueio, foi assim que o login virou uma parede.
   loginBloqueado: false,
   showModalLogin: false,
   account: {} as any,

@@ -8,11 +8,15 @@ import Health from './health/health';
 import Metrics from './metrics/metrics';
 import Configuration from './configuration/configuration';
 import Docs from './docs/docs';
+import DesempenhoAdmin from 'app/modules/desempenho/desempenho-admin';
 
 const AdministrationRoutes = () => (
   <div>
     <ErrorBoundaryRoutes>
       <Route path="user-management/*" element={<UserManagement />} />
+      {/* Relatorio de desempenho da base, o PrivateRoute de admin em routes.tsx
+          ja barra o acesso, e o endpoint tem @Secured(ADMIN) por cima */}
+      <Route path="desempenho" element={<DesempenhoAdmin />} />
       <Route path="health" element={<Health />} />
       <Route path="metrics" element={<Metrics />} />
       <Route path="configuration" element={<Configuration />} />

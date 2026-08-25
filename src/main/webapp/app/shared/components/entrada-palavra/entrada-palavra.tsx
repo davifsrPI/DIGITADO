@@ -9,13 +9,13 @@ export type TipoBurla = 'colagem' | 'arrasto' | 'correcao-automatica' | 'inserca
 const CARACTERES_INVALIDOS = /[^a-záàâãéêíóôõúüç-]/g;
 // Enquanto o acento está sendo composto (tecla morta ´ seguida da vogal), o campo
 // precisa exibir o acento sozinho por um instante. Apagá-lo nessa janela cancela a
-// composição do navegador e a vogal acentuada nunca chega - por isso as teclas
+// composição do navegador e a vogal acentuada nunca chega, por isso as teclas
 // mortas passam durante a composição e só são sanitizadas no fim dela
 const CARACTERES_INVALIDOS_COMPONDO = /[^a-záàâãéêíóôõúüç´`^~¨-]/g;
 
 // Dispositivo sem teclado físico. O teclado nativo (e o corretor que vem junto) só
 // pode ser suprimido quando existe o TecladoVirtual para colocar no lugar: errar
-// essa conta dos dois lados é seguro - ou aparece o teclado da tela, ou o do sistema
+// essa conta dos dois lados é seguro, ou aparece o teclado da tela, ou o do sistema
 const ehDispositivoDeToque = (): boolean => {
   if (typeof window === 'undefined') return false;
   if (typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches) return true;
@@ -31,7 +31,7 @@ interface Props {
   disabled?: boolean;
   maxLength?: number;
   placeholder?: string;
-  // Classes visuais do input - cada tela mantém o próprio estilo de campo
+  // Classes visuais do input, cada tela mantém o próprio estilo de campo
   className?: string;
   ariaLabel?: string;
   inputRef?: React.MutableRefObject<HTMLInputElement | null>;
@@ -116,7 +116,7 @@ export const EntradaPalavra: React.FC<Props> = ({
     const bruto = e.target.value;
     // Acento a meio caminho: o texto da composição segue para o estado quase como
     // veio. Devolver outro valor aqui faria o React reescrever o input no meio da
-    // composição, e o navegador a cancelaria - era o que impedia digitar á, ã, ê...
+    // composição, e o navegador a cancelaria, era o que impedia digitar á, ã, ê...
     if (compondoRef.current) {
       onChange(bruto.toLowerCase().replace(CARACTERES_INVALIDOS_COMPONDO, '').slice(0, maxLength));
       return;
@@ -138,7 +138,7 @@ export const EntradaPalavra: React.FC<Props> = ({
   };
 
   // Fim da composição: o acento já virou vogal acentuada. Só agora dá para sanitizar
-  // e conferir o crescimento - uma composição rende UM caractere, então a regra de
+  // e conferir o crescimento, uma composição rende UM caractere, então a regra de
   // "no máximo 1 por vez" continua valendo contra o corretor que sugere a palavra inteira
   const handleCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
     compondoRef.current = false;

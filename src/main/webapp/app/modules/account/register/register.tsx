@@ -114,7 +114,7 @@ export const RegisterPage = () => {
               }}
               data-cy="username"
             />
-            {/* Apelido: o nome público do jogador - é o que aparece no ranking,
+            {/* Apelido: o nome público do jogador, é o que aparece no ranking,
                 no placar das salas e no pódio */}
             <ValidatedField
               name="apelido"
@@ -144,7 +144,7 @@ export const RegisterPage = () => {
             {emailCheck.status === 'loading' && <p className="rg-email-check rg-email-check--loading">Verificando cadastro...</p>}
             {emailCheck.status === 'found' && (
               <p className="rg-email-check rg-email-check--found">
-                Este e-mail já possui cadastro - <RouterLink to="/login">entre aqui</RouterLink>.
+                Este e-mail já possui cadastro, <RouterLink to="/login">entre aqui</RouterLink>.
               </p>
             )}
             {emailCheck.status === 'notfound' && (
@@ -179,7 +179,7 @@ export const RegisterPage = () => {
               data-cy="secondPassword"
             />
             {/* LGPD art. 9º: informação clara no ato da coleta (a base legal do
-                cadastro é execução de contrato - por isso aviso, não checkbox) */}
+                cadastro é execução de contrato, por isso aviso, não checkbox) */}
             <p className="register-aviso-privacidade">
               Ao criar a conta, seus dados (nome, e-mail e desempenho no jogo) serão tratados conforme a{' '}
               <RouterLink to="/privacidade">Política de Privacidade</RouterLink>.
