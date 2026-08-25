@@ -1,4 +1,4 @@
-<#
+﻿<#
     Gera a semente publica do banco a partir de um dump pessoal.
 
     O dados\banco-digitado.sql que o exportar-banco.ps1 produz tem e-mails,
@@ -9,7 +9,8 @@
         fica          palavras, listas, conquistas, papeis (jhi_authority),
                       o controle do Liquibase e as contas padrao admin/user
         sai           usuarios reais, salas, atividades, respostas, erros,
-                      ranking, conquistas ganhas e tentativas da palavra do dia
+                      ranking, conquistas ganhas, tentativas da palavra do dia,
+                      o historico de respostas e as estatisticas de partida
 
     O trabalho todo acontece dentro de um container MySQL descartavel, criado
     e destruido aqui mesmo. O banco de desenvolvimento desta maquina e o
@@ -119,6 +120,13 @@ DELETE FROM $BANCO.erro_ortografico;
 DELETE FROM $BANCO.resposta;
 DELETE FROM $BANCO.atividade;
 DELETE FROM $BANCO.palavra_do_dia_tentativa;
+-- historico_resposta guarda o login e CADA resposta digitada por aluno real;
+-- estatistica_partida guarda um JSON com login, nome e o texto literal que
+-- cada um escreveu. Nenhuma das duas pode sair na semente publica.
+-- A FK de estatistica_partida tem ON DELETE CASCADE, mas o FOREIGN_KEY_CHECKS=0
+-- acima desliga o cascade: apagar a sala NAO levaria o snapshot junto.
+DELETE FROM $BANCO.historico_resposta;
+DELETE FROM $BANCO.estatistica_partida;
 DELETE FROM $BANCO.ranking;
 DELETE FROM $BANCO.usuario_conquista;
 DELETE FROM $BANCO.rel_usuario__salas_aluno;
@@ -161,7 +169,21 @@ SET FOREIGN_KEY_CHECKS=1;
     $conteudo = [IO.File]::ReadAllText((Resolve-Path $Destino), [Text.Encoding]::UTF8)
     $vazados = [regex]::Matches($conteudo, '@(?!localhost)[A-Za-z0-9.-]+\.[A-Za-z]{2,}').Count
 
+    # Segunda rede: as tabelas de historico nao guardam e-mail, guardam LOGIN e
+    # o texto digitado - o teste de e-mail passaria direto por elas. Aqui a
+    # checagem e por tabela: sobrou INSERT de alguma, a limpeza ficou para tras.
+    $PESSOAIS = 'historico_resposta', 'estatistica_partida', 'palavra_do_dia_tentativa', 'resposta', 'usuario'
+    $comResiduo = @($PESSOAIS | Where-Object { $conteudo -match ("INSERT INTO ``{0}``" -f $_) })
+
     Escrever ""
+    if ($comResiduo.Count -gt 0) {
+        Escrever "  ATENCAO - sobraram dados pessoais na semente:" Red
+        foreach ($t in $comResiduo) { Escrever "    $t" Red }
+        Escrever "  Nao publique este arquivo: acrescente a(s) tabela(s) a limpeza deste script." DarkYellow
+        Escrever ""
+        exit 1
+    }
+
     if ($vazados -gt 0) {
         Escrever "  ATENCAO - encontrei $vazados e-mail(s) na semente." Red
         Escrever "  Nao publique este arquivo: confira quais tabelas novas guardam" Red
