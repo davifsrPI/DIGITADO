@@ -435,15 +435,34 @@ public class JogoSalaService {
         return jogo.gerarRelatorio();
     }
 
-    // Resultado de uma resposta: contém o feedback individual + o estado atualizado da
-    // sala. Numa resposta RECUSADA o estado vem null - nada mudou no placar, então não
-    // há o que retransmitir para a sala inteira, só o aviso para quem respondeu.
-    public record ResultadoResposta(FeedbackAluno feedback, EstadoJogoDTO estado) {}
+    /**
+     * Resultado de uma resposta.
+     *
+     * feedback: vai para quem respondeu, sempre.
+     *
+     * estado: o estado COMPLETO da sala, para retransmitir a todo mundo. Só vem
+     * preenchido quando a sala inteira realmente precisa dele - quando a rodada fecha
+     * (o último jogador respondeu) ou num duelo 1v1, onde são dois aparelhos e o custo
+     * não existe. Durante a rodada de uma turma vem null: mandar 5 KB de placar para
+     * 40 aparelhos a cada resposta era o que travava a partida no celular.
+     *
+     * evento: o aviso leve da resposta, para o painel ao vivo de quem comanda a sala.
+     *
+     * Numa resposta RECUSADA os dois vêm null - nada mudou, não há o que contar a ninguém.
+     */
+    public record ResultadoResposta(FeedbackAluno feedback, EstadoJogoDTO estado, RespostaRodada evento) {}
 
     // Aviso de resposta não contabilizada. Não devolve o texto da palavra: a rodada
     // pode continuar aberta para os outros e ninguém recebe a resposta antes da hora.
     private FeedbackAluno recusa(String motivo) {
         return new FeedbackAluno(false, 0, 0, motivo, null, false);
+    }
+
+    // Login de quem comanda a sala, para o controller saber a quem mandar o aviso leve
+    // da resposta. null em duelo 1v1 e em sala sem professor conectado.
+    public String loginProfessorDaSala(String codigoSala) {
+        EstadoJogo jogo = jogos.get(codigoSala);
+        return jogo != null && !jogo.isModo1v1() ? jogo.getLoginProfessor() : null;
     }
 
     // Processa a resposta de um aluno:
@@ -468,11 +487,11 @@ public class JogoSalaService {
         // A recusa VOLTA para o aluno (registrada = false): sem ela a tela mantinha o
         // "você acertou" da conferência local, e ele não entendia por que ficou sem ponto.
         if (!"NOVA_PALAVRA".equals(jogo.getTipo())) {
-            return new ResultadoResposta(recusa("RODADA_ENCERRADA"), null);
+            return new ResultadoResposta(recusa("RODADA_ENCERRADA"), null, null);
         }
         long decorrido = Instant.now().toEpochMilli() - jogo.getTimestampInicio();
         if (decorrido > jogo.getTempoLimite() * 1000L + FOLGA_RESPOSTA_MS) {
-            return new ResultadoResposta(recusa("TEMPO_ESGOTADO"), null);
+            return new ResultadoResposta(recusa("TEMPO_ESGOTADO"), null, null);
         }
 
         String textoCorreto = jogo.getPalavraAtual().getTexto();
@@ -554,8 +573,20 @@ public class JogoSalaService {
 
         // ordem do feedback = posição entre os acertos (é o "Nº a acertar" da tela)
         FeedbackAluno feedback = new FeedbackAluno(correta, pontos, chegada.ordemAcerto(), tipoErro, textoCorreto, true);
-        EstadoJogoDTO estado = buildEstado(codigoSala, nomeSala, jogo, jogo.getTipo());
-        return new ResultadoResposta(feedback, estado);
+
+        // Rodada FECHOU (o último jogador respondeu) ou duelo 1v1: a sala inteira
+        // recebe o estado completo, que é o que alimenta a tela de ranking com a
+        // pontuação nova. Fora disso, durante a rodada, vai só o aviso leve.
+        boolean fechouARodada = jogo.todosJogadoresResponderam();
+        EstadoJogoDTO estado = (fechouARodada || jogo.isModo1v1()) ? buildEstado(codigoSala, nomeSala, jogo, jogo.getTipo()) : null;
+        RespostaRodada evento = new RespostaRodada(
+            jogo.getIndiceAtual(),
+            login,
+            correta ? "ACERTOU" : "ERROU",
+            jogo.totalRespostasNaRodada(),
+            jogo.totalAcertosNaRodada()
+        );
+        return new ResultadoResposta(feedback, estado, evento);
     }
 
     /**
@@ -1065,6 +1096,31 @@ public class JogoSalaService {
         // O login joga nesta sala? Só o professor da sala de turma não joga.
         boolean ehJogador(String login) {
             return modo1v1 || !login.equals(loginProfessor);
+        }
+
+        // Todos os JOGADORES conectados já responderam a palavra atual? É o instante em
+        // que a rodada fecha: dali em diante a sala inteira precisa do placar novo.
+        // Sala sem jogador nenhum nunca "fecha" - não há rodada para encerrar.
+        boolean todosJogadoresResponderam() {
+            List<String> jogadores = alunosConectados.keySet().stream().filter(this::ehJogador).toList();
+            return !jogadores.isEmpty() && jogadores.stream().allMatch(respondeuNaRodada::contains);
+        }
+
+        // Quantos JOGADORES já responderam nesta rodada (o professor nunca entra)
+        int totalRespostasNaRodada() {
+            return (int) respondeuNaRodada.stream().filter(this::ehJogador).count();
+        }
+
+        // Quantos acertaram nesta rodada, pelo status que ficou no placar
+        int totalAcertosNaRodada() {
+            return (int) respondeuNaRodada
+                .stream()
+                .filter(this::ehJogador)
+                .filter(login -> {
+                    AlunoInfo info = placar.get(login);
+                    return info != null && "ACERTOU".equals(info.statusAtual());
+                })
+                .count();
         }
     }
 }

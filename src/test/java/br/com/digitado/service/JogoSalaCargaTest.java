@@ -306,40 +306,60 @@ class JogoSalaCargaTest {
     }
 
     /**
-     * Cada resposta faz o servidor mandar o estado INTEIRO da sala para todo mundo.
-     * Numa turma de 40 isso são 40 respostas x 40 destinatários = 1600 mensagens por
-     * rodada, cada uma carregando o placar completo. Este teste mede o tamanho dessa
-     * mensagem e o tráfego que ela gera - é o número que decide se o wi-fi da escola
-     * aguenta a partida, e nenhum teste de CPU mostra isso.
+     * Tráfego de uma rodada com a turma cheia.
+     *
+     * Antes, cada resposta mandava o estado INTEIRO da sala para todo mundo: 40
+     * respostas x 40 aparelhos = 1600 mensagens de 5 KB por palavra, e cada uma
+     * redesenhava a tela de todos os alunos. Agora, durante a rodada, sai só um aviso
+     * de algumas dezenas de bytes e só para quem comanda a sala; o placar completo vai
+     * uma vez, quando a rodada fecha.
+     *
+     * O teste mede os dois e trava a diferença: se alguém voltar a transmitir o placar
+     * a cada resposta, a conta explode e o teste avisa.
      */
     @Test
-    @DisplayName("BENCHMARK: tamanho da mensagem enviada a cada resposta")
-    void tamanhoDoBroadcastComTurmaCheia() throws Exception {
+    @DisplayName("BENCHMARK: tráfego de uma rodada com turma cheia")
+    void trafegoDaRodadaComTurmaCheia() throws Exception {
         turmaInteiraEntra();
         iniciarPartida();
         String certa = palavraDaRodada();
-        for (int i = 1; i <= ALUNOS; i++) {
-            service.responder(SALA, NOME_SALA, login(i), nome(i), i % 2 == 0 ? certa : "erro" + i, 0);
-        }
 
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-        byte[] json = mapper.writeValueAsBytes(service.getEstado(SALA, NOME_SALA));
-        int bytesPorMensagem = json.length;
-        long mensagensPorRodada = (long) ALUNOS * ALUNOS; // cada resposta vai para todos
-        long trafegoPorRodadaKb = (bytesPorMensagem * mensagensPorRodada) / 1024;
+        long bytesNovos = 0;
+        int mensagensNovas = 0;
+        for (int i = 1; i <= ALUNOS; i++) {
+            JogoSalaService.ResultadoResposta r = service.responder(SALA, NOME_SALA, login(i), nome(i), i % 2 == 0 ? certa : "erro" + i, 0);
+            if (r.evento() != null && r.estado() == null) {
+                // aviso leve: um destinatário só, o professor
+                bytesNovos += mapper.writeValueAsBytes(r.evento()).length;
+                mensagensNovas += 1;
+            }
+            if (r.estado() != null) {
+                // rodada fechou: o placar completo vai para a sala inteira
+                bytesNovos += (long) mapper.writeValueAsBytes(r.estado()).length * ALUNOS;
+                mensagensNovas += ALUNOS;
+            }
+        }
+
+        int bytesDoEstado = mapper.writeValueAsBytes(service.getEstado(SALA, NOME_SALA)).length;
+        long mensagensAntigas = (long) ALUNOS * ALUNOS;
+        long bytesAntigos = (long) bytesDoEstado * mensagensAntigas;
 
         LOG.info(
-            "BENCHMARK · estado da sala com {} alunos: {} bytes por mensagem · {} mensagens por rodada · {} KB por rodada",
+            "BENCHMARK · tráfego de UMA rodada com {} alunos — antes: {} mensagens / {} KB · agora: {} mensagens / {} KB ({}x menos)",
             ALUNOS,
-            bytesPorMensagem,
-            mensagensPorRodada,
-            trafegoPorRodadaKb
+            mensagensAntigas,
+            bytesAntigos / 1024,
+            mensagensNovas,
+            bytesNovos / 1024,
+            bytesAntigos / Math.max(bytesNovos, 1)
         );
 
-        // Limite de sanidade: o estado de uma turma cheia tem de caber em poucos KB.
-        // Se passar disso, algum campo novo entrou no DTO e está sendo repetido 1600
-        // vezes por rodada - o lugar de corrigir é o que o broadcast carrega.
-        assertThat(bytesPorMensagem).as("tamanho do estado com turma cheia").isLessThan(16 * 1024);
+        assertThat(bytesNovos).as("tráfego da rodada tem de ser uma fração do antigo").isLessThan(bytesAntigos / 10);
+        // O aviso leve tem de continuar leve: se alguém pendurar o placar nele, some a economia
+        assertThat(mapper.writeValueAsBytes(new br.com.digitado.web.websocket.dto.RespostaRodada(0, "aluno01", "ACERTOU", 1, 1)).length)
+            .as("tamanho do aviso de resposta")
+            .isLessThan(200);
     }
 
     @Test

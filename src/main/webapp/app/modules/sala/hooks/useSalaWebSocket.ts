@@ -57,6 +57,23 @@ export interface FeedbackAluno {
   registrada: boolean;
 }
 
+/**
+ * Aviso leve de que alguém respondeu, recebido durante a rodada.
+ *
+ * Durante a rodada o servidor não transmite mais o placar inteiro a cada resposta -
+ * numa turma de 40 eram 5 KB e um redesenho de tela por colega que respondia. Vai só
+ * este aviso, e só para quem comanda a sala. O placar completo volta quando a rodada
+ * fecha, ou sob encomenda (ver pedirEstado).
+ */
+export interface RespostaRodada {
+  // Rodada a que a resposta pertence: aviso atrasado de palavra que já passou é descartado
+  indiceAtual: number;
+  login: string;
+  statusAtual: string;
+  totalRespostas: number;
+  totalAcertos: number;
+}
+
 // Erro enviado pelo servidor via WebSocket (ex: tentativa não autorizada de iniciar)
 export interface ErroWS {
   tipo: string;
@@ -82,12 +99,14 @@ interface UseSalaWebSocketOptions {
   onEstado?: (estado: EstadoJogo) => void;
   onFeedback?: (feedback: FeedbackAluno) => void;
   onErro?: (erro: ErroWS) => void;
+  // Chamado a cada resposta durante a rodada (só chega a quem comanda a sala)
+  onRespostaRodada?: (evento: RespostaRodada) => void;
 }
 
 // Hook principal
 // Gerencia toda a conexão WebSocket com STOMP/SockJS para uma sala de jogo.
 // Retorna funções para enviar ações (iniciar, responder, próxima...) e o estado de conexão.
-export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback, onErro }: UseSalaWebSocketOptions) {
+export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback, onErro, onRespostaRodada }: UseSalaWebSocketOptions) {
   const clientRef = useRef<Client | null>(null);
   const [conectado, setConectado] = useState(false);
 
@@ -96,6 +115,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
   const onEstadoRef = useRef(onEstado);
   const onFeedbackRef = useRef(onFeedback);
   const onErroRef = useRef(onErro);
+  const onRespostaRodadaRef = useRef(onRespostaRodada);
   useEffect(() => {
     onEstadoRef.current = onEstado;
   }, [onEstado]);
@@ -105,6 +125,9 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
   useEffect(() => {
     onErroRef.current = onErro;
   }, [onErro]);
+  useEffect(() => {
+    onRespostaRodadaRef.current = onRespostaRodada;
+  }, [onRespostaRodada]);
 
   // Nome de exibição em ref: ele muda sozinho quando a sessão do usuário é recarregada
   // (o apelido chega depois), e como dependência do efeito de conexão isso derrubava e
@@ -132,6 +155,17 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
         client.subscribe(`/user/queue/sala/${codigoSala}/feedback`, (msg: IMessage) => {
           const feedback: FeedbackAluno = JSON.parse(msg.body);
           onFeedbackRef.current?.(feedback);
+        });
+        // Estado completo pedido sob encomenda (ver pedirEstado): chega só para este
+        // usuário e entra pelo mesmo caminho do estado que vem no tópico da sala
+        client.subscribe(`/user/queue/sala/${codigoSala}/estado`, (msg: IMessage) => {
+          const estado: EstadoJogo = JSON.parse(msg.body);
+          onEstadoRef.current?.(corrigirRelogio(estado));
+        });
+        // Avisos leves das respostas da rodada (só quem comanda a sala recebe)
+        client.subscribe(`/user/queue/sala/${codigoSala}/rodada`, (msg: IMessage) => {
+          const evento: RespostaRodada = JSON.parse(msg.body);
+          onRespostaRodadaRef.current?.(evento);
         });
         // Inscreve no canal privado de erros (ex: permissão negada ao tentar iniciar)
         client.subscribe(`/user/queue/sala/${codigoSala}/erro`, (msg: IMessage) => {
@@ -192,5 +226,9 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     // tentativasBurla: nº de inserções bloqueadas (colar, corretor) durante a rodada,
     // vai junto para o servidor marcar a resposta como suspeita
     responder: (respostaDigitada: string, tentativasBurla = 0) => publicar('responder', { respostaDigitada, tentativasBurla }),
+    // Pede o placar atualizado só para este aparelho. Usado ao abrir a tela de ranking
+    // quando o tempo esgotou sem todo mundo responder: nesse caminho o servidor não
+    // transmitiu nada durante a rodada, então a pontuação na tela é a do início dela
+    pedirEstado: () => publicar('estado'),
   };
 }

@@ -241,22 +241,23 @@ class JogoSalaServiceTest {
             assertThat(erro.feedback().correta()).isFalse();
             assertThat(erro.feedback().pontos()).isZero();
             assertThat(erro.feedback().ordem()).isZero();
-            assertThat(noPlacar(erro.estado(), "ana").pontos()).isZero();
+            assertThat(noPlacar(service.getEstado(SALA, NOME_SALA), "ana").pontos()).isZero();
         }
 
         @Test
         void acertoSempreSomaPontoNoPlacar() {
             JogoSalaService.ResultadoResposta r = service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
 
-            assertThat(noPlacar(r.estado(), "ana").pontos()).isEqualTo(r.feedback().pontos()).isPositive();
-            assertThat(noPlacar(r.estado(), "ana").statusAtual()).isEqualTo("ACERTOU");
+            EstadoJogoDTO estado = service.getEstado(SALA, NOME_SALA);
+            assertThat(noPlacar(estado, "ana").pontos()).isEqualTo(r.feedback().pontos()).isPositive();
+            assertThat(noPlacar(estado, "ana").statusAtual()).isEqualTo("ACERTOU");
         }
 
         @Test
         void placarUsaOnomePublicoDaEntradaNaSala() {
-            JogoSalaService.ResultadoResposta r = service.responder(SALA, NOME_SALA, "ana", "ana", "casa", 0);
+            service.responder(SALA, NOME_SALA, "ana", "ana", "casa", 0);
 
-            assertThat(noPlacar(r.estado(), "ana").nome()).isEqualTo("Ana");
+            assertThat(noPlacar(service.getEstado(SALA, NOME_SALA), "ana").nome()).isEqualTo("Ana");
         }
 
         @Test
@@ -342,6 +343,97 @@ class JogoSalaServiceTest {
 
             assertThat(r.feedback().correta()).isFalse();
             assertThat(r.feedback().tipoErro()).isEqualTo("ACENTUACAO");
+        }
+    }
+
+    @Nested
+    @DisplayName("o que sai no ar a cada resposta")
+    class TransmissaoDaRodada {
+
+        @BeforeEach
+        void iniciar() {
+            comPalavras(palavra(1L, "casa"));
+            service.registrarProfessor(SALA, PROFESSOR, "Professora Ana", "s-prof");
+            service.registrarAluno(SALA, "ana", "Ana", "s1");
+            service.registrarAluno(SALA, "bruno", "Bruno", "s2");
+            service.registrarAluno(SALA, "carla", "Carla", "s3");
+            iniciarPartida(30);
+        }
+
+        // O placar inteiro para todo mundo a cada resposta era 5 KB vezes o tamanho da
+        // turma, a cada colega que respondia
+        @Test
+        void respostaNoMeioDaRodadaNaoCarregaOplacarInteiro() {
+            JogoSalaService.ResultadoResposta r = service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
+
+            assertThat(r.estado()).as("nada a retransmitir para a sala ainda").isNull();
+            assertThat(r.evento()).isNotNull();
+            assertThat(r.evento().login()).isEqualTo("ana");
+            assertThat(r.evento().statusAtual()).isEqualTo("ACERTOU");
+            assertThat(r.evento().totalRespostas()).isEqualTo(1);
+            assertThat(r.evento().totalAcertos()).isEqualTo(1);
+        }
+
+        @Test
+        void contadoresDoEventoAcompanhamARodada() {
+            service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
+            JogoSalaService.ResultadoResposta r = service.responder(SALA, NOME_SALA, "bruno", "Bruno", "kasa", 0);
+
+            assertThat(r.evento().statusAtual()).isEqualTo("ERROU");
+            assertThat(r.evento().totalRespostas()).isEqualTo(2);
+            assertThat(r.evento().totalAcertos()).as("o erro nao conta como acerto").isEqualTo(1);
+        }
+
+        @Test
+        void aUltimaRespostaDaRodadaLevaOplacarParaTodaASala() {
+            service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
+            service.responder(SALA, NOME_SALA, "bruno", "Bruno", "casa", 0);
+            JogoSalaService.ResultadoResposta ultima = service.responder(SALA, NOME_SALA, "carla", "Carla", "casa", 0);
+
+            assertThat(ultima.estado()).as("rodada fechou: a sala precisa do placar novo").isNotNull();
+            assertThat(ultima.estado().placar()).hasSize(3);
+        }
+
+        // O professor nao joga: a rodada fecha quando os ALUNOS respondem, sem esperar por ele
+        @Test
+        void oProfessorNaoSeguraOfechamentoDaRodada() {
+            service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
+            service.responder(SALA, NOME_SALA, "bruno", "Bruno", "casa", 0);
+            JogoSalaService.ResultadoResposta ultima = service.responder(SALA, NOME_SALA, "carla", "Carla", "casa", 0);
+
+            assertThat(ultima.estado()).isNotNull();
+        }
+
+        @Test
+        void oEventoSabeAqueRodadaPertence() {
+            JogoSalaService.ResultadoResposta r = service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
+
+            assertThat(r.evento().indiceAtual()).isEqualTo(service.getEstado(SALA, NOME_SALA).indiceAtual());
+        }
+
+        // Duelo 1v1 sao dois aparelhos: transmitir o estado inteiro nao custa nada e
+        // mantem a tela dos dois sempre em dia
+        @Test
+        void dueloContinuaRecebendoOplacarInteiro() {
+            JogoSalaService serv2 = new JogoSalaService(
+                palavraRepository,
+                palavraEstatisticaService,
+                conquistaEngine,
+                estatisticaPartidaService,
+                historicoRespostaService
+            );
+            serv2.registrarNoDuelo("DUELO1", "ana", "Ana", "d1");
+            serv2.registrarNoDuelo("DUELO1", "bruno", "Bruno", "d2");
+            serv2.iniciar("DUELO1", "Duelo", new IniciarPayload(30, 30, 30, 1, 0, 0, List.of(), List.of()), "ana");
+
+            JogoSalaService.ResultadoResposta r = serv2.responder("DUELO1", "Duelo", "ana", "Ana", "casa", 0);
+
+            assertThat(r.estado()).as("no duelo o placar segue indo inteiro").isNotNull();
+        }
+
+        @Test
+        void oProfessorEhOdestinoDoAvisoLeve() {
+            assertThat(service.loginProfessorDaSala(SALA)).isEqualTo(PROFESSOR);
         }
     }
 }

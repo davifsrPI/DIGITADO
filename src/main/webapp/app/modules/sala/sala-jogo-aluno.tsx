@@ -56,6 +56,8 @@ interface Props {
   onIniciar?: (cfg: GameConfig) => void;
   onProxima?: () => void;
   initialGameConfig?: GameConfig;
+  // Pede ao servidor o placar atualizado só para este aparelho (ver pedirEstado)
+  onPedirEstado?: () => void;
 }
 
 // Tela de espera do CRIADOR do duelo 1v1 (componente próprio para não inflar a
@@ -170,6 +172,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
   onIniciar,
   onProxima,
   initialGameConfig,
+  onPedirEstado,
 }) => {
   const [resposta, setResposta] = useState('');
   const [falando, setFalando] = useState(false);
@@ -284,11 +287,14 @@ export const SalaJogoAluno: React.FC<Props> = ({
       const tempoEsgotado = Date.now() - estado.timestampInicio >= estado.tempoLimite * 1000;
       if (tempoEsgotado) {
         rankingTriggeredRef.current = true;
+        // O placar na tela é o do início da rodada: durante ela o servidor não
+        // transmite mais nada para o aluno. Pede o atualizado antes de mostrar o ranking.
+        onPedirEstado?.();
         setShowRanking(true);
         if (criadorDuelo) setRankingTimer(RANKING_DURACAO);
       }
     }
-  }, [tempoRestante, ativo, estado]);
+  }, [tempoRestante, ativo, estado, onPedirEstado]);
 
   // Se TODOS os conectados já responderam a palavra, vai direto para a tela de
   // correção/ranking, não faz sentido ficar olhando o relógio depois de todo

@@ -197,11 +197,38 @@ public class JogoSalaController {
 
         // Feedback vai apenas para quem respondeu (via user destination privada)
         messaging.convertAndSendToUser(login, "/queue/sala/" + codigo + "/feedback", resultado.feedback());
-        // Placar atualizado vai para toda a sala. Resposta recusada não mexe no placar
-        // e vem sem estado: nada a retransmitir.
+
+        // Estado COMPLETO só quando a sala inteira precisa: rodada fechada ou duelo
+        // 1v1. Resposta recusada não mexe no placar e vem sem estado.
         if (resultado.estado() != null) {
             broadcast(codigo, resultado.estado());
+        } else if (resultado.evento() != null) {
+            // Rodada em andamento numa turma: o aviso leve vai SÓ para quem comanda a
+            // sala, que é quem acompanha "quantos já responderam". Os aparelhos dos
+            // alunos não recebem nada até a rodada fechar - durante a rodada a tela
+            // deles mostra a pontuação congelada de propósito, então o placar que
+            // chegava a cada resposta era 5 KB e um redesenho de tela por colega.
+            String professor = jogoService.loginProfessorDaSala(codigo);
+            if (professor != null) {
+                messaging.convertAndSendToUser(professor, "/queue/sala/" + codigo + "/rodada", resultado.evento());
+            }
         }
+    }
+
+    /**
+     * Devolve o estado completo da sala SÓ para quem pediu.
+     *
+     * Durante a rodada o placar não é mais transmitido a cada resposta, então quando o
+     * tempo esgota sem todo mundo ter respondido o aparelho está com a pontuação do
+     * início da rodada. A tela de ranking pede o estado neste instante e recebe os
+     * números novos - uma mensagem por aparelho por rodada, no lugar de uma por
+     * resposta de cada colega.
+     */
+    @MessageMapping("/sala/{codigo}/estado")
+    public void estado(@DestinationVariable String codigo, Principal principal) {
+        if (principal == null) return;
+        EstadoJogoDTO estado = jogoService.getEstado(codigo, getNomeSala(codigo));
+        messaging.convertAndSendToUser(principal.getName(), "/queue/sala/" + codigo + "/estado", estado);
     }
 
     // Envia o estado do jogo para todos os participantes inscritos no tópico da sala

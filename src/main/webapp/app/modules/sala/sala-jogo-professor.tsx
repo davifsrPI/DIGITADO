@@ -38,6 +38,8 @@ interface Props {
   // Login do próprio professor: usado para EXCLUÍ-LO das contagens ao vivo e do
   // ranking, ele comanda a partida, não compete com os alunos
   meuLogin?: string;
+  // Pede ao servidor o placar atualizado só para este aparelho (ver pedirEstado)
+  onPedirEstado?: () => void;
 }
 
 // Relatório da partida (visão do professor): espelho dos records
@@ -102,6 +104,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   conectado,
   onIniciar,
   onProxima,
+  onPedirEstado,
   initialGameConfig,
   meuLogin,
 }) => {
@@ -250,10 +253,13 @@ export const SalaJogoProfessor: React.FC<Props> = ({
       const tempoEsgotado = Date.now() - estado.timestampInicio >= estado.tempoLimite * 1000;
       if (!tempoEsgotado) return;
       rankingTriggeredRef.current = true;
+      // Durante a rodada o servidor não transmite o placar a cada resposta; o ranking
+      // que vai aparecer precisa da pontuação de agora, então pede antes de trocar de tela
+      onPedirEstado?.();
       setShowRanking(true);
       setRankingTimer(RANKING_DURATION);
     }
-  }, [tempoRestante, estado]);
+  }, [tempoRestante, estado, onPedirEstado]);
 
   // Conta regressiva do ranking (8s), ao chegar a zero avança para a próxima palavra
   useEffect(() => {

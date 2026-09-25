@@ -5,7 +5,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
 import { useAppSelector } from 'app/config/store';
-import { ErroWS, EstadoJogo, FeedbackAluno, useSalaWebSocket } from './hooks/useSalaWebSocket';
+import { ErroWS, EstadoJogo, FeedbackAluno, RespostaRodada, useSalaWebSocket } from './hooks/useSalaWebSocket';
 import { SalaJogoAluno } from './sala-jogo-aluno';
 import { SalaJogoProfessor } from './sala-jogo-professor';
 import { useBodyClass } from 'app/shared/util/use-body-class';
@@ -100,6 +100,24 @@ export const SalaJogo: React.FC = () => {
     setFeedback(f);
   }, []);
 
+  /**
+   * Resposta de alguém durante a rodada, no formato leve.
+   *
+   * Aplica só o STATUS daquele jogador sobre o placar que já está na tela. A
+   * pontuação não muda aqui de propósito: durante a rodada ela fica congelada, e o
+   * placar novo chega inteiro quando a rodada fecha. Aviso de uma palavra que já
+   * passou é descartado, para não sujar a contagem da rodada em andamento.
+   */
+  const handleRespostaRodada = useCallback((ev: RespostaRodada) => {
+    setEstado(anterior => {
+      if (!anterior || anterior.indiceAtual !== ev.indiceAtual) return anterior;
+      return {
+        ...anterior,
+        placar: anterior.placar.map(p => (p.login === ev.login ? { ...p, statusAtual: ev.statusAtual } : p)),
+      };
+    });
+  }, []);
+
   // Mostra o erro por 6 segundos e depois esconde automaticamente
   const handleErro = useCallback((e: ErroWS) => {
     setErroWS(e);
@@ -107,13 +125,14 @@ export const SalaJogo: React.FC = () => {
   }, []);
 
   // Conexão WebSocket
-  const { conectado, iniciar, proxima, pausar, encerrar, responder } = useSalaWebSocket({
+  const { conectado, iniciar, proxima, pausar, encerrar, responder, pedirEstado } = useSalaWebSocket({
     codigoSala: codigo,
     login,
     nome,
     onEstado: handleEstado,
     onFeedback: handleFeedback,
     onErro: handleErro,
+    onRespostaRodada: handleRespostaRodada,
   });
 
   return (
@@ -150,6 +169,7 @@ export const SalaJogo: React.FC = () => {
             codigoSala={codigo}
             onIniciar={iniciar}
             onProxima={proxima}
+            onPedirEstado={pedirEstado}
             initialGameConfig={gameConfig}
           />
         ) : isProfessor ? (
@@ -162,6 +182,7 @@ export const SalaJogo: React.FC = () => {
             onPausar={pausar}
             onEncerrar={encerrar}
             onResponder={responder}
+            onPedirEstado={pedirEstado}
             initialGameConfig={gameConfig}
             // Login do professor: a tela usa para excluí-lo das contagens e do ranking
             meuLogin={login}
@@ -176,6 +197,7 @@ export const SalaJogo: React.FC = () => {
             onResponder={responder}
             conectado={conectado}
             duelo1v1={modo1v1 === true}
+            onPedirEstado={pedirEstado}
           />
         )}
       </div>
