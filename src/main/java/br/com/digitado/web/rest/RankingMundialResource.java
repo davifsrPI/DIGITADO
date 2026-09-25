@@ -69,10 +69,30 @@ public class RankingMundialResource {
         List<RankingEntryVM> entries = new ArrayList<>(pagina.getNumberOfElements());
         int posicaoInicial = pagina.getNumber() * TAMANHO_PAGINA;
         List<Usuario> usuarios = pagina.getContent();
+        /*
+         * Posição com EMPATE dividindo o lugar: quem tem o mesmo XP fica na mesma
+         * posição e o próximo pula os lugares ocupados (1º, 2º, 2º, 4º). Numerar pela
+         * linha da lista dava posições que não fechavam com "Sua posição" (calculada
+         * abaixo por quantos têm mais XP) - dois empatados apareciam como 19º e 20º e
+         * os dois liam "sua posição: 19º".
+         */
+        int posicao = 0;
+        Long xpDoGrupo = null;
         for (int i = 0; i < usuarios.size(); i++) {
             Usuario u = usuarios.get(i);
+            long xp = u.getXp();
+            if (xpDoGrupo == null) {
+                // Primeiro da página: o grupo de empate pode ter começado na página
+                // anterior, então a posição real vem de quantos têm mais XP que ele
+                posicao = (int) usuarioRepository.countByXpGreaterThan(xp) + 1;
+                xpDoGrupo = xp;
+            } else if (xp != xpDoGrupo) {
+                // Grupo novo começa nesta linha: todos os anteriores têm mais XP
+                posicao = posicaoInicial + i + 1;
+                xpDoGrupo = xp;
+            }
             boolean souEu = eu.isPresent() && eu.orElseThrow().getId().equals(u.getId());
-            entries.add(new RankingEntryVM(posicaoInicial + i + 1, nomeExibicao(u), u.getXp(), souEu));
+            entries.add(new RankingEntryVM(posicao, nomeExibicao(u), xp, souEu));
         }
 
         long meuXp = eu.map(Usuario::getXp).orElse(0L);

@@ -51,6 +51,10 @@ export interface FeedbackAluno {
   ordem: number;
   tipoErro?: string;
   textoCorreto: string;
+  // A resposta foi contabilizada? false quando o servidor a recusou (chegou fora do
+  // tempo da rodada) - sem este aviso a tela mostrava o resultado da conferência local
+  // e o aluno via "acertou" sem ganhar ponto
+  registrada: boolean;
 }
 
 // Erro enviado pelo servidor via WebSocket (ex: tentativa não autorizada de iniciar)
@@ -102,6 +106,14 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     onErroRef.current = onErro;
   }, [onErro]);
 
+  // Nome de exibição em ref: ele muda sozinho quando a sessão do usuário é recarregada
+  // (o apelido chega depois), e como dependência do efeito de conexão isso derrubava e
+  // reabria o WebSocket no meio da partida. O valor só é lido no momento de entrar.
+  const nomeRef = useRef(nome);
+  useEffect(() => {
+    nomeRef.current = nome;
+  }, [nome]);
+
   // Cria e ativa o cliente STOMP ao montar o componente
   useEffect(() => {
     const token = Storage.local.get('jhi-authenticationToken') || Storage.session.get('jhi-authenticationToken');
@@ -129,7 +141,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
         // Anuncia entrada na sala para o servidor registrar o participante no placar
         client.publish({
           destination: `/app/sala/${codigoSala}/entrar`,
-          body: JSON.stringify({ login, nome }),
+          body: JSON.stringify({ login, nome: nomeRef.current }),
         });
       },
       onDisconnect: () => setConectado(false),
@@ -140,12 +152,22 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     return () => {
       client.deactivate();
     };
-  }, [codigoSala, login, nome]);
+  }, [codigoSala, login]);
 
-  // Função auxiliar para publicar mensagens no servidor
+  // Publica uma mensagem no servidor. Devolve false quando NÃO foi possível enviar
+  // (socket caído ou reconectando): sem esse retorno a resposta do aluno se perdia em
+  // silêncio - a tela dava a resposta como enviada, o servidor nunca a recebia e ele
+  // terminava a rodada com zero ponto mesmo tendo digitado a palavra certa.
   const publicar = useCallback(
-    (destino: string, payload?: unknown) => {
-      clientRef.current?.publish({ destination: `/app/sala/${codigoSala}/${destino}`, body: payload ? JSON.stringify(payload) : '' });
+    (destino: string, payload?: unknown): boolean => {
+      const client = clientRef.current;
+      if (!client?.connected) return false;
+      try {
+        client.publish({ destination: `/app/sala/${codigoSala}/${destino}`, body: payload ? JSON.stringify(payload) : '' });
+        return true;
+      } catch {
+        return false;
+      }
     },
     [codigoSala],
   );

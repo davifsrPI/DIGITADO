@@ -43,7 +43,10 @@ public class JogoSalaDisconnectListener {
             return;
         }
         String login = user.getName();
-        JogoSalaService.ResultadoDesconexao resultado = jogoService.aoDesconectar(login);
+        // Sai por SESSÃO: recarregar a página abre a conexão nova antes de a antiga ser
+        // encerrada, e remover o participante pelo login tirava da sala quem continuava
+        // conectado - ver JogoSalaService.aoDesconectar
+        JogoSalaService.ResultadoDesconexao resultado = jogoService.aoDesconectar(login, event.getSessionId());
 
         // Sala ficou vazia (qualquer estado) → fecha no banco (ativo = false)
         for (String codigo : resultado.salasVazias()) {

@@ -238,15 +238,22 @@ export const SalaJogoProfessor: React.FC<Props> = ({
     return () => clearInterval(id);
   }, [estado?.timestampInicio, estado?.tempoLimite, estado?.tipo]);
 
-  // Quando o tempo acaba, exibe a tela de ranking e inicia a contagem para a próxima palavra
+  // Quando o tempo acaba, exibe a tela de ranking e inicia a contagem para a próxima palavra.
+  // Confere contra o timestamp do SERVIDOR: tempoRestante começa a rodada valendo 0 (é o
+  // valor inicial do estado, antes de o timer acima calcular). Sem essa checagem, abrir a
+  // tela no meio de uma rodada - recarregar a página, voltar para a sala - caía direto no
+  // ranking: a palavra desaparecia da tela e, 8s depois, a rodada era passada para a turma
+  // inteira sem ninguém ter respondido.
   useEffect(() => {
-    const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
-    if (tempoRestante === 0 && ativo && estado?.palavraAtual != null && !rankingTriggeredRef.current) {
+    const emJogo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
+    if (tempoRestante === 0 && emJogo && estado?.palavraAtual != null && !rankingTriggeredRef.current) {
+      const tempoEsgotado = Date.now() - estado.timestampInicio >= estado.tempoLimite * 1000;
+      if (!tempoEsgotado) return;
       rankingTriggeredRef.current = true;
       setShowRanking(true);
       setRankingTimer(RANKING_DURATION);
     }
-  }, [tempoRestante]);
+  }, [tempoRestante, estado]);
 
   // Conta regressiva do ranking (8s), ao chegar a zero avança para a próxima palavra
   useEffect(() => {
@@ -266,7 +273,9 @@ export const SalaJogoProfessor: React.FC<Props> = ({
 
   /* LOBBY */
   if (!estado || estado.tipo === 'AGUARDANDO') {
-    const alunos = estado?.alunosConectados ?? [];
+    // O servidor já deixa o professor fora da lista; o filtro aqui cobre a sala que
+    // ficou com um registro antigo dele (sessão aberta antes desta correção)
+    const alunos = (estado?.alunosConectados ?? []).filter(a => a.login !== meuLogin);
     return (
       <div className="sj-lobby">
         <div className="sj-lobby-header">

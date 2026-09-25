@@ -12,6 +12,7 @@ body.login-page .view-container {
 .login-wrapper {
   position: relative;
   min-height: calc(100vh - 60px);
+  min-height: calc(100dvh - 60px);
   background: #0f172a;
   display: flex;
   flex-direction: column;
@@ -30,10 +31,19 @@ body.login-page .view-container {
   z-index: 0;
 }
 
+/* Brilho de fundo SEM filter: blur(). Um blur de mais de 100px obriga o
+   navegador a montar e refiltrar uma textura enorme a cada quadro, e era o
+   principal motivo de o app engasgar no iPhone. A mesma borda esfumada sai de
+   uma máscara radial, que o compositor resolve de graça: a escala compensa o
+   espalhamento que o blur dava, e cor, tamanho e posição de cada brilho
+   continuam onde estavam. */
 .lp-shape {
   position: absolute;
   border-radius: 50%;
-  filter: blur(130px);
+
+  -webkit-mask-image: radial-gradient(closest-side, #000, rgba(0, 0, 0, 0));
+  mask-image: radial-gradient(closest-side, #000, rgba(0, 0, 0, 0));
+  transform: scale(1.7);
 }
 
 .lp-shape.one {

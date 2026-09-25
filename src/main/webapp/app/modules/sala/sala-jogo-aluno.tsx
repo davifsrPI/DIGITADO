@@ -6,6 +6,7 @@ import { falarPalavra } from './utils/falar-palavra';
 import { RankingNuvem } from './ranking-nuvem';
 import { VinhetaPodio } from './vinheta-podio';
 import { AmpulhetaAnimada } from './ampulheta-animada';
+import { posicoesRanking } from './utils/posicoes-ranking';
 import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
 import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
 
@@ -39,7 +40,8 @@ interface Props {
   estado: EstadoJogo | null;
   feedback: FeedbackAluno | null;
   meuLogin: string;
-  onResponder: (resposta: string, tentativasBurla?: number) => void;
+  // Devolve false quando a resposta não chegou a ser enviada (WebSocket caído)
+  onResponder: (resposta: string, tentativasBurla?: number) => boolean;
   conectado: boolean;
   // Sala em modo duelo 1v1 (vale para os DOIS jogadores): quando todos os
   // conectados já responderam, a tela de correção da palavra aparece na hora,
@@ -105,6 +107,55 @@ const EsperaCriadorDuelo: React.FC<{
   );
 };
 
+/**
+ * Resultado da rodada para o próprio aluno, revelado quando o tempo acaba.
+ *
+ * Quem decide é o SERVIDOR: era a conferência local que dizia "você acertou" para uma
+ * resposta que o servidor tinha recusado (por chegar fora do tempo, por exemplo), e o
+ * aluno terminava a rodada sem entender por que não ganhou ponto. A conferência local
+ * continua valendo enquanto o feedback do servidor não chega, e é ela que detalha o
+ * erro (a % da palavra e as letras trocadas), que o servidor não manda.
+ */
+const ResultadoRodada: React.FC<{
+  feedback: FeedbackAluno | null;
+  validacaoLocal: ReturnType<typeof validarResposta> | null;
+  jaRespondeu: boolean;
+  resposta: string;
+  palavraCorreta: string;
+}> = ({ feedback, validacaoLocal, jaRespondeu, resposta, palavraCorreta }) => {
+  // Resposta enviada mas não contabilizada: dizer isso é melhor do que mostrar um
+  // acerto que não virou ponto
+  if (feedback && !feedback.registrada) {
+    return <span className="sj-similaridade sj-similaridade--warn">⏱ Sua resposta chegou fora do tempo e não foi contabilizada</span>;
+  }
+  if (!jaRespondeu || (!validacaoLocal && !feedback)) {
+    return <span className="sj-similaridade sj-similaridade--warn">Você não respondeu a tempo</span>;
+  }
+  const acertou = feedback ? feedback.correta : validacaoLocal?.correta === true;
+  if (acertou) {
+    return <span className="sj-similaridade sj-similaridade--ok">✓ Você acertou!{feedback ? ` +${feedback.pontos} pts` : ''}</span>;
+  }
+  return (
+    <>
+      <span className="sj-similaridade sj-similaridade--err">
+        ✗ Você errou
+        {validacaoLocal ? ` · você acertou ${Math.round(validacaoLocal.similaridade * 100)}% da palavra` : ''}
+        {validacaoLocal?.tipoErro ? ` · ${MENSAGEM_ERRO[validacaoLocal.tipoErro]}` : ''}
+      </span>
+      {/* Mostra O QUE o aluno errou: a resposta dele com as letras trocadas ou a mais
+          destacadas em vermelho (a palavra certa aparece inteira logo acima, para ele comparar) */}
+      <span className="sj-diff">
+        <span className="sj-diff-label">Você escreveu:</span>{' '}
+        {compararLetras(resposta, palavraCorreta).digitado.map((l, idx) => (
+          <span key={idx} className={l.ok ? 'sj-diff-ok' : 'sj-diff-err'}>
+            {l.ch}
+          </span>
+        ))}
+      </span>
+    </>
+  );
+};
+
 // Tela do aluno durante a partida: aguarda o professor iniciar, recebe a palavra via áudio,
 // digita a resposta e vê o feedback individual e o placar ao vivo dos colegas
 export const SalaJogoAluno: React.FC<Props> = ({
@@ -125,6 +176,12 @@ export const SalaJogoAluno: React.FC<Props> = ({
   const [jaRespondeu, setJaRespondeu] = useState(false);
   const [tempoRestante, setTempoRestante] = useState(0);
   const [validacaoLocal, setValidacaoLocal] = useState<ReturnType<typeof validarResposta> | null>(null);
+  // Envio que não saiu do aparelho (conexão caída): o aluno precisa saber para tentar
+  // de novo, em vez de achar que respondeu e terminar a rodada sem ponto
+  const [erroEnvio, setErroEnvio] = useState(false);
+  // O campo recusou um texto que não foi digitado (sugestão do teclado, corretor,
+  // colagem). Vira um aviso na tela: recusar em silêncio parece o campo travado.
+  const [bloqueioCorretor, setBloqueioCorretor] = useState(false);
   // Ranking exibido quando o tempo da rodada acaba (mesma tela que o professor vê)
   const [showRanking, setShowRanking] = useState(false);
   // Contagem regressiva do ranking, usada SÓ pelo criador do duelo, cujo cliente
@@ -154,6 +211,8 @@ export const SalaJogoAluno: React.FC<Props> = ({
         setJaRespondeu(false);
         burlasRef.current = 0;
         setValidacaoLocal(null);
+        setErroEnvio(false);
+        setBloqueioCorretor(false);
         setFalando(false);
         setShowRanking(false);
         rankingTriggeredRef.current = false;
@@ -200,9 +259,16 @@ export const SalaJogoAluno: React.FC<Props> = ({
       e.preventDefault();
       if (!resposta.trim() || jaRespondeu) return;
       if (!estado?.palavraAtual) return;
-      const v = validarResposta(resposta, estado.palavraAtual.texto);
-      setValidacaoLocal(v);
-      onResponder(resposta.trim(), burlasRef.current);
+      // Só dá a rodada por respondida se a mensagem REALMENTE saiu: com o socket
+      // reconectando, o publish não chega ao servidor e travar o campo aqui deixaria
+      // o aluno sem nova tentativa - e sem ponto pela palavra que ele acertou
+      const enviada = onResponder(resposta.trim(), burlasRef.current);
+      if (!enviada) {
+        setErroEnvio(true);
+        return;
+      }
+      setErroEnvio(false);
+      setValidacaoLocal(validarResposta(resposta, estado.palavraAtual.texto));
       setJaRespondeu(true);
     },
     [resposta, jaRespondeu, estado?.palavraAtual, onResponder],
@@ -291,13 +357,15 @@ export const SalaJogoAluno: React.FC<Props> = ({
     if (!vinhetaFimConcluida) {
       return <VinhetaPodio placar={estado.placar} meuLogin={meuLogin} onFim={() => setVinhetaFimConcluida(true)} />;
     }
+    // Empate divide o lugar (1º, 2º, 2º, 4º), igual ao ranking que o professor vê
+    const lugaresFinais = posicoesRanking(estado.placar.map(p => p.pontos));
     return (
       <div className="sj-ended">
         <h2>Atividade encerrada!</h2>
         <div className="sj-final-placar">
           {estado.placar.map((p, i) => (
             <div key={p.login} className={`sj-final-row${p.login === meuLogin ? ' sj-final-me' : ''}`}>
-              <span className="sj-final-rank">{i + 1}º</span>
+              <span className="sj-final-rank">{lugaresFinais[i]}º</span>
               <span className="sj-final-nome">
                 {p.nome || p.login}
                 {p.login === meuLogin ? ' (você)' : ''}
@@ -326,31 +394,13 @@ export const SalaJogoAluno: React.FC<Props> = ({
             <span className="sj-palavra-correta-label">Palavra correta</span>
             <span className="sj-palavra-correta-val">{estado.palavraAtual.texto}</span>
             {/* Só o aluno vê o próprio resultado, revelado agora, no fim da rodada */}
-            {jaRespondeu && validacaoLocal ? (
-              validacaoLocal.correta ? (
-                <span className="sj-similaridade sj-similaridade--ok">✓ Você acertou!</span>
-              ) : (
-                <>
-                  <span className="sj-similaridade sj-similaridade--err">
-                    ✗ Você errou · você acertou {Math.round(validacaoLocal.similaridade * 100)}% da palavra
-                    {validacaoLocal.tipoErro ? ` · ${MENSAGEM_ERRO[validacaoLocal.tipoErro]}` : ''}
-                  </span>
-                  {/* Mostra O QUE o aluno errou: a resposta dele com as letras
-                      trocadas ou a mais destacadas em vermelho (a palavra certa
-                      aparece inteira logo acima, para ele comparar) */}
-                  <span className="sj-diff">
-                    <span className="sj-diff-label">Você escreveu:</span>{' '}
-                    {compararLetras(resposta, estado.palavraAtual.texto).digitado.map((l, idx) => (
-                      <span key={idx} className={l.ok ? 'sj-diff-ok' : 'sj-diff-err'}>
-                        {l.ch}
-                      </span>
-                    ))}
-                  </span>
-                </>
-              )
-            ) : (
-              <span className="sj-similaridade sj-similaridade--warn">Você não respondeu a tempo</span>
-            )}
+            <ResultadoRodada
+              feedback={feedback}
+              validacaoLocal={validacaoLocal}
+              jaRespondeu={jaRespondeu}
+              resposta={resposta}
+              palavraCorreta={estado.palavraAtual.texto}
+            />
           </div>
         )}
 
@@ -422,6 +472,9 @@ export const SalaJogoAluno: React.FC<Props> = ({
             onChange={setResposta}
             onBurla={() => {
               burlasRef.current += 1;
+              // Avisa o aluno: sem isso, tocar numa sugestão do teclado simplesmente
+              // não fazia nada e ele ficava tentando de novo, achando que travou
+              setBloqueioCorretor(true);
             }}
             placeholder="escreva aqui..."
             disabled={jaRespondeu || !ativo}
@@ -429,15 +482,37 @@ export const SalaJogoAluno: React.FC<Props> = ({
           <button type="submit" className="sj-send-btn" disabled={!resposta.trim() || jaRespondeu || !ativo}>
             {jaRespondeu ? 'Resposta enviada ✓' : 'Enviar resposta →'}
           </button>
+          {bloqueioCorretor && (
+            <div className="sj-feedback sj-feedback--warn">
+              <span className="sj-feedback-icon">⌨</span>
+              <div className="sj-feedback-body">
+                <strong>Escreva você mesmo</strong> · sugestão do teclado, colar e corretor não valem aqui
+              </div>
+            </div>
+          )}
+          {erroEnvio && (
+            <div className="sj-feedback sj-feedback--warn">
+              <span className="sj-feedback-icon">⚠</span>
+              <div className="sj-feedback-body">
+                <strong>Sem conexão com a sala</strong> · sua resposta não foi enviada, toque em enviar de novo
+              </div>
+            </div>
+          )}
         </form>
 
         {feedback && (
           // No acerto celebramos na hora; no erro ficamos NEUTROS (nada de ✗ vermelho):
           // o resultado só é revelado no fim da rodada, junto do % e do que errou
-          <div className={`sj-feedback${feedback.correta ? ' sj-feedback--ok' : ' sj-feedback--warn'}`}>
-            <span className="sj-feedback-icon">✓</span>
+          <div className={`sj-feedback${feedback.correta && feedback.registrada ? ' sj-feedback--ok' : ' sj-feedback--warn'}`}>
+            <span className="sj-feedback-icon">{feedback.registrada ? '✓' : '⏱'}</span>
             <div className="sj-feedback-body">
-              {feedback.correta ? (
+              {!feedback.registrada ? (
+                // O servidor recusou a resposta (chegou fora do tempo da rodada):
+                // avisar na hora evita a impressão de acerto que não virou ponto
+                <>
+                  <strong>Resposta fora do tempo</strong> · não foi contabilizada
+                </>
+              ) : feedback.correta ? (
                 <>
                   <strong>{feedback.ordem === 1 ? '1º a acertar!' : `${feedback.ordem}º a acertar`}</strong> · palavra correta
                 </>
@@ -449,7 +524,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
                 </>
               )}
             </div>
-            {feedback.correta && <span className="sj-feedback-pts">+{feedback.pontos} pts</span>}
+            {feedback.correta && feedback.registrada && <span className="sj-feedback-pts">+{feedback.pontos} pts</span>}
           </div>
         )}
 

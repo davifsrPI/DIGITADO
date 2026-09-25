@@ -58,9 +58,21 @@ function fonetizar(s: string): string {
 // 3. Igual foneticamente → erro fonético (ex: "chave" vs "xave")
 // 4. Levenshtein = 1 → identifica letra trocada, extra ou faltando
 // 5. Qualquer outro → erro genérico com percentual de similaridade
+// Forma canônica da comparação, a MESMA regra do servidor (JogoSalaService.canonico):
+// NFC junta "a + til" no mesmo "ã" que o teclado produz, e o espaço fixo (NBSP) de uma
+// palavra colada de documento vira espaço normal antes de aparar as pontas. Sem isso a
+// conferência local e a do servidor podiam discordar da mesma resposta.
+function canonico(s: string): string {
+  return s
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 export function validarResposta(digitado: string, correto: string): ResultadoValidacao {
-  const d = digitado.trim().toLowerCase();
-  const c = correto.trim().toLowerCase();
+  const d = canonico(digitado);
+  const c = canonico(correto);
 
   if (d === c) return { correta: true, similaridade: 1 };
 

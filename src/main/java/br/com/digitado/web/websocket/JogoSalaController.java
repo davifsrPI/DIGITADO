@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,14 +69,22 @@ public class JogoSalaController {
     // Em duelos 1v1 o servidor limita a 2 jogadores: o 3º recebe erro e não entra.
     // Depois de registrar, faz broadcast do estado atual para todos na sala.
     @MessageMapping("/sala/{codigo}/entrar")
-    public void entrar(@DestinationVariable String codigo, @Payload EntradaAluno entrada, Principal principal) {
+    public void entrar(
+        @DestinationVariable String codigo,
+        @Payload EntradaAluno entrada,
+        Principal principal,
+        SimpMessageHeaderAccessor headers
+    ) {
         if (principal == null) return;
         String login = principal.getName();
+        // Id da sessão WebSocket desta conexão: é por sessão que o participante entra e
+        // sai da sala, e não por login - ver JogoSalaService.aoDesconectar
+        String sessaoId = headers != null ? headers.getSessionId() : null;
         String nomeSala = getNomeSala(codigo);
         String nome = nomeExibicao(login, entrada.nome());
         boolean duelo = salaRepository.findByCodigo(codigo).map(s -> s.getTipo() == TipoSala.UM_V_UM).orElse(false);
         if (duelo) {
-            boolean entrou = jogoService.registrarNoDuelo(codigo, login, nome);
+            boolean entrou = jogoService.registrarNoDuelo(codigo, login, nome, sessaoId);
             if (!entrou) {
                 LOG.warn("Duelo {} cheio - entrada negada para {}", codigo, login);
                 messaging.convertAndSendToUser(
@@ -85,12 +94,14 @@ public class JogoSalaController {
                 );
                 return;
             }
-        } else if (!isProfessorDaSala(codigo, principal)) {
-            // O criador conduz a sala mas nao joga: fica de fora do placar e da
-            // contagem de alunos, para nao aparecer no ranking. O estado do jogo
-            // e criado mesmo assim pelo getEstado abaixo (computeIfAbsent), entao
-            // o professor continua recebendo o broadcast normalmente.
-            jogoService.registrarAluno(codigo, login, nome);
+        } else if (isProfessorDaSala(codigo, principal)) {
+            // O criador conduz a sala mas nao joga: fica de fora do placar e da lista de
+            // alunos, para nao aparecer na tela de espera nem no ranking da turma. Mas a
+            // CONEXAO dele conta: enquanto o professor esta na sala ela nao esta vazia e
+            // nao pode ser fechada por falta de participantes.
+            jogoService.registrarProfessor(codigo, login, nome, sessaoId);
+        } else {
+            jogoService.registrarAluno(codigo, login, nome, sessaoId);
         }
         // Conquista "Bem-vindo à Turma" (primeira sala) - nunca derruba a conexão
         try {
@@ -177,6 +188,7 @@ public class JogoSalaController {
             codigo,
             nomeSala,
             login,
+            // fallback do nome público: o valor que vale é o resolvido na entrada da sala
             login,
             payload.respostaDigitada(),
             tentativasBurla
@@ -185,8 +197,11 @@ public class JogoSalaController {
 
         // Feedback vai apenas para quem respondeu (via user destination privada)
         messaging.convertAndSendToUser(login, "/queue/sala/" + codigo + "/feedback", resultado.feedback());
-        // Placar atualizado vai para toda a sala
-        broadcast(codigo, resultado.estado());
+        // Placar atualizado vai para toda a sala. Resposta recusada não mexe no placar
+        // e vem sem estado: nada a retransmitir.
+        if (resultado.estado() != null) {
+            broadcast(codigo, resultado.estado());
+        }
     }
 
     // Envia o estado do jogo para todos os participantes inscritos no tópico da sala

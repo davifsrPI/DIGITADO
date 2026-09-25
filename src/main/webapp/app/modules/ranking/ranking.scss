@@ -13,6 +13,7 @@ body.ranking-page .view-container {
 .rk-wrapper {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   background: #0f172a;
   font-family: 'Poppins', sans-serif;
   color: white;
@@ -27,11 +28,19 @@ body.ranking-page .view-container {
   pointer-events: none;
 }
 
+/* Brilho de fundo SEM filter: blur(). Um blur de mais de 100px obriga o
+   navegador a montar e refiltrar uma textura enorme a cada quadro, e era o
+   principal motivo de o app engasgar no iPhone. A mesma borda esfumada sai de
+   uma máscara radial, que o compositor resolve de graça: a escala compensa o
+   espalhamento que o blur dava, e cor, tamanho e posição de cada brilho
+   continuam onde estavam. */
 .rk-shape {
   position: absolute;
   border-radius: 50%;
-  filter: blur(130px);
   opacity: 0.35;
+  -webkit-mask-image: radial-gradient(closest-side, #000, rgba(0, 0, 0, 0));
+  mask-image: radial-gradient(closest-side, #000, rgba(0, 0, 0, 0));
+  transform: scale(1.7);
 }
 
 .rk-shape.one {

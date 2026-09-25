@@ -66,10 +66,8 @@ export const SalaEstatisticas: React.FC = () => {
 
   return (
     <div className="sj-wrapper">
-      <div className="sj-bg">
-        <div className="sj-shape sj-shape-one" />
-        <div className="sj-shape sj-shape-two" />
-      </div>
+      {/* Mesmo fundo da tela da partida: gradiente no próprio .sj-bg */}
+      <div className="sj-bg" />
 
       <div className="sj-container">
         <button className="sj-back-btn" onClick={() => navigate('/minhas-salas')}>

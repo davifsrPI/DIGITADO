@@ -1,5 +1,6 @@
 import React from 'react';
 import { CORES_DIFICULDADE, LABELS_DIFICULDADE } from 'app/shared/util/dificuldade-constants';
+import { posicoesRanking } from './utils/posicoes-ranking';
 
 // Blocos do desempenho da turma numa partida: o ranking final e o relatório
 // "quem escreveu o quê" por palavra.
@@ -46,11 +47,13 @@ export const RankingPartida: React.FC<{ posicoes: PosicaoRanking[] }> = ({ posic
   if (posicoes.length === 0) {
     return <p className="sj-no-alunos">Nenhum aluno participou desta partida.</p>;
   }
+  // Empate divide a posição (1º, 2º, 2º, 4º) em vez de numerar pelo índice da lista
+  const lugares = posicoesRanking(posicoes.map(p => p.pontos));
   return (
     <div className="sj-final-placar">
       {posicoes.map((p, i) => (
         <div key={p.login} className="sj-final-row">
-          <span className="sj-final-rank">{i + 1}º</span>
+          <span className="sj-final-rank">{lugares[i]}º</span>
           <span className="sj-final-nome">
             {p.nome || p.login}
             {p.alertas > 0 && (

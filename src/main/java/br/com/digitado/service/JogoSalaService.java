@@ -29,6 +29,10 @@ public class JogoSalaService {
     // folga de rede: aceita resposta até 2s depois do tempo da rodada
     private static final long FOLGA_RESPOSTA_MS = 2000;
 
+    // Espaço fixo (U+00A0): vem em texto colado de documento e sobrevive ao trim,
+    // que só apara caracteres de controle e o espaço comum
+    private static final char ESPACO_FIXO = (char) 0x00A0;
+
     // ninguém digita mais rápido que ~80ms por letra; abaixo disso trato como bot
     private static final long MIN_MS_POR_LETRA = 80;
 
@@ -40,6 +44,22 @@ public class JogoSalaService {
 
     // Mapa em memória: código da sala → estado do jogo
     private final Map<String, EstadoJogo> jogos = new ConcurrentHashMap<>();
+
+    /**
+     * Ordem do placar: mais pontos primeiro e, no empate, nome e login em ordem
+     * alfabética.
+     *
+     * O desempate importa: o placar vive num ConcurrentHashMap, cuja ordem de
+     * iteração é arbitrária e muda conforme entram participantes. Sem um critério
+     * fixo, quem estava empatado trocava de lugar a cada mensagem do WebSocket e o
+     * ranking ao vivo parecia embaralhar sozinho entre uma resposta e outra.
+     */
+    private static final Comparator<Map.Entry<String, EstadoJogo.AlunoInfo>> ORDEM_PLACAR = Comparator.comparingInt(
+        (Map.Entry<String, EstadoJogo.AlunoInfo> e) -> e.getValue().pontos()
+    )
+        .reversed()
+        .thenComparing(e -> e.getValue().nome() != null ? e.getValue().nome() : "", String.CASE_INSENSITIVE_ORDER)
+        .thenComparing(Map.Entry::getKey);
 
     public JogoSalaService(
         PalavraRepository palavraRepository,
@@ -55,53 +75,76 @@ public class JogoSalaService {
         this.historicoRespostaService = historicoRespostaService;
     }
 
-    // Registra um participante na sala (cria o estado da sala se ainda não existir)
-    public void registrarAluno(String codigoSala, String login, String nome) {
-        jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo()).registrarAluno(login, nome);
+    // Registra um participante na sala (cria o estado da sala se ainda não existir).
+    // sessaoId: id da sessão WebSocket desta conexão - o mesmo aluno pode ter mais de
+    // uma aberta (recarregou a página, reconectou, abriu outra aba) e só sai da sala
+    // quando a ÚLTIMA delas cai.
+    public void registrarAluno(String codigoSala, String login, String nome, String sessaoId) {
+        jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo()).registrarAluno(login, nome, sessaoId);
+    }
+
+    /**
+     * Registra quem COMANDA a sala de turma. Ele conecta como todo mundo (a sala não
+     * pode ser considerada vazia enquanto o professor está nela), mas não entra no
+     * placar nem na lista de alunos: comanda a partida, não compete.
+     *
+     * Também limpa um placar herdado: se em algum momento este login foi registrado
+     * como aluno da sala, a entrada some daqui - era ela que fazia o professor
+     * aparecer na tela de espera e ocupar uma posição no ranking da turma.
+     */
+    public void registrarProfessor(String codigoSala, String login, String nome, String sessaoId) {
+        EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
+        jogo.registrarProfessor(login, nome, sessaoId);
     }
 
     // Registra um participante num duelo 1v1, respeitando o limite de 2 jogadores.
     // Retorna false se a sala já está cheia (e o login não é um dos dois que já estão nela -
     // reconexão de quem já participa é sempre aceita).
-    public boolean registrarNoDuelo(String codigoSala, String login, String nome) {
+    public boolean registrarNoDuelo(String codigoSala, String login, String nome, String sessaoId) {
         EstadoJogo jogo = jogos.computeIfAbsent(codigoSala, k -> new EstadoJogo());
         synchronized (jogo) {
             jogo.marcarModo1v1();
             if (jogo.totalConectados() >= 2 && !jogo.getAlunosConectados().containsKey(login)) {
                 return false;
             }
-            jogo.registrarAluno(login, nome);
+            jogo.registrarAluno(login, nome, sessaoId);
             return true;
         }
     }
 
-    // Quantos jogadores estão conectados na sala agora (0 se a sala nem tem estado em memória)
+    // Quantos JOGADORES estão conectados na sala agora (0 se a sala nem tem estado em
+    // memória). O professor da turma não conta: ele comanda a sala, não joga - a
+    // listagem mostraria "1 conectado" numa sala em que ninguém entrou ainda.
     public int conectadosNaSala(String codigoSala) {
         EstadoJogo jogo = jogos.get(codigoSala);
-        return jogo != null ? jogo.totalConectados() : 0;
-    }
-
-    // Remove um participante da lista de conectados (usado quando desconecta)
-    public void removerAluno(String codigoSala, String login) {
-        EstadoJogo jogo = jogos.get(codigoSala);
-        if (jogo != null) jogo.removerAluno(login);
+        return jogo != null ? jogo.totalJogadores() : 0;
     }
 
     // salasComSaida: salas de onde o jogador saiu; salasVazias: as que ficaram sem ninguém
     // (o chamador fecha essas no banco)
     public record ResultadoDesconexao(List<String> salasComSaida, List<String> salasVazias) {}
 
-    // remove o usuário de todas as salas em que estava e devolve quais ficaram vazias
-    // pra fechar depois
-    public ResultadoDesconexao aoDesconectar(String login) {
+    /**
+     * Fecha UMA sessão WebSocket do usuário em todas as salas em que ela estava e
+     * devolve quais ficaram vazias, pra fechar depois.
+     *
+     * A saída é por SESSÃO, não por login: recarregar a página (ou uma reconexão de
+     * rede) abre a sessão nova antes de a antiga ser encerrada, e remover pelo login
+     * apagava da sala um aluno que continuava conectado - a tela de espera do
+     * professor mostrava menos gente do que realmente tinha entrado.
+     */
+    public ResultadoDesconexao aoDesconectar(String login, String sessaoId) {
         List<String> salasComSaida = new ArrayList<>();
         List<String> salasVazias = new ArrayList<>();
         jogos.forEach((codigo, jogo) -> {
-            if (jogo.getAlunosConectados().containsKey(login)) {
-                jogo.removerAluno(login);
+            // ehJogador ANTES de remover: depois da saída o estado já não sabe quem era
+            boolean eraJogador = jogo.ehJogador(login);
+            if (jogo.removerSessao(login, sessaoId)) {
                 salasComSaida.add(codigo);
-                // saiu o último, sala ficou vazia
-                if (jogo.totalConectados() == 0) {
+                // Saiu o último JOGADOR e não ficou mais ninguém: sala abandonada.
+                // A saída do professor não fecha a sala por si só - ele recarregar a
+                // tela de espera, sozinho, fechava a sala que ele acabou de abrir.
+                if (eraJogador && jogo.totalConectados() == 0) {
                     salasVazias.add(codigo);
                 }
             }
@@ -264,9 +307,7 @@ public class JogoSalaService {
             .entrySet()
             .stream()
             .filter(e -> jogo.isModo1v1() || !e.getKey().equals(loginProfessor))
-            .sorted(
-                Map.Entry.<String, EstadoJogo.AlunoInfo>comparingByValue(Comparator.comparingInt(EstadoJogo.AlunoInfo::pontos).reversed())
-            )
+            .sorted(ORDEM_PLACAR)
             .map(e ->
                 new EstatisticaPartidaService.RankingEntrada(
                     e.getKey(),
@@ -294,7 +335,9 @@ public class JogoSalaService {
             return;
         }
         for (String login : jogo.getAlunosConectados().keySet()) {
-            boolean isento = !jogo.isModo1v1() && login.equals(loginProfessor);
+            // ehJogador já conhece o dono da sala (gravado na entrada); o loginProfessor
+            // da mensagem cobre a sala cujo estado nasceu antes desta correção
+            boolean isento = !jogo.ehJogador(login) || (!jogo.isModo1v1() && login.equals(loginProfessor));
             if (!isento && !jogo.jaRespondeu(login)) {
                 palavraEstatisticaService.registrarTentativa(atual.getId(), false);
             }
@@ -392,8 +435,16 @@ public class JogoSalaService {
         return jogo.gerarRelatorio();
     }
 
-    // Resultado de uma resposta: contém o feedback individual + o estado atualizado da sala
+    // Resultado de uma resposta: contém o feedback individual + o estado atualizado da
+    // sala. Numa resposta RECUSADA o estado vem null - nada mudou no placar, então não
+    // há o que retransmitir para a sala inteira, só o aviso para quem respondeu.
     public record ResultadoResposta(FeedbackAluno feedback, EstadoJogoDTO estado) {}
+
+    // Aviso de resposta não contabilizada. Não devolve o texto da palavra: a rodada
+    // pode continuar aberta para os outros e ninguém recebe a resposta antes da hora.
+    private FeedbackAluno recusa(String motivo) {
+        return new FeedbackAluno(false, 0, 0, motivo, null, false);
+    }
 
     // Processa a resposta de um aluno:
     // compara com a palavra correta, calcula pontos (com bônus de velocidade) e registra no placar
@@ -407,18 +458,26 @@ public class JogoSalaService {
     ) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null || jogo.getPalavraAtual() == null) return null;
-        // Cada aluno só pode responder uma vez por palavra
+        // Cada aluno só pode responder uma vez por palavra. Aqui não mandamos recusa:
+        // o feedback da primeira resposta já chegou e uma segunda mensagem só faria a
+        // tela do aluno trocar o resultado bom por um aviso.
         if (jogo.jaRespondeu(login)) return null;
         // O relógio é validado NO SERVIDOR: rodada precisa estar ativa e dentro do
         // tempo (com folga para latência) - um cliente adulterado não responde
-        // depois que o tempo esgota nem durante pausa/encerramento
-        if (!"NOVA_PALAVRA".equals(jogo.getTipo())) return null;
+        // depois que o tempo esgota nem durante pausa/encerramento.
+        // A recusa VOLTA para o aluno (registrada = false): sem ela a tela mantinha o
+        // "você acertou" da conferência local, e ele não entendia por que ficou sem ponto.
+        if (!"NOVA_PALAVRA".equals(jogo.getTipo())) {
+            return new ResultadoResposta(recusa("RODADA_ENCERRADA"), null);
+        }
         long decorrido = Instant.now().toEpochMilli() - jogo.getTimestampInicio();
-        if (decorrido > jogo.getTempoLimite() * 1000L + FOLGA_RESPOSTA_MS) return null;
+        if (decorrido > jogo.getTempoLimite() * 1000L + FOLGA_RESPOSTA_MS) {
+            return new ResultadoResposta(recusa("TEMPO_ESGOTADO"), null);
+        }
 
         String textoCorreto = jogo.getPalavraAtual().getTexto();
-        String dLower = respostaDigitada.trim().toLowerCase();
-        String cLower = textoCorreto.trim().toLowerCase();
+        String dLower = canonico(respostaDigitada);
+        String cLower = canonico(textoCorreto);
         boolean correta = dLower.equals(cLower);
 
         // marca como suspeita se tentou colar/corretor ou respondeu rápido demais.
@@ -464,21 +523,26 @@ public class JogoSalaService {
             jogo.isModo1v1() ? HistoricoResposta.Origem.DUELO : HistoricoResposta.Origem.PARTIDA
         );
 
-        // Registra a resposta e guarda a ordem de acerto (1º, 2º, 3º...)
-        int ordem = jogo.registrarResposta(login, correta);
-        // guarda o que o aluno digitou de fato, pro relatório do professor
-        jogo.registrarRespostaDetalhada(login, nomeAluno, respostaDigitada.trim(), correta, ordem);
+        // Registra a resposta: ordem de chegada (relatório) e ordem entre os acertos (pontuação)
+        EstadoJogo.Chegada chegada = jogo.registrarResposta(login, correta);
+        // guarda o que o aluno digitou de fato, pro relatório do professor - com o nome
+        // público já resolvido na entrada, não com o login
+        String nomePublico = jogo.nomeNoPlacar(login, nomeAluno);
+        jogo.registrarRespostaDetalhada(login, nomePublico, respostaDigitada.trim(), correta, chegada.ordem());
         int pontos = 0;
         if (correta) {
-            // Pontuação = base (por ordem de acerto) + bônus de velocidade proporcional ao tempo restante
-            int idx = Math.min(ordem - 1, PONTOS_BASE.length - 1);
+            // Pontuação = base (pela ordem entre os ACERTOS) + bônus de velocidade
+            // proporcional ao tempo restante. Quem erra não "gasta" as posições de
+            // pontuação: o 1º a acertar leva os 20 pontos ainda que três colegas
+            // tenham mandado a resposta errada antes dele.
+            int idx = Math.min(chegada.ordemAcerto() - 1, PONTOS_BASE.length - 1);
             int base = PONTOS_BASE[idx];
             long elapsed = Instant.now().toEpochMilli() - jogo.getTimestampInicio();
             double fracao = Math.max(0, 1.0 - (double) elapsed / (jogo.getTempoLimite() * 1000L));
             int bonus = (int) Math.round(BONUS_MAX[idx] * fracao);
             pontos = base + bonus;
         }
-        jogo.adicionarPontos(login, nomeAluno, pontos);
+        jogo.adicionarPontos(login, nomePublico, pontos);
 
         // Motor de conquistas: acerto, rapidez, acentos/cedilha e sequência.
         // Transação própria e try/catch - conquista nunca derruba a partida.
@@ -488,9 +552,27 @@ public class JogoSalaService {
             LOG.error("Falha ao processar conquistas da resposta de {}: {}", login, e.getMessage(), e);
         }
 
-        FeedbackAluno feedback = new FeedbackAluno(correta, pontos, ordem, tipoErro, textoCorreto);
+        // ordem do feedback = posição entre os acertos (é o "Nº a acertar" da tela)
+        FeedbackAluno feedback = new FeedbackAluno(correta, pontos, chegada.ordemAcerto(), tipoErro, textoCorreto, true);
         EstadoJogoDTO estado = buildEstado(codigoSala, nomeSala, jogo, jogo.getTipo());
         return new ResultadoResposta(feedback, estado);
+    }
+
+    /**
+     * Forma canônica usada para decidir se a resposta bate com a palavra.
+     *
+     * NFC: "ã" pode chegar como um caractere só ou como "a" + til combinante. Para
+     * quem lê é a mesma letra, mas como texto são sequências diferentes - sem
+     * normalizar, uma palavra cadastrada por cópia de um documento (é comum vir
+     * decomposta) marcava como ERRADA a resposta digitada exatamente igual, e o aluno
+     * terminava a rodada sem ponto jurando que tinha acertado.
+     *
+     * O espaço fixo (NBSP) também vem nessas colagens e sobrevive ao trim comum, por
+     * isso vira espaço normal antes de aparar as pontas.
+     */
+    private String canonico(String s) {
+        if (s == null) return "";
+        return Normalizer.normalize(s, Normalizer.Form.NFC).replace(ESPACO_FIXO, ' ').trim().toLowerCase(Locale.ROOT);
     }
 
     // Remove acentos para comparação sem diferenciar versões acentuadas
@@ -532,14 +614,15 @@ public class JogoSalaService {
     private EstadoJogoDTO buildEstado(String codigoSala, String nomeSala, EstadoJogo jogo, String tipo) {
         Palavra p = jogo.getPalavraAtual();
         PalavraDTO palavraDTO = p == null ? null : new PalavraDTO(p.getId(), p.getTexto(), p.getDificuldade().name(), p.getCategoria());
-        // Placar ordenado do maior para o menor pontuação
+        // Placar ordenado do maior para o menor pontuação. O professor da turma fica
+        // de fora do placar e da lista de conectados: ele comanda a partida, não
+        // compete - e ocupando uma linha ele empurrava a posição de todos os alunos.
         List<PlacarEntry> placar = jogo
             .getPlacar()
             .entrySet()
             .stream()
-            .sorted(
-                Map.Entry.<String, EstadoJogo.AlunoInfo>comparingByValue(Comparator.comparingInt(EstadoJogo.AlunoInfo::pontos).reversed())
-            )
+            .filter(e -> jogo.ehJogador(e.getKey()))
+            .sorted(ORDEM_PLACAR)
             .map(e ->
                 new PlacarEntry(
                     e.getKey(),
@@ -554,6 +637,8 @@ public class JogoSalaService {
             .getAlunosConectados()
             .entrySet()
             .stream()
+            .filter(e -> jogo.ehJogador(e.getKey()))
+            .sorted(Map.Entry.comparingByValue(Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
             .map(e -> new EntradaAluno(e.getKey(), e.getValue()))
             .collect(Collectors.toList());
         return new EstadoJogoDTO(
@@ -585,9 +670,10 @@ public class JogoSalaService {
         return jogos.values().stream().filter(j -> "NOVA_PALAVRA".equals(j.getTipo()) || "PAUSADA".equals(j.getTipo())).count();
     }
 
-    // Total de alunos conectados somando todas as salas
+    // Total de alunos conectados somando todas as salas (professores de turma não
+    // entram na conta: a métrica é de alunos jogando)
     public int totalAlunosConectados() {
-        return jogos.values().stream().mapToInt(EstadoJogo::totalConectados).sum();
+        return jogos.values().stream().mapToInt(EstadoJogo::totalJogadores).sum();
     }
 
     // Estado interno de uma sala de jogo - mantido em memória enquanto o servidor está rodando.
@@ -604,11 +690,25 @@ public class JogoSalaService {
         private String tipo = "AGUARDANDO";
         private final Map<String, AlunoInfo> placar = new ConcurrentHashMap<>();
         private final Map<String, String> alunosConectados = new ConcurrentHashMap<>();
+        /**
+         * Sessões WebSocket abertas de cada participante (login → ids de sessão).
+         *
+         * Uma pessoa pode ter mais de uma ao mesmo tempo: recarregar a página abre a
+         * nova antes de o servidor receber a desconexão da antiga, e uma queda de rede
+         * reconecta do mesmo jeito. Só quando a ÚLTIMA sessão de um login cai é que ele
+         * sai mesmo da sala.
+         */
+        private final Map<String, Set<String>> sessoesPorLogin = new ConcurrentHashMap<>();
         // Conjunto dos logins que já responderam na rodada atual (evita resposta dupla)
         private final Set<String> respondeuNaRodada = ConcurrentHashMap.newKeySet();
         // Respostas suspeitas (colar/corretor bloqueado ou rápida demais) por jogador na partida
         private final Map<String, Integer> alertasBurla = new ConcurrentHashMap<>();
         private int ordemRespostas = 0;
+        // Ordem entre os ACERTOS da rodada: é ela que define a pontuação base e o
+        // "Nº a acertar" do feedback. Separada de ordemRespostas (que conta qualquer
+        // resposta, certa ou errada) - senão quem acertasse depois de três colegas
+        // errarem levava a pontuação de 4º colocado.
+        private int ordemAcertos = 0;
         // Rastreamento da PARTIDA para conquistas: sequência de acertos por jogador,
         // estatística acumulada (respostas/acertos) e flag de fim já premiado
         private final Map<String, Integer> sequenciaAcertos = new ConcurrentHashMap<>();
@@ -642,6 +742,13 @@ public class JogoSalaService {
 
         public record AlunoInfo(String nome, int pontos, String statusAtual) {}
 
+        /**
+         * Posição de chegada de uma resposta na rodada:
+         * - ordem: entre TODAS as respostas (alimenta o relatório "quem escreveu o quê");
+         * - ordemAcerto: entre os ACERTOS (define a pontuação e o "Nº a acertar"); 0 quando errou.
+         */
+        public record Chegada(int ordem, int ordemAcerto) {}
+
         // Começa o jogo: define as palavras, redefine o índice para 0 e registra o timestamp de início
         void iniciar(List<Palavra> palavras, int tempoFacil, int tempoMedio, int tempoDificil) {
             this.palavras = palavras;
@@ -653,6 +760,7 @@ public class JogoSalaService {
             this.timestampInicio = Instant.now().toEpochMilli();
             respondeuNaRodada.clear();
             ordemRespostas = 0;
+            ordemAcertos = 0;
             sequenciaAcertos.clear();
             estatisticasPartida.clear();
             alertasBurla.clear();
@@ -674,6 +782,7 @@ public class JogoSalaService {
             timestampInicio = Instant.now().toEpochMilli();
             respondeuNaRodada.clear();
             ordemRespostas = 0;
+            ordemAcertos = 0;
             placar.replaceAll((k, v) -> new AlunoInfo(v.nome(), v.pontos(), "AGUARDANDO"));
             return true;
         }
@@ -692,9 +801,11 @@ public class JogoSalaService {
         }
 
         // Marca que o aluno respondeu e retorna sua posição de chegada (1º, 2º, 3º...)
-        int registrarResposta(String login, boolean correta) {
+        // e, quando acertou, a posição entre os acertos da rodada
+        synchronized Chegada registrarResposta(String login, boolean correta) {
             respondeuNaRodada.add(login);
             int ordem = ++ordemRespostas;
+            int ordemAcerto = correta ? ++ordemAcertos : 0;
             String status = correta ? "ACERTOU" : "ERROU";
             AlunoInfo atual = placar.getOrDefault(login, new AlunoInfo(login, 0, "AGUARDANDO"));
             placar.put(login, new AlunoInfo(atual.nome(), atual.pontos(), status));
@@ -705,7 +816,7 @@ public class JogoSalaService {
                 estat[0]++;
                 if (correta) estat[1]++;
             }
-            return ordem;
+            return new Chegada(ordem, ordemAcerto);
         }
 
         /**
@@ -754,19 +865,63 @@ public class JogoSalaService {
             return relatorio;
         }
 
+        // Nome público do participante, como ficou registrado na entrada da sala.
+        // O fallback só vale para quem, por algum motivo, ainda não está no placar.
+        String nomeNoPlacar(String login, String fallback) {
+            AlunoInfo info = placar.get(login);
+            if (info != null && info.nome() != null && !info.nome().isBlank()) {
+                return info.nome();
+            }
+            String conectado = alunosConectados.get(login);
+            return conectado != null && !conectado.isBlank() ? conectado : fallback;
+        }
+
         void adicionarPontos(String login, String nome, int pontos) {
             AlunoInfo atual = placar.getOrDefault(login, new AlunoInfo(nome, 0, "AGUARDANDO"));
             placar.put(login, new AlunoInfo(atual.nome(), atual.pontos() + pontos, atual.statusAtual()));
         }
 
-        // Garante que o aluno apareça na lista de conectados e no placar (com 0 pontos)
-        void registrarAluno(String login, String nome) {
+        // Garante que o aluno apareça na lista de conectados e no placar (com 0 pontos).
+        // synchronized com removerSessao: entrada e saída mexem nos dois mapas juntos, e
+        // elas se cruzam justamente na reconexão, quando a sessão nova chega antes de a
+        // antiga ser encerrada.
+        synchronized void registrarAluno(String login, String nome, String sessaoId) {
             alunosConectados.put(login, nome);
+            abrirSessao(login, sessaoId);
             placar.computeIfAbsent(login, k -> new AlunoInfo(nome, 0, "AGUARDANDO"));
         }
 
-        void removerAluno(String login) {
-            alunosConectados.remove(login);
+        // Professor da turma: conecta (a sala não está vazia enquanto ele está nela),
+        // mas fica fora do placar e da lista de alunos. Remove também um placar herdado
+        // de quando este login entrou como aluno nesta mesma sala.
+        synchronized void registrarProfessor(String login, String nome, String sessaoId) {
+            setLoginProfessor(login);
+            alunosConectados.put(login, nome);
+            abrirSessao(login, sessaoId);
+            placar.remove(login);
+        }
+
+        private void abrirSessao(String login, String sessaoId) {
+            if (sessaoId != null) {
+                sessoesPorLogin.computeIfAbsent(login, k -> ConcurrentHashMap.newKeySet()).add(sessaoId);
+            }
+        }
+
+        /**
+         * Fecha uma sessão do participante. Devolve true só quando ele realmente saiu
+         * da sala - ou seja, quando essa era a última sessão aberta dele.
+         */
+        synchronized boolean removerSessao(String login, String sessaoId) {
+            Set<String> sessoes = sessoesPorLogin.get(login);
+            if (sessoes != null && sessaoId != null) {
+                sessoes.remove(sessaoId);
+                // Ainda tem outra aba/conexão viva: continua na sala
+                if (!sessoes.isEmpty()) {
+                    return false;
+                }
+            }
+            sessoesPorLogin.remove(login);
+            return alunosConectados.remove(login) != null;
         }
 
         Palavra getPalavraAtual() {
@@ -894,9 +1049,22 @@ public class JogoSalaService {
             return alunosConectados;
         }
 
-        // Quantidade de alunos conectados nesta sala (para monitoramento)
+        // Quantidade de participantes conectados nesta sala, professor incluído.
+        // É a conta do CICLO DE VIDA: enquanto for maior que zero a sala tem gente
+        // dentro e não pode ser descartada nem fechada no banco.
         int totalConectados() {
             return alunosConectados.size();
+        }
+
+        // Quantidade de JOGADORES conectados: o professor da turma fica de fora
+        // (no duelo 1v1 o criador joga, então lá ninguém é descontado)
+        int totalJogadores() {
+            return (int) alunosConectados.keySet().stream().filter(this::ehJogador).count();
+        }
+
+        // O login joga nesta sala? Só o professor da sala de turma não joga.
+        boolean ehJogador(String login) {
+            return modo1v1 || !login.equals(loginProfessor);
         }
     }
 }

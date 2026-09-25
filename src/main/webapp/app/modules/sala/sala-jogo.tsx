@@ -118,10 +118,9 @@ export const SalaJogo: React.FC = () => {
 
   return (
     <div className="sj-wrapper">
-      <div className="sj-bg">
-        <div className="sj-shape sj-shape-one" />
-        <div className="sj-shape sj-shape-two" />
-      </div>
+      {/* Brilhos de fundo: agora são gradientes pintados no próprio .sj-bg, sem as
+          duas divs desfocadas que faziam a partida engasgar no celular */}
+      <div className="sj-bg" />
 
       <div className="sj-container">
         <button className="sj-back-btn" onClick={() => navigate('/lobby')}>

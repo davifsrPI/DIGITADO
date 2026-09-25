@@ -1,5 +1,6 @@
 import React, { MutableRefObject, useEffect, useRef } from 'react';
 import { PlacarEntry } from './hooks/useSalaWebSocket';
+import { posicoesRanking } from './utils/posicoes-ranking';
 
 interface Props {
   placar: PlacarEntry[];
@@ -20,6 +21,9 @@ const ROW_H = 74;
  */
 export const RankingNuvem: React.FC<Props> = ({ placar, meuLogin, posRef }) => {
   const top5 = placar.slice(0, 5);
+  // Posições calculadas sobre o placar COMPLETO: quem empata divide o lugar, e a
+  // numeração do top 5 é a mesma que aparece no ranking final da partida
+  const posicoes = posicoesRanking(placar.map(p => p.pontos));
   const boxRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const chaveOrdem = top5.map(p => `${p.login}:${p.pontos}`).join('|');
@@ -60,7 +64,7 @@ export const RankingNuvem: React.FC<Props> = ({ placar, meuLogin, posRef }) => {
           className={`rn-nuvem rn-medalha-${i}${p.login === meuLogin ? ' rn-eu' : ''}`}
           style={{ top: i * ROW_H }}
         >
-          <span className="rn-rank">{i + 1}º</span>
+          <span className="rn-rank">{posicoes[i]}º</span>
           <span className="rn-avatar">{(p.nome || p.login).charAt(0).toUpperCase()}</span>
           <span className="rn-nome">
             {p.nome || p.login}

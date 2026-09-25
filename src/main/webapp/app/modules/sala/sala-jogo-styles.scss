@@ -17,41 +17,32 @@ body.sala-jogo-page .view-container {
 
 .sj-wrapper {
   position: relative;
+  /* dvh = altura REAL visível. No Safari do iPhone, 100vh é a altura com as
+     barras escondidas: a tela do jogo ficava mais alta que o visível e o botão
+     de enviar caía atrás da barra do navegador */
   min-height: 100vh;
+  min-height: 100dvh;
   background: #0f172a;
   font-family: 'Poppins', sans-serif;
   display: flex;
   flex-direction: column;
 }
 
+/* Brilhos de fundo desenhados como GRADIENTE, não como círculo desfocado.
+   Eram duas divs de 600px com filter: blur(130px), e um blur desse tamanho
+   obriga o navegador a montar e refiltrar uma textura enorme a cada quadro -
+   no iPhone era o principal motivo de a partida engasgar. O gradiente tem o
+   mesmo resultado na tela e custa praticamente nada. */
 .sj-bg {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-}
-
-.sj-shape {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(130px);
-  opacity: 0.15;
-}
-
-.sj-shape-one {
-  width: 600px;
-  height: 600px;
-  background: #6366f1;
-  top: -200px;
-  left: -200px;
-}
-
-.sj-shape-two {
-  width: 500px;
-  height: 500px;
-  background: #22c55e;
-  bottom: -180px;
-  right: -180px;
+  /* Medidas copiadas dos círculos antigos: o indigo tinha 600px com o centro em
+     (100, 100) e o verde 500px com o centro a 70px do canto inferior direito */
+  background:
+    radial-gradient(460px 460px at 100px 100px, rgba(99, 102, 241, 0.17), rgba(99, 102, 241, 0) 70%),
+    radial-gradient(400px 400px at calc(100% - 70px) calc(100% - 70px), rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0) 70%);
 }
 
 .sj-container {
@@ -908,11 +899,16 @@ body.sala-jogo-page .view-container {
   gap: 14px;
 }
 
+/* Número da posição: min-width + flex-shrink 0 porque 30px fixos não cabiam duas
+   casas ("10º", "20º") - dentro do flex a caixa era comprimida e o número encostava
+   ou sobrepunha o nome do aluno a partir da décima posição */
 .sj-final-rank {
   font-size: 18px;
   font-weight: 800;
   color: rgba(255, 255, 255, 0.35);
-  width: 30px;
+  min-width: 42px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .sj-final-nome {
@@ -2105,10 +2101,14 @@ body.sala-jogo-page .view-container {
   gap: 14px;
   padding: 0 24px;
   border-radius: 40px;
-  background: radial-gradient(120% 160% at 30% 0%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04) 60%);
+  /* Sem backdrop-filter: estas caixas DESLIZAM na animação de ultrapassagem, e
+     desfocar o que está atrás a cada quadro de cinco caixas ao mesmo tempo
+     travava o ranking no celular. O fundo sólido sobre o azul-escuro da página
+     dá o mesmo aspecto. */
+  background-color: #1b2338;
+  background-image: radial-gradient(120% 160% at 30% 0%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04) 60%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(6px);
   will-change: transform;
 }
 
@@ -2692,7 +2692,8 @@ body.sala-jogo-page .view-container {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 30px;
   padding: 10px 26px;
-  backdrop-filter: blur(10px);
+  /* sem backdrop-filter: a etiqueta aparece junto com o relógio tremendo a
+     0,15s por volta - desfocar o fundo nesse momento é o pior cenário no iPhone */
   animation: rr-label-pop 0.5s ease;
 }
 
@@ -2832,6 +2833,13 @@ body.sala-jogo-page .view-container {
 
 /* ── Responsivo: painel e relatório em telas estreitas (celular) ── */
 @media (max-width: 640px) {
+  /* Card da partida do aluno: 36px de padding de cada lado comiam quase um quarto da
+     largura da tela do celular, deixando o campo de resposta e os botões apertados */
+  .sj-aluno-main {
+    padding: 22px 16px 24px;
+    gap: 16px;
+  }
+
   .sj-dash-atual-texto {
     font-size: 24px;
   }
@@ -2971,10 +2979,18 @@ body.sala-jogo-page .view-container {
   color: #d97706;
 }
 
-/* Linhas do ranking entram em sequência dentro da própria seção */
+/* Linhas do ranking entram em sequência dentro da própria seção.
+   A cascata é escalonada só nas 10 primeiras; da 11ª em diante todas entram com o
+   mesmo atraso. Antes o @for parava na 10ª e as posições seguintes ficavam SEM
+   regra de animação nenhuma - numa turma grande a lista aparecia pela metade
+   animada e metade não. */
+.sj-final-row {
+  animation: sj-surgir 0.35s ease-out both;
+  animation-delay: 0.65s;
+}
+
 @for $i from 1 through 10 {
   .sj-final-row:nth-child(#{$i}) {
-    animation: sj-surgir 0.35s ease-out both;
     animation-delay: #{0.15 + $i * 0.05}s;
   }
 }

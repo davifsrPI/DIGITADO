@@ -1,3 +1,7 @@
+/* O campo de resposta usa o teclado normal do aparelho (o do sistema no celular, o
+   físico no computador) - a blindagem contra o corretor está no componente, não aqui.
+   Cada tela dá o próprio estilo ao input; este wrapper só garante que ele ocupe a
+   largura disponível sem estourar o container. */
 .ep-wrap {
   width: 100%;
   flex: 1;
@@ -6,73 +10,4 @@
   input {
     width: 100%;
   }
-}
-
-/* Teclado virtual: aparece apenas em telas de toque, onde o inputMode="none" do
-   campo suprime o teclado nativo (e o corretor). Quem esconde é o componente, que
-   decide as duas coisas juntas, se o CSS decidisse sozinho, uma tela de toque fora
-   do padrão ficaria sem teclado nenhum */
-.ep-teclado {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 12px;
-  user-select: none;
-  touch-action: manipulation;
-}
-
-.ep-teclado--oculto {
-  display: none;
-}
-
-.ep-linha {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-}
-
-.ep-tecla {
-  flex: 1;
-  min-width: 0;
-  max-width: 42px;
-  height: 46px;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  font-family: 'Poppins', sans-serif;
-  font-size: 17px;
-  font-weight: 600;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-
-  &:active {
-    background: rgba(255, 255, 255, 0.28);
-    transform: scale(0.94);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-}
-
-.ep-tecla--acento {
-  background: rgba(99, 102, 241, 0.28);
-  font-size: 20px;
-}
-
-.ep-tecla--pendente {
-  background: #6366f1;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7) inset;
-}
-
-.ep-tecla--larga {
-  max-width: 64px;
-  flex: 1.6;
-  font-size: 19px;
 }
