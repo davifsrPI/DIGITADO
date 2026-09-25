@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Lista de palavras de ORTOGRAFIA pedida pela professora: as que a turma mais
+        erra na escrita (x/ch, s/z/ss/c, g/j, acentuacao, sufixos -sao/-cao).
+
+        Dificuldade: a lista veio com F/M/D ao lado de algumas palavras; as demais
+        entram como MEDIO, conforme combinado. "Atraves" aparecia duas vezes, uma
+        sem marcador e outra com D - vale o marcador explicito (DIFICIL). As
+        repeticoes dentro da propria lista ("Privilegio", "Excecao") entram uma vez.
+
+        Mesmo INSERT ... SELECT com NOT EXISTS do seed de 20260824130000: a
+        comparacao por LOWER(texto) faz com que palavra ja existente no banco seja
+        ignorada, entao rodar num banco que ja tem parte da lista nao duplica nada.
+        Banco novo recebe tudo na criacao; banco existente recebe so o que falta.
+
+        Sem dica e sem categoria especifica de classe gramatical: a lista e um
+        treino de grafia, o que importa e o texto. Ambas as colunas sao opcionais e
+        nao entram em nenhuma consulta.
+    -->
+    <changeSet id="20260925030000-1" author="digitado">
+        <sql>
+            INSERT INTO palavra (texto, categoria, idioma, possui_acento, ativa, criador_id, dica, dificuldade)
+            SELECT s.texto, s.categoria, s.idioma, s.possui_acento, s.ativa, s.criador_id, s.dica, s.dificuldade
+            FROM (
+                SELECT 'Acréscimo' AS texto, 'ORTOGRAFIA' AS categoria, 'PT-BR' AS idioma, 1 AS possui_acento, 1 AS ativa, NULL AS criador_id, NULL AS dica, 'MEDIO' AS dificuldade
+                UNION ALL SELECT 'Enxurrada', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Chuchu', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Puxar', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Frouxo', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Mecha', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Mexer', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Exagerado', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Paralisar', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Deslizar', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Analisar', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Ansioso', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Berinjela', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Tigela', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Sarjeta', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Viagem', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Viajar', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Privilégio', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Exceção', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Consenso', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Obsessão', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Rescisão', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Pretensioso', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Através', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Extinção', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Meteorologia', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Asterisco', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Supérfluo', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Pichação', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Cansaço', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Xícara', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Ciência', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Muçarela', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Preguiça', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Chiclete', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Coincidência', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Estéril', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Réveillon', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Exigência', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Diretrizes', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Supervisionar', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Específico', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Profissionalismo', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Crítica', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Século', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Socialismo', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Exclusivo', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Inércia', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Restrição', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Formalização', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Inerente', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Europeia', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Clássica', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Desvalorização', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Melancólico', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Melancolia', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Talvez', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Indubitavelmente', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Primordial', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Sequência', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Paradoxo', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Indenização', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Conscientização', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Socialização', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Mobilização', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Modéstia', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Desmistificar', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Aptidão', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Vulnerabilidade', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Adaptação', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Opinião', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Pública', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Polarização', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Expansão', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Empecilho', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Inconsistência', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Consolidação', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Assertividade', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Célere', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Excesso', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Exímio', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Transgressão', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Xenofobia', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Compreensão', 'ORTOGRAFIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Ambiguidade', 'ORTOGRAFIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+            ) s
+            WHERE NOT EXISTS (SELECT 1 FROM palavra p WHERE LOWER(p.texto) = LOWER(s.texto))
+        </sql>
+    </changeSet>
+</databaseChangeLog>

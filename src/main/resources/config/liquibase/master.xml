@@ -52,5 +52,6 @@
     <include file="config/liquibase/changelog/20260824120000_estatistica_partida.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20260824130000_seed_palavras_extras.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20260824140000_historico_resposta.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260925030000_seed_palavras_ortografia.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
 </databaseChangeLog>
