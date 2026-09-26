@@ -47,6 +47,23 @@ public class Sala implements Serializable {
     private Boolean ativo;
 
     /**
+     * Configuração da partida desta sala, em JSON: tempo e quantidade por
+     * dificuldade, palavras extras escolhidas a mão e as palavras já sorteadas na
+     * criação.
+     *
+     * Existia só no cliente (estado de navegação do React Router, com cópia no
+     * sessionStorage para os duelos): recarregar a tela de espera descartava, em
+     * silêncio, a lista de palavras que o professor tinha conferido uma por uma, e
+     * a partida começava com a configuração padrão.
+     *
+     * NÃO sai na listagem pública. palavrasIds são as respostas da partida, então
+     * a configuração só é devolvida ao dono da sala - ver
+     * SalaResource.getConfiguracao.
+     */
+    @Column(name = "configuracao", columnDefinition = "json")
+    private String configuracao;
+
+    /**
      * Data/hora em que a sala foi criada. Junto com o código (que tem constraint
      * única no banco - ux_sala__codigo), identifica a sala sem ambiguidade.
      * updatable = false: uma vez criada, a data nunca muda (nem via PUT).
@@ -160,6 +177,38 @@ public class Sala implements Serializable {
         } else {
             this.descricao = node.toString();
         }
+    }
+
+    // Acesso do código Java: a String JSON crua, como está no banco
+    @JsonIgnore
+    public String getConfiguracao() {
+        return this.configuracao;
+    }
+
+    @JsonIgnore
+    public void setConfiguracao(String configuracao) {
+        this.configuracao = configuracao;
+    }
+
+    /**
+     * Serialização REST: emite a configuração como objeto JSON de verdade.
+     * Só o admin (que recebe a entidade crua) e o dono da sala chegam a ver isto -
+     * a listagem dos demais usa SalaResponseVM, que não tem o campo.
+     */
+    @JsonProperty("configuracao")
+    @JsonRawValue
+    public String getConfiguracaoJson() {
+        if (configuracao == null) {
+            return null;
+        }
+        String t = configuracao.trim();
+        return t.startsWith("{") ? configuracao : null;
+    }
+
+    /** Desserialização REST: aceita o objeto JSON que a tela de criação envia. */
+    @JsonProperty("configuracao")
+    public void setConfiguracaoJson(JsonNode node) {
+        this.configuracao = (node == null || node.isNull() || !node.isObject()) ? null : node.toString();
     }
 
     public Boolean getAtivo() {

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Identificação do aluno em cada sala: nome de verdade, turma e a escolha de
+        aparecer para os colegas pelo apelido.
+
+        O placar usava o nome da CONTA, que numa sala de aula não diz nada ao
+        professor - ele precisa do nome e da turma do aluno. Agora o aluno preenche
+        isso na tela de entrada, logo depois de digitar o código, e a identificação
+        é POR SALA (ux_...__sala_login): o mesmo aluno pode jogar em salas de turmas
+        diferentes sem que uma sobrescreva a outra.
+
+        FK com ON DELETE CASCADE - sala excluída leva junto as identificações dela.
+    -->
+    <changeSet id="20260925120000-1" author="digitado">
+        <createTable tableName="participante_sala">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="sala_codigo" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="login" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nome" type="varchar(60)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="turma" type="varchar(30)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- true = a turma vê o apelido; o professor vê sempre o nome real -->
+            <column name="usar_apelido" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="apelido" type="varchar(30)"/>
+            <column name="data_entrada" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="participante_sala"
+                             columnNames="sala_codigo, login"
+                             constraintName="ux_participante_sala__sala_login"/>
+    </changeSet>
+
+    <changeSet id="20260925120000-2" author="digitado">
+        <addForeignKeyConstraint baseColumnNames="sala_codigo"
+                                 baseTableName="participante_sala"
+                                 constraintName="fk_participante_sala__sala_codigo"
+                                 referencedColumnNames="codigo"
+                                 referencedTableName="sala"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

@@ -6,12 +6,6 @@ import axios from 'axios';
 import { useBodyClass } from 'app/shared/util/use-body-class';
 import { CORES_DIFICULDADE, LABELS_DIFICULDADE, DificuldadeKey } from 'app/shared/util/dificuldade-constants';
 
-// Gera um código de 6 caracteres aleatórios para a sala, excluindo letras/números confusos (O, I, 1, 0)
-const generateCode = () => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-};
-
 // Alias local: mantém o nome curto usado em todo o componente
 type Dificuldade = DificuldadeKey;
 
@@ -52,7 +46,10 @@ export const CriarSala = () => {
   // Estado do formulário
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [codigo, setCodigo] = useState(generateCode());
+  // Código da sala: sorteado pelo SERVIDOR (GET /api/salas/codigo/novo), que é o
+  // único lugar que conhece o formato e já confere se ele está livre. Vazio até a
+  // resposta chegar - o botão de criar espera por ele.
+  const [codigo, setCodigo] = useState('');
   // Visibilidade, escolha exclusiva do 1v1: pública entra na lista global de duelos;
   // privada só entra quem tiver o código
   const [privada, setPrivada] = useState(false);
@@ -95,6 +92,25 @@ export const CriarSala = () => {
 
   // Adiciona classe ao body para aplicar estilos de fundo específicos desta página
   useBodyClass('criar-sala-page');
+
+  // Pede ao servidor um código livre. Devolve o código para quem precisa dele na
+  // hora (a retentativa do submit), além de deixá-lo na tela.
+  const buscarCodigo = async (): Promise<string | null> => {
+    try {
+      const { data } = await axios.get<{ codigo: string }>('/api/salas/codigo/novo');
+      setCodigo(data.codigo);
+      return data.codigo;
+    } catch {
+      setCodigo('');
+      return null;
+    }
+  };
+
+  // Um código já na abertura da tela: o professor vê qual será o código da sala
+  // antes de criá-la, como era quando o sorteio acontecia aqui
+  useEffect(() => {
+    void buscarCodigo();
+  }, []);
 
   // Incrementa/decrementa a quantidade de palavras de uma dificuldade, limitado entre 0 e 30
   const adj = (key: Dificuldade, delta: number) => {
@@ -242,26 +258,31 @@ export const CriarSala = () => {
 
   const removeWord = (id: number) => setExtraWords(prev => prev.filter(w => w.id !== id));
 
-  // Cria a sala via API, tenta até 5 vezes se o código já existir, gerando um novo a cada tentativa.
-  // Ao criar com sucesso, navega para a tela de espera da sala: o professor vê quem
-  // está entrando e inicia quando quiser, inclusive com a sala vazia.
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  /**
+   * Cria a sala via API. O código vem sorteado do servidor; se ele tiver sido levado
+   * por outra sala nesse meio-tempo (janela mínima entre pedir e criar), pede outro e
+   * tenta de novo - quem sorteia continua sendo só o servidor.
+   *
+   * entrarAgora = true: vai direto para a tela de espera da sala, o professor vê quem
+   * está entrando e inicia quando quiser.
+   *
+   * entrarAgora = false: DEIXA A SALA PRONTA e volta para "Minhas salas". Tudo o que
+   * foi montado aqui (tempos, quantidades, palavras sorteadas e as escolhidas a mão)
+   * fica gravado na sala, então dá para preparar a atividade dias antes e, na hora da
+   * aula, só entrar como professor - conferindo a lista de palavras por lá.
+   */
+  const criar = async (entrarAgora: boolean) => {
+    if (!codigo || submitting) return; // sem código do servidor ainda não há o que criar
     setSubmitting(true);
     setError(null);
     let tentativas = 0;
     let codigoTentativa = codigo;
     while (tentativas < 5) {
       try {
-        const res = await axios.post('/api/salas', {
-          nome,
-          codigo: codigoTentativa,
-          descricao: descricao || null,
-          ativo: true,
-          tipo: is1v1 ? 'UM_V_UM' : 'TURMA',
-          // O backend força privada=true para salas de turma; só o 1v1 escolhe
-          privada: is1v1 ? privada : true,
-        });
+        // Configuração da partida: vai no MESMO pedido que cria a sala e fica
+        // gravada nela. Antes viajava só no estado de navegação do React Router
+        // (com uma cópia no sessionStorage para os duelos), e recarregar a tela de
+        // espera descartava em silêncio a lista de palavras conferida aqui.
         const gameConfig = {
           tempoFacil: tempos.FACIL,
           tempoMedio: tempos.MEDIO,
@@ -274,23 +295,34 @@ export const CriarSala = () => {
           // essas (vazio no 1v1, onde o sorteio continua acontecendo só ao iniciar)
           palavrasIds: sorteadas.map(w => w.id),
         };
-        // No 1v1 a configuração também vai para o sessionStorage: o estado de navegação
-        // se perde se o criador recarregar a página ou entrar de novo pela lista de
-        // duelos, sem isso, a partida começava com a configuração PADRÃO em vez da
-        // escolhida aqui (tempos e quantidades ignorados).
-        if (is1v1) {
-          try {
-            sessionStorage.setItem(`duelo-cfg-${res.data.codigo}`, JSON.stringify(gameConfig));
-          } catch {
-            // sessionStorage indisponível (modo privado restrito), segue só com o state
-          }
+        const res = await axios.post('/api/salas', {
+          nome,
+          codigo: codigoTentativa,
+          descricao: descricao || null,
+          ativo: true,
+          tipo: is1v1 ? 'UM_V_UM' : 'TURMA',
+          // O backend força privada=true para salas de turma; só o 1v1 escolhe
+          privada: is1v1 ? privada : true,
+          configuracao: gameConfig,
+        });
+        if (entrarAgora) {
+          // O state segue indo como atalho para a primeira renderização; quem manda é
+          // a configuração gravada na sala, que a tela de espera busca no servidor
+          navigate(`/sala/${res.data.codigo}`, { state: { isProfessor: true, gameConfig } });
+        } else {
+          // Sala pronta, esperando o dia da aula: a lista de salas avisa que ela foi
+          // criada e destaca o card, com o código à mão para copiar
+          navigate('/minhas-salas', { state: { salaCriada: res.data.codigo } });
         }
-        navigate(`/sala/${res.data.codigo}`, { state: { isProfessor: true, gameConfig } });
         return;
       } catch (err: any) {
         if (err?.response?.data?.errorKey === 'codigoexists') {
-          codigoTentativa = generateCode();
-          setCodigo(codigoTentativa);
+          const outro = await buscarCodigo();
+          if (!outro) {
+            setError('Não foi possível gerar um código para a sala. Tente novamente.');
+            break;
+          }
+          codigoTentativa = outro;
           tentativas++;
         } else {
           const detail = err?.response?.data?.detail || err?.response?.data?.title || err?.message;
@@ -327,7 +359,14 @@ export const CriarSala = () => {
 
               {error && <div className="cs-error">{error}</div>}
 
-              <form id="sala-form" onSubmit={handleSubmit} className="cs-form">
+              <form
+                id="sala-form"
+                onSubmit={e => {
+                  e.preventDefault();
+                  void criar(true);
+                }}
+                className="cs-form"
+              >
                 {/* Visibilidade, APENAS no duelo 1v1: pública aparece na lista global;
                     privada exige o código de acesso */}
                 {is1v1 && (
@@ -631,12 +670,17 @@ export const CriarSala = () => {
             <div className="cs-card">
               <span className="cs-step-label">Passo 4</span>
               <h2 className="cs-step-title">Código de acesso</h2>
-              <div className="cs-code-display">{codigo}</div>
+              <div className="cs-code-display">{codigo || '······'}</div>
               <div className="cs-code-row">
-                <button type="button" className="cs-regen-btn" onClick={() => setCodigo(generateCode())}>
+                {/* "Gerar novo" agora PEDE outro código ao servidor: é ele que sorteia
+                    e que confere se o código está livre */}
+                <button type="button" className="cs-regen-btn" onClick={() => void buscarCodigo()}>
                   🔄 Gerar novo
                 </button>
               </div>
+              {!codigo && (
+                <span className="cs-code-hint">Pedindo um código ao servidor... se não aparecer, toque em &ldquo;Gerar novo&rdquo;.</span>
+              )}
               <span className="cs-code-hint">
                 {is1v1
                   ? privada
@@ -684,15 +728,38 @@ export const CriarSala = () => {
               </div>
             </div>
 
-            <button type="submit" form="sala-form" className="cs-submit-btn" disabled={submitting || !nome.trim()}>
+            {/* Sem código do servidor não há sala para criar: o botão espera por ele
+                e diz o motivo, em vez de não fazer nada ao ser tocado */}
+            <button type="submit" form="sala-form" className="cs-submit-btn" disabled={submitting || !nome.trim() || !codigo}>
               {submitting
                 ? is1v1
                   ? 'Criando duelo...'
                   : 'Criando sala...'
-                : is1v1
-                  ? '⚔ Criar duelo 1v1'
-                  : '▶ Criar sala e iniciar partida'}
+                : !codigo
+                  ? 'Gerando o código da sala...'
+                  : is1v1
+                    ? '⚔ Criar duelo 1v1'
+                    : '▶ Criar sala e entrar agora'}
             </button>
+
+            {/* Preparar hoje, dar a aula depois: a sala fica gravada com tudo o que
+                foi montado aqui - inclusive as palavras sorteadas - e o professor só
+                entra nela no dia. Não existe no duelo 1v1, onde quem cria joga. */}
+            {!is1v1 && (
+              <>
+                <button
+                  type="button"
+                  className="cs-submit-btn cs-submit-btn--pronta"
+                  onClick={() => void criar(false)}
+                  disabled={submitting || !nome.trim() || !codigo}
+                >
+                  {submitting ? 'Criando sala...' : '✓ Criar e deixar pronta'}
+                </button>
+                <span className="cs-code-hint cs-pronta-hint">
+                  Deixa a sala montada com estas palavras. No dia da aula, entre por &ldquo;Minhas salas&rdquo; e comece.
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>

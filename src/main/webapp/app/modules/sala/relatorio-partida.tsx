@@ -42,8 +42,20 @@ export interface PosicaoRanking {
 const COR_DIFICULDADE: Record<string, string> = CORES_DIFICULDADE;
 const LABEL_DIFICULDADE: Record<string, string> = LABELS_DIFICULDADE;
 
-// Ranking completo da partida, do primeiro ao último colocado
-export const RankingPartida: React.FC<{ posicoes: PosicaoRanking[] }> = ({ posicoes }) => {
+/**
+ * Ranking completo da partida, do primeiro ao último colocado.
+ *
+ * nomes (login → nome): só as telas do PROFESSOR passam este mapa, vindo de
+ * useNomesParticipantes. Ele troca o nome público pelo nome verdadeiro do aluno
+ * (com o apelido entre parênteses, quando ele escolheu jogar escondido dos
+ * colegas). Sem o mapa - que é o caso de qualquer tela de aluno - fica o nome
+ * público, exatamente como estava.
+ */
+export const RankingPartida: React.FC<{
+  posicoes: PosicaoRanking[];
+  nomes?: Record<string, string>;
+  turmas?: Record<string, string>;
+}> = ({ posicoes, nomes, turmas }) => {
   if (posicoes.length === 0) {
     return <p className="sj-no-alunos">Nenhum aluno participou desta partida.</p>;
   }
@@ -55,7 +67,8 @@ export const RankingPartida: React.FC<{ posicoes: PosicaoRanking[] }> = ({ posic
         <div key={p.login} className="sj-final-row">
           <span className="sj-final-rank">{lugares[i]}º</span>
           <span className="sj-final-nome">
-            {p.nome || p.login}
+            {nomes?.[p.login] ?? p.nome ?? p.login}
+            {turmas?.[p.login] && <span className="sj-final-turma">{turmas[p.login]}</span>}
             {p.alertas > 0 && (
               <span className="sj-alerta-burla" title={`${p.alertas} resposta(s) suspeita(s) de colar/corretor nesta partida`}>
                 ⚠ {p.alertas}
@@ -69,8 +82,10 @@ export const RankingPartida: React.FC<{ posicoes: PosicaoRanking[] }> = ({ posic
   );
 };
 
-// Uma palavra por card, com a resposta LITERAL de cada aluno
-export const RelatorioPorPalavra: React.FC<{ relatorio: RelatorioPalavra[] }> = ({ relatorio }) => {
+// Uma palavra por card, com a resposta LITERAL de cada aluno.
+// nomes: mesmo mapa do ranking - só o professor recebe, e troca o nome público
+// pelo nome verdadeiro de quem está jogando de apelido.
+export const RelatorioPorPalavra: React.FC<{ relatorio: RelatorioPalavra[]; nomes?: Record<string, string> }> = ({ relatorio, nomes }) => {
   if (relatorio.length === 0) {
     return <p className="sj-no-alunos">Sem respostas registradas nesta partida.</p>;
   }
@@ -99,7 +114,7 @@ export const RelatorioPorPalavra: React.FC<{ relatorio: RelatorioPalavra[] }> = 
                 {r.respostas.map(resp => (
                   <li key={resp.login} className={`sj-rel-resp${resp.correta ? ' sj-rel-resp--certa' : ' sj-rel-resp--errada'}`}>
                     <span className="sj-rel-resp-icone">{resp.correta ? '✓' : '✗'}</span>
-                    <span className="sj-rel-resp-nome">{resp.nome || resp.login}</span>
+                    <span className="sj-rel-resp-nome">{nomes?.[resp.login] ?? resp.nome ?? resp.login}</span>
                     <span className="sj-rel-resp-texto">&ldquo;{resp.texto}&rdquo;</span>
                   </li>
                 ))}

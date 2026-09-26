@@ -53,5 +53,9 @@
     <include file="config/liquibase/changelog/20260824130000_seed_palavras_extras.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20260824140000_historico_resposta.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20260925030000_seed_palavras_ortografia.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260925120000_participante_sala.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260925130000_salas_nunca_fecham.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260926120000_sala_configuracao.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260926130000_seed_palavras_tecnologia.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
 </databaseChangeLog>

@@ -44,12 +44,18 @@ const FONETICO: [RegExp, string][] = [
   [/[sz]/g, 'z'],
 ];
 
-// Aplica todas as substituições fonéticas da tabela acima, duas palavras foneticamente equivalentes
-// terão o mesmo resultado, permitindo detectar erros de som vs. grafia
-function fonetizar(s: string): string {
+// Reduz a palavra ao "som" dela: duas grafias que soam igual caem no mesmo texto
+// ("caça" e "cassa" viram "caza"; "chave" e "xave" viram "xave").
+//
+// A ORDEM importa: as regras rodam ANTES de tirar os acentos, porque o NFD decompõe
+// "ç" em "c" + cedilha e a cedilha é um diacrítico como qualquer outro - removida
+// primeiro, "caça" virava "caca" e a regra ç → s nunca chegava a valer. Os acentos de
+// vogal saem depois; a diferença só de acento já foi tratada como ACENTUACAO acima.
+// Mesma regra do servidor (JogoSalaService.som), que é quem grava no histórico.
+function som(s: string): string {
   let r = s;
   for (const [from, to] of FONETICO) r = r.replace(from, to);
-  return r;
+  return removerAcentos(r);
 }
 
 // Valida a resposta do aluno comparando com a palavra correta em várias camadas:
@@ -81,7 +87,9 @@ export function validarResposta(digitado: string, correto: string): ResultadoVal
 
   if (dSem === cSem) return { correta: false, tipoErro: 'ACENTUACAO', similaridade: 0.95 };
 
-  if (fonetizar(dSem) === fonetizar(cSem)) return { correta: false, tipoErro: 'ERRO_FONETICO', similaridade: 0.85 };
+  // Som certo com grafia errada: comparado sobre o texto AINDA acentuado, por causa
+  // da cedilha (ver som)
+  if (som(d) === som(c)) return { correta: false, tipoErro: 'ERRO_FONETICO', similaridade: 0.85 };
 
   const dist = levenshtein(dSem, cSem);
   const maxLen = Math.max(d.length, c.length);

@@ -72,6 +72,11 @@ class JogoSalaCargaTest {
     @Mock
     private PalavraEstatisticaService palavraEstatisticaService;
 
+    // Audio da palavra: mock devolve "sem audio pronto", entao o texto continua sendo
+    // transmitido no estado - e o que estes testes conferem
+    @Mock
+    private PalavraAudioService palavraAudioService;
+
     @Mock
     private ConquistaEngineService conquistaEngine;
 
@@ -88,6 +93,7 @@ class JogoSalaCargaTest {
         service = new JogoSalaService(
             palavraRepository,
             palavraEstatisticaService,
+            palavraAudioService,
             conquistaEngine,
             estatisticaPartidaService,
             historicoRespostaService

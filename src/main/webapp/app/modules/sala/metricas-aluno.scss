@@ -1,0 +1,94 @@
+/* Métrica por aluno (tela do professor): a fileira de nomes e o resumo do
+   aluno escolhido. O resumo em si tem estilo próprio, em resumo-aluno.scss. */
+
+.ma-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.ma-instrucao {
+  margin: 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.ma-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ma-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.62);
+  border: 1.5px solid rgba(148, 163, 184, 0.22);
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition:
+    border-color 0.18s,
+    background 0.18s,
+    transform 0.18s;
+
+  &:hover {
+    border-color: rgba(99, 102, 241, 0.6);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
+  }
+}
+
+.ma-chip--ativo {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.32), rgba(79, 70, 229, 0.3));
+  border-color: #4f46e5;
+  color: white;
+}
+
+.ma-chip-nome {
+  font-weight: 600;
+}
+
+.ma-chip-turma {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.16);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.ma-chip-pts {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.ma-chip--ativo .ma-chip-pts {
+  color: #c7d2fe;
+}
+
+.ma-status {
+  margin: 0;
+  font-size: 13.5px;
+  color: #94a3b8;
+}
+
+.ma-resumo {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}

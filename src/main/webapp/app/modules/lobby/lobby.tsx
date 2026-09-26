@@ -5,9 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
 import { useBodyClass } from 'app/shared/util/use-body-class';
-
-// Os códigos de sala têm sempre 6 caracteres (ver generateCode em criar-sala)
-const CODE_LEN = 6;
+import { limparCodigoSala, TAMANHO_CODIGO_SALA as CODE_LEN } from 'app/shared/util/codigo-sala';
 
 export const Lobby = () => {
   const account = useAppSelector(state => state.authentication.account);
@@ -18,10 +16,13 @@ export const Lobby = () => {
 
   useBodyClass('lobby-page');
 
+  // O aluno passa antes pela tela de entrada (nome, turma, apelido): é lá que a
+  // sala descobre quem ele é. Quem for o dono da sala, ou entrar num duelo 1v1,
+  // é mandado direto para a partida pela própria tela.
   const handleEnterRoom = (e: React.FormEvent) => {
     e.preventDefault();
     const code = roomCode.trim().toUpperCase();
-    if (code) navigate(`/sala/${code}`);
+    if (code) navigate(`/sala/${code}/entrar`);
   };
 
   return (
@@ -73,14 +74,7 @@ export const Lobby = () => {
                 type="text"
                 className="code-hidden-input"
                 value={roomCode}
-                onChange={e =>
-                  setRoomCode(
-                    e.target.value
-                      .toUpperCase()
-                      .replace(/[^A-Z0-9]/g, '')
-                      .slice(0, CODE_LEN),
-                  )
-                }
+                onChange={e => setRoomCode(limparCodigoSala(e.target.value))}
                 onFocus={() => setCodeFocused(true)}
                 onBlur={() => setCodeFocused(false)}
                 maxLength={CODE_LEN}

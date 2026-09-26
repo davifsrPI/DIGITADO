@@ -718,6 +718,13 @@ body.home-page {
   }
 }
 
+/* No celular quem recebe o foco é o campo invisível por cima do espelho (ver
+   entrada-palavra.scss), então o destaque do campo focado vem do wrapper */
+.ep-wrap--espelho:focus-within .pdd-input {
+  border-color: rgba(250, 204, 21, 0.6);
+  background: rgba(255, 255, 255, 0.11);
+}
+
 .pdd-btn {
   height: 52px;
   padding: 0 30px;

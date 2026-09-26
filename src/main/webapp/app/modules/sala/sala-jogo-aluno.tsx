@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import { EstadoJogo, FeedbackAluno } from './hooks/useSalaWebSocket';
 import { compararLetras, MENSAGEM_ERRO, validarResposta } from './utils/validarResposta';
 import { RODADA_RAPIDA_LIMITE, RelogioRodada } from './relogio-rodada';
-import { falarPalavra } from './utils/falar-palavra';
+import { ouvirPalavraDaRodada, pararAudioDaPalavra } from './utils/ouvir-palavra';
 import { RankingNuvem } from './ranking-nuvem';
 import { VinhetaPodio } from './vinheta-podio';
 import { AmpulhetaAnimada } from './ampulheta-animada';
 import { posicoesRanking } from './utils/posicoes-ranking';
 import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
 import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
+import { ResumoAluno, ResumoAlunoPartida } from './resumo-aluno';
 
 // Configuração enviada ao iniciar a partida, mesmo shape usado pela tela do professor
 interface GameConfig {
@@ -33,9 +35,6 @@ const DUELO_CFG_PADRAO: GameConfig = {
   palavrasExtrasIds: [],
 };
 
-// Tempo da tela de ranking entre palavras antes do avanço automático (só no duelo)
-const RANKING_DURACAO = 8;
-
 interface Props {
   estado: EstadoJogo | null;
   feedback: FeedbackAluno | null;
@@ -52,9 +51,10 @@ interface Props {
   // jogador, ele inicia o duelo e seu cliente avança as rodadas automaticamente
   // (papéis que na sala de turma pertencem ao professor).
   criadorDuelo?: boolean;
+  // Código da sala: o criador do duelo usa para compartilhar, e TODO aluno usa
+  // para buscar o próprio resumo quando a partida encerra
   codigoSala?: string;
   onIniciar?: (cfg: GameConfig) => void;
-  onProxima?: () => void;
   initialGameConfig?: GameConfig;
   // Pede ao servidor o placar atualizado só para este aparelho (ver pedirEstado)
   onPedirEstado?: () => void;
@@ -108,6 +108,183 @@ const EsperaCriadorDuelo: React.FC<{
     </div>
   );
 };
+
+/**
+ * Avisos que aparecem sob o campo de resposta. Cada um explica por que algo NÃO
+ * aconteceu - recusar em silêncio parece a tela travada.
+ *
+ * Extraído da tela principal, que já estava no limite de complexidade do projeto.
+ */
+const AvisosDoCampo: React.FC<{
+  bloqueioCorretor: boolean;
+  erroEnvio: boolean;
+  audioBloqueado: boolean;
+}> = ({ bloqueioCorretor, erroEnvio, audioBloqueado }) => (
+  <>
+    {bloqueioCorretor && (
+      <div className="sj-feedback sj-feedback--warn">
+        <span className="sj-feedback-icon">⌨</span>
+        <div className="sj-feedback-body">
+          <strong>Escreva você mesmo</strong> · corretor, sugestão do teclado, copiar e colar não valem aqui
+        </div>
+      </div>
+    )}
+    {erroEnvio && (
+      <div className="sj-feedback sj-feedback--warn">
+        <span className="sj-feedback-icon">⚠</span>
+        <div className="sj-feedback-body">
+          <strong>Sem conexão com a sala</strong> · sua resposta não foi enviada, toque em enviar de novo
+        </div>
+      </div>
+    )}
+    {audioBloqueado && (
+      <div className="sj-feedback sj-feedback--warn">
+        <span className="sj-feedback-icon">🔊</span>
+        <div className="sj-feedback-body">
+          <strong>Toque no botão de ouvir</strong> · o navegador não toca o áudio sozinho na primeira vez
+        </div>
+      </div>
+    )}
+  </>
+);
+
+/**
+ * Confirmação logo após o envio da resposta.
+ *
+ * No acerto a tela celebra na hora; no erro fica NEUTRA (nada de ✗ vermelho) - o
+ * resultado só é revelado no fim da rodada, junto do percentual e do que ele errou.
+ */
+const FeedbackDoEnvio: React.FC<{ feedback: FeedbackAluno | null }> = ({ feedback }) => {
+  if (!feedback) return null;
+  return (
+    <div className={`sj-feedback${feedback.correta && feedback.registrada ? ' sj-feedback--ok' : ' sj-feedback--warn'}`}>
+      <span className="sj-feedback-icon">{feedback.registrada ? '✓' : '⏱'}</span>
+      <div className="sj-feedback-body">
+        {!feedback.registrada ? (
+          // O servidor recusou a resposta (chegou fora do tempo da rodada):
+          // avisar na hora evita a impressão de acerto que não virou ponto
+          <>
+            <strong>Resposta fora do tempo</strong> · não foi contabilizada
+          </>
+        ) : feedback.correta ? (
+          <>
+            <strong>{feedback.ordem === 1 ? '1º a acertar!' : `${feedback.ordem}º a acertar`}</strong> · palavra correta
+          </>
+        ) : (
+          <>
+            {/* Ao enviar mostramos só que errou; o quanto acertou (%) e o que
+                errou aparecem no fim da rodada, quando o tempo acaba */}
+            <strong>Resposta enviada</strong> · veja o resultado quando o tempo acabar
+          </>
+        )}
+      </div>
+      {feedback.correta && feedback.registrada && <span className="sj-feedback-pts">+{feedback.pontos} pts</span>}
+    </div>
+  );
+};
+
+/**
+ * Tela de fim de partida do aluno: o placar final e, abaixo dele, o resumo pessoal.
+ *
+ * Componente separado pelo mesmo motivo do EsperaCriadorDuelo e do
+ * TelaRankingRodada: a função principal já estava no limite de complexidade que o
+ * projeto aceita.
+ */
+const TelaFimDaPartida: React.FC<{
+  placar: EstadoJogo['placar'];
+  meuLogin: string;
+  resumo: ResumoAluno | null;
+}> = ({ placar, meuLogin, resumo }) => {
+  // Empate divide o lugar (1º, 2º, 2º, 4º), igual ao ranking que o professor vê
+  const lugaresFinais = posicoesRanking(placar.map(p => p.pontos));
+  return (
+    <div className="sj-ended">
+      <h2>Atividade encerrada!</h2>
+      <div className="sj-final-placar">
+        {placar.map((p, i) => (
+          <div key={p.login} className={`sj-final-row${p.login === meuLogin ? ' sj-final-me' : ''}`}>
+            <span className="sj-final-rank">{lugaresFinais[i]}º</span>
+            <span className="sj-final-nome">
+              {p.nome || p.login}
+              {p.login === meuLogin ? ' (você)' : ''}
+            </span>
+            <span className="sj-final-pts">{p.pontos} pts</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Resumo pessoal: só este aluno vê o dele (e o professor, pela tela de
+          métricas por aluno). Fica abaixo do placar, que é o que a turma
+          comenta em voz alta assim que a partida acaba. */}
+      {resumo && (
+        <>
+          <h3 className="sj-rel-secao">Seu resumo da partida</h3>
+          <ResumoAlunoPartida resumo={resumo} titulo="Seu desempenho" />
+        </>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Tela entre uma palavra e a próxima: a palavra certa, o resultado do próprio aluno,
+ * a contagem para a próxima e o ranking da turma.
+ *
+ * Componente separado pelo mesmo motivo do EsperaCriadorDuelo: a função principal já
+ * estava no limite de complexidade que o projeto aceita.
+ *
+ * A contagem mostrada vem do SERVIDOR (ver segundosParaProxima): é ele quem vira a
+ * rodada, esta tela só espera a palavra nova chegar pelo WebSocket.
+ */
+const TelaRankingRodada: React.FC<{
+  estado: EstadoJogo;
+  feedback: FeedbackAluno | null;
+  validacaoLocal: ReturnType<typeof validarResposta> | null;
+  jaRespondeu: boolean;
+  resposta: string;
+  meuLogin: string;
+  segundosParaProxima: number;
+  posRef: React.MutableRefObject<Map<string, number>>;
+  // Palavra certa já resolvida pela tela principal (estado ou feedback)
+  palavraCorreta: string;
+}> = ({ estado, feedback, validacaoLocal, jaRespondeu, resposta, meuLogin, segundosParaProxima, posRef, palavraCorreta }) => (
+  <div className="sj-ranking-screen">
+    <div className="sj-ranking-header">
+      <div className="sj-lobby-badge">Ranking da rodada</div>
+      <h2 className="sj-ranking-title">
+        palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
+      </h2>
+    </div>
+
+    {estado.palavraAtual && (
+      <div className="sj-palavra-correta">
+        <span className="sj-palavra-correta-label">Palavra correta</span>
+        {/* A palavra certa vem do estado quando a rodada fechou; enquanto o estado
+            atualizado não chega, vale a que o servidor mandou no feedback da
+            resposta deste aluno (durante a rodada o texto não é transmitido) */}
+        <span className="sj-palavra-correta-val">{palavraCorreta || '···'}</span>
+        {/* Só o aluno vê o próprio resultado, revelado agora, no fim da rodada */}
+        <ResultadoRodada
+          feedback={feedback}
+          validacaoLocal={validacaoLocal}
+          jaRespondeu={jaRespondeu}
+          resposta={resposta}
+          palavraCorreta={palavraCorreta}
+        />
+      </div>
+    )}
+
+    {/* A contagem aparece para todos: quem vira a rodada é o servidor, no mesmo
+        instante para a sala inteira - antes só o criador do duelo a via, porque
+        era o cliente dele que pedia a próxima palavra */}
+    <div className="sj-ranking-countdown">
+      <span className="sj-ranking-next-label">Próxima palavra em</span>
+      <span className="sj-ranking-next-val">{segundosParaProxima}s</span>
+    </div>
+
+    <RankingNuvem placar={estado.placar} meuLogin={meuLogin} posRef={posRef} />
+  </div>
+);
 
 /**
  * Resultado da rodada para o próprio aluno, revelado quando o tempo acaba.
@@ -170,7 +347,6 @@ export const SalaJogoAluno: React.FC<Props> = ({
   criadorDuelo,
   codigoSala,
   onIniciar,
-  onProxima,
   initialGameConfig,
   onPedirEstado,
 }) => {
@@ -185,6 +361,9 @@ export const SalaJogoAluno: React.FC<Props> = ({
   // O campo recusou um texto que não foi digitado (sugestão do teclado, corretor,
   // colagem). Vira um aviso na tela: recusar em silêncio parece o campo travado.
   const [bloqueioCorretor, setBloqueioCorretor] = useState(false);
+  // O navegador recusou tocar o áudio sem um toque (política de autoplay do iOS e
+  // do Chrome). Sem avisar, o aluno espera um som que nunca vem.
+  const [audioBloqueado, setAudioBloqueado] = useState(false);
   // Ranking exibido quando o tempo da rodada acaba (mesma tela que o professor vê)
   const [showRanking, setShowRanking] = useState(false);
   // Contagem regressiva do ranking, usada SÓ pelo criador do duelo, cujo cliente
@@ -203,6 +382,24 @@ export const SalaJogoAluno: React.FC<Props> = ({
   // Posições da rodada anterior no top 5, usado pela animação de ultrapassagem
   const posRef = useRef<Map<string, number>>(new Map());
 
+  /**
+   * Resumo pessoal da partida, buscado quando ela encerra.
+   *
+   * O placar final só diz quantos pontos cada um fez; o que o aluno quer saber é
+   * QUAIS palavras ele acertou, quais errou e como foi em relação à turma. O
+   * servidor devolve só os dados dele - as respostas dos colegas entram apenas
+   * como o percentual de erro de cada palavra.
+   */
+  const [resumo, setResumo] = useState<ResumoAluno | null>(null);
+  useEffect(() => {
+    if (estado?.tipo !== 'ENCERRADA' || !codigoSala) return;
+    axios
+      .get<ResumoAluno>(`/api/salas/${codigoSala}/meu-resumo`)
+      // 404: o aluno entrou mas não respondeu nenhuma palavra - nada a resumir
+      .then(res => setResumo(res.data))
+      .catch(() => setResumo(null));
+  }, [estado?.tipo, codigoSala]);
+
   // Detecta mudança de palavra e reseta o estado de resposta, fala a palavra automaticamente
   useEffect(() => {
     if (!estado) return;
@@ -217,15 +414,24 @@ export const SalaJogoAluno: React.FC<Props> = ({
         setErroEnvio(false);
         setBloqueioCorretor(false);
         setFalando(false);
+        setAudioBloqueado(false);
         setShowRanking(false);
         rankingTriggeredRef.current = false;
         // Congela a pontuação/posição atuais para exibir durante toda a rodada
         const idx = estado.placar.findIndex(p => p.login === meuLogin);
         setScoreCongelado({ pontos: idx >= 0 ? estado.placar[idx].pontos : 0, posicao: idx });
         if (estado.palavraAtual) {
-          // O módulo já aplica a pausa de 1s antes de falar
+          // O módulo já aplica a pausa de 1s antes de tocar. Sem texto no estado, o
+          // áudio vem do SERVIDOR - é assim que a palavra deixa de chegar ao aparelho
+          // do aluno como resposta legível.
           setFalando(true);
-          falarPalavra(estado.palavraAtual.texto, { onEnd: () => setFalando(false) });
+          setAudioBloqueado(false);
+          ouvirPalavraDaRodada({
+            codigoSala,
+            texto: estado.palavraAtual.texto,
+            onEnd: () => setFalando(false),
+            onBloqueadoPeloNavegador: () => setAudioBloqueado(true),
+          });
         }
         inputRef.current?.focus();
       }
@@ -242,19 +448,29 @@ export const SalaJogoAluno: React.FC<Props> = ({
       const elapsed = Date.now() - estado.timestampInicio;
       const restante = Math.max(0, estado.tempoLimite - Math.floor(elapsed / 1000));
       setTempoRestante(restante);
+      // Contagem até a próxima palavra, derivada do fechamento que o SERVIDOR mandou
+      const proxima = estado.timestampFechamento + estado.tempoRanking * 1000;
+      setRankingTimer(Math.max(0, Math.ceil((proxima - Date.now()) / 1000)));
     };
     calcTempo();
     const id = setInterval(calcTempo, 500);
     return () => clearInterval(id);
-  }, [estado?.timestampInicio, estado?.tempoLimite, estado?.tipo]);
+  }, [estado?.timestampInicio, estado?.tempoLimite, estado?.tipo, estado?.timestampFechamento, estado?.tempoRanking]);
 
   // Reproduz a palavra ao clicar no botão de áudio e atualiza o ícone enquanto fala.
   // pausaMs: 0, reouvir toca na hora, sem a espera de 1s da palavra da rodada
   const handleFalar = useCallback(() => {
     if (!estado?.palavraAtual) return;
     setFalando(true);
-    falarPalavra(estado.palavraAtual.texto, { pausaMs: 0, onEnd: () => setFalando(false) });
-  }, [estado?.palavraAtual]);
+    setAudioBloqueado(false);
+    ouvirPalavraDaRodada({
+      codigoSala,
+      texto: estado.palavraAtual.texto,
+      pausaMs: 0,
+      onEnd: () => setFalando(false),
+      onBloqueadoPeloNavegador: () => setAudioBloqueado(true),
+    });
+  }, [estado?.palavraAtual, codigoSala]);
 
   // Envia a resposta: faz validação local para feedback imediato antes de receber o do servidor
   const handleEnviar = useCallback(
@@ -271,29 +487,59 @@ export const SalaJogoAluno: React.FC<Props> = ({
         return;
       }
       setErroEnvio(false);
-      setValidacaoLocal(validarResposta(resposta, estado.palavraAtual.texto));
+      // Só há o que conferir aqui se o texto veio no estado (servidor sem áudio).
+      // No modo seguro a conferência acontece quando o feedback traz a palavra certa.
+      if (estado.palavraAtual.texto) {
+        setValidacaoLocal(validarResposta(resposta, estado.palavraAtual.texto));
+      }
       setJaRespondeu(true);
     },
     [resposta, jaRespondeu, estado?.palavraAtual, onResponder],
   );
 
+  /**
+   * A palavra certa da rodada, para a tela de correção.
+   *
+   * Durante a rodada o servidor NÃO transmite o texto (ele ia para o tópico que
+   * todo aluno assina, entregando a resposta antes da hora). Quando a rodada fecha,
+   * o texto volta a vir no estado; e o aluno que respondeu já o recebeu no feedback
+   * individual dele. Vale o que estiver disponível primeiro.
+   */
+  const palavraCorreta = estado?.palavraAtual?.texto || feedback?.textoCorreto || '';
+
+  /**
+   * Conferência local da resposta: quanto da palavra o aluno acertou e que letras
+   * trocou. É o que detalha o erro na tela - o servidor manda se acertou e o tipo
+   * do erro, não o percentual nem as letras.
+   *
+   * Roda quando a palavra certa aparece, e não mais no instante do envio: sem o
+   * texto no estado, no envio não havia com o que comparar. O texto do FEEDBACK
+   * chega junto com a resposta do servidor, então a conta acontece igual.
+   */
+  useEffect(() => {
+    if (!jaRespondeu || !resposta.trim() || !palavraCorreta || validacaoLocal) return;
+    setValidacaoLocal(validarResposta(resposta, palavraCorreta));
+  }, [jaRespondeu, resposta, palavraCorreta, validacaoLocal]);
+
+  // Sai da tela: para o áudio que estiver tocando, senão ele continua depois de o
+  // aluno voltar ao lobby
+  useEffect(() => pararAudioDaPalavra, []);
+
   const ativo = estado?.tipo === 'NOVA_PALAVRA' || estado?.tipo === 'INICIADA';
 
-  // Quando o tempo acaba, exibe a tela de ranking (igual à do professor) até chegar a próxima palavra.
-  // Confere contra o timestamp do servidor: no início da rodada tempoRestante ainda é 0 (valor
-  // inicial do estado, antes de o timer calcular), e sem essa checagem o ranking apareceria na hora.
+  // Exibe a tela de ranking quando a rodada FECHA, e espera a próxima palavra chegar
+  // do servidor. O marco é o timestampFechamento dele, que já cobre os dois jeitos de
+  // fechar (tempo esgotado ou todos responderam). Comparar com o relógio do servidor -
+  // e não com tempoRestante, que vale 0 antes do primeiro tick - é o que evita o
+  // ranking aparecer na hora ao abrir a tela no meio de uma rodada.
   useEffect(() => {
-    if (tempoRestante === 0 && ativo && estado?.palavraAtual != null && !rankingTriggeredRef.current) {
-      const tempoEsgotado = Date.now() - estado.timestampInicio >= estado.tempoLimite * 1000;
-      if (tempoEsgotado) {
-        rankingTriggeredRef.current = true;
-        // O placar na tela é o do início da rodada: durante ela o servidor não
-        // transmite mais nada para o aluno. Pede o atualizado antes de mostrar o ranking.
-        onPedirEstado?.();
-        setShowRanking(true);
-        if (criadorDuelo) setRankingTimer(RANKING_DURACAO);
-      }
-    }
+    if (!ativo || estado?.palavraAtual == null || rankingTriggeredRef.current) return;
+    if (Date.now() < estado.timestampFechamento) return;
+    rankingTriggeredRef.current = true;
+    // O placar na tela é o do início da rodada: durante ela o servidor não
+    // transmite mais nada para o aluno. Pede o atualizado antes de mostrar o ranking.
+    onPedirEstado?.();
+    setShowRanking(true);
   }, [tempoRestante, ativo, estado, onPedirEstado]);
 
   // Se TODOS os conectados já responderam a palavra, vai direto para a tela de
@@ -314,21 +560,14 @@ export const SalaJogoAluno: React.FC<Props> = ({
     if (todosResponderam) {
       rankingTriggeredRef.current = true;
       setShowRanking(true);
-      if (criadorDuelo) setRankingTimer(RANKING_DURACAO);
     }
   }, [duelo1v1, ativo, estado, criadorDuelo]);
 
-  // Avanço automático do duelo: o cliente do CRIADOR conta os segundos do ranking
-  // e pede a próxima palavra ao servidor, o oponente só recebe o broadcast
-  useEffect(() => {
-    if (!criadorDuelo || !showRanking) return;
-    if (rankingTimer <= 0) {
-      onProxima?.();
-      return;
-    }
-    const id = setTimeout(() => setRankingTimer(t => t - 1), 1000);
-    return () => clearTimeout(id);
-  }, [criadorDuelo, showRanking, rankingTimer]);
+  // Aqui existia o avanço automático do duelo: o cliente de quem CRIOU a sala contava
+  // os segundos do ranking e pedia a próxima palavra. Se ele fechasse a aba ou perdesse
+  // a rede, o oponente ficava preso no ranking para sempre - nada no servidor virava a
+  // rodada. Quem vira agora é o relógio do servidor (JogoSalaRodadaScheduler), igual
+  // para os dois jogadores; esta tela só desenha a contagem.
 
   if (!estado || estado.tipo === 'AGUARDANDO') {
     if (criadorDuelo) {
@@ -363,63 +602,23 @@ export const SalaJogoAluno: React.FC<Props> = ({
     if (!vinhetaFimConcluida) {
       return <VinhetaPodio placar={estado.placar} meuLogin={meuLogin} onFim={() => setVinhetaFimConcluida(true)} />;
     }
-    // Empate divide o lugar (1º, 2º, 2º, 4º), igual ao ranking que o professor vê
-    const lugaresFinais = posicoesRanking(estado.placar.map(p => p.pontos));
-    return (
-      <div className="sj-ended">
-        <h2>Atividade encerrada!</h2>
-        <div className="sj-final-placar">
-          {estado.placar.map((p, i) => (
-            <div key={p.login} className={`sj-final-row${p.login === meuLogin ? ' sj-final-me' : ''}`}>
-              <span className="sj-final-rank">{lugaresFinais[i]}º</span>
-              <span className="sj-final-nome">
-                {p.nome || p.login}
-                {p.login === meuLogin ? ' (você)' : ''}
-              </span>
-              <span className="sj-final-pts">{p.pontos} pts</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    return <TelaFimDaPartida placar={estado.placar} meuLogin={meuLogin} resumo={resumo} />;
   }
 
-  /* RANKING entre palavras (tempo esgotado) */
+  /* RANKING entre palavras (rodada fechada, esperando o servidor virar a palavra) */
   if (showRanking && ativo) {
     return (
-      <div className="sj-ranking-screen">
-        <div className="sj-ranking-header">
-          <div className="sj-lobby-badge">Ranking da rodada</div>
-          <h2 className="sj-ranking-title">
-            palavra {estado.indiceAtual + 1} de {estado.totalPalavras}
-          </h2>
-        </div>
-
-        {estado.palavraAtual && (
-          <div className="sj-palavra-correta">
-            <span className="sj-palavra-correta-label">Palavra correta</span>
-            <span className="sj-palavra-correta-val">{estado.palavraAtual.texto}</span>
-            {/* Só o aluno vê o próprio resultado, revelado agora, no fim da rodada */}
-            <ResultadoRodada
-              feedback={feedback}
-              validacaoLocal={validacaoLocal}
-              jaRespondeu={jaRespondeu}
-              resposta={resposta}
-              palavraCorreta={estado.palavraAtual.texto}
-            />
-          </div>
-        )}
-
-        {/* Só o criador do duelo vê a contagem, é o cliente dele que avança a rodada */}
-        {criadorDuelo && (
-          <div className="sj-ranking-countdown">
-            <span className="sj-ranking-next-label">Próxima palavra em</span>
-            <span className="sj-ranking-next-val">{rankingTimer}s</span>
-          </div>
-        )}
-
-        <RankingNuvem placar={estado.placar} meuLogin={meuLogin} posRef={posRef} />
-      </div>
+      <TelaRankingRodada
+        estado={estado}
+        feedback={feedback}
+        validacaoLocal={validacaoLocal}
+        jaRespondeu={jaRespondeu}
+        resposta={resposta}
+        meuLogin={meuLogin}
+        segundosParaProxima={rankingTimer}
+        posRef={posRef}
+        palavraCorreta={palavraCorreta}
+      />
     );
   }
 
@@ -488,51 +687,10 @@ export const SalaJogoAluno: React.FC<Props> = ({
           <button type="submit" className="sj-send-btn" disabled={!resposta.trim() || jaRespondeu || !ativo}>
             {jaRespondeu ? 'Resposta enviada ✓' : 'Enviar resposta →'}
           </button>
-          {bloqueioCorretor && (
-            <div className="sj-feedback sj-feedback--warn">
-              <span className="sj-feedback-icon">⌨</span>
-              <div className="sj-feedback-body">
-                <strong>Escreva você mesmo</strong> · sugestão do teclado, colar e corretor não valem aqui
-              </div>
-            </div>
-          )}
-          {erroEnvio && (
-            <div className="sj-feedback sj-feedback--warn">
-              <span className="sj-feedback-icon">⚠</span>
-              <div className="sj-feedback-body">
-                <strong>Sem conexão com a sala</strong> · sua resposta não foi enviada, toque em enviar de novo
-              </div>
-            </div>
-          )}
+          <AvisosDoCampo bloqueioCorretor={bloqueioCorretor} erroEnvio={erroEnvio} audioBloqueado={audioBloqueado} />
         </form>
 
-        {feedback && (
-          // No acerto celebramos na hora; no erro ficamos NEUTROS (nada de ✗ vermelho):
-          // o resultado só é revelado no fim da rodada, junto do % e do que errou
-          <div className={`sj-feedback${feedback.correta && feedback.registrada ? ' sj-feedback--ok' : ' sj-feedback--warn'}`}>
-            <span className="sj-feedback-icon">{feedback.registrada ? '✓' : '⏱'}</span>
-            <div className="sj-feedback-body">
-              {!feedback.registrada ? (
-                // O servidor recusou a resposta (chegou fora do tempo da rodada):
-                // avisar na hora evita a impressão de acerto que não virou ponto
-                <>
-                  <strong>Resposta fora do tempo</strong> · não foi contabilizada
-                </>
-              ) : feedback.correta ? (
-                <>
-                  <strong>{feedback.ordem === 1 ? '1º a acertar!' : `${feedback.ordem}º a acertar`}</strong> · palavra correta
-                </>
-              ) : (
-                <>
-                  {/* Ao enviar mostramos só que errou, o quanto acertou (%) e o
-                      que errou aparecem no fim da rodada, quando o tempo acaba */}
-                  <strong>Resposta enviada</strong> · veja o resultado quando o tempo acabar
-                </>
-              )}
-            </div>
-            {feedback.correta && feedback.registrada && <span className="sj-feedback-pts">+{feedback.pontos} pts</span>}
-          </div>
-        )}
+        <FeedbackDoEnvio feedback={feedback} />
 
         {validacaoLocal && !validacaoLocal.correta && jaRespondeu && !feedback && (
           <div className="sj-feedback sj-feedback--warn">

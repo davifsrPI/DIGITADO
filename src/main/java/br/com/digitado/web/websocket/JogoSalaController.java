@@ -5,8 +5,10 @@ import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.AuthoritiesConstants;
+import br.com.digitado.service.ConfiguracaoPartidaService;
 import br.com.digitado.service.ConquistaEngineService;
 import br.com.digitado.service.JogoSalaService;
+import br.com.digitado.service.ParticipanteSalaService;
 import br.com.digitado.web.websocket.dto.*;
 import java.security.Principal;
 import java.util.Map;
@@ -35,6 +37,8 @@ public class JogoSalaController {
     private final UsuarioRepository usuarioRepository;
     private final SimpMessagingTemplate messaging;
     private final ConquistaEngineService conquistaEngine;
+    private final ParticipanteSalaService participanteSalaService;
+    private final ConfiguracaoPartidaService configuracaoPartidaService;
 
     public JogoSalaController(
         JogoSalaService jogoService,
@@ -42,7 +46,9 @@ public class JogoSalaController {
         UserRepository userRepository,
         UsuarioRepository usuarioRepository,
         SimpMessagingTemplate messaging,
-        ConquistaEngineService conquistaEngine
+        ConquistaEngineService conquistaEngine,
+        ParticipanteSalaService participanteSalaService,
+        ConfiguracaoPartidaService configuracaoPartidaService
     ) {
         this.jogoService = jogoService;
         this.salaRepository = salaRepository;
@@ -50,19 +56,33 @@ public class JogoSalaController {
         this.usuarioRepository = usuarioRepository;
         this.messaging = messaging;
         this.conquistaEngine = conquistaEngine;
+        this.participanteSalaService = participanteSalaService;
+        this.configuracaoPartidaService = configuracaoPartidaService;
     }
 
-    // Nome público do jogador no placar: o APELIDO cadastrado no perfil vence o nome
-    // enviado pelo cliente (que fica só como fallback) - resolvido no servidor, um
-    // cliente adulterado não escolhe como aparece para os outros
-    private String nomeExibicao(String login, String nomeEnviado) {
-        return userRepository
-            .findOneByLogin(login)
-            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
-            .map(u -> u.getApelido())
-            .filter(a -> a != null && !a.isBlank())
-            .map(String::trim)
-            .orElse(nomeEnviado);
+    /**
+     * Nome público do jogador no placar - o que os COLEGAS veem.
+     *
+     * Vale primeiro a identificação que o aluno preencheu ao entrar NESTA sala
+     * (o nome que ele digitou ou, se ele preferiu se esconder, o apelido). Sem
+     * ela - professor, duelo 1v1, sala entrada antes desta tela existir - segue
+     * a regra antiga: o apelido do perfil e, por último, o nome que o cliente
+     * mandou. Tudo resolvido no servidor: um cliente adulterado não escolhe como
+     * aparece para os outros, nem consegue exibir o nome real de quem optou pelo
+     * apelido.
+     */
+    private String nomeExibicao(String codigoSala, String login, String nomeEnviado) {
+        return participanteSalaService
+            .nomePublico(codigoSala, login)
+            .orElseGet(() ->
+                userRepository
+                    .findOneByLogin(login)
+                    .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+                    .map(u -> u.getApelido())
+                    .filter(a -> a != null && !a.isBlank())
+                    .map(String::trim)
+                    .orElse(nomeEnviado)
+            );
     }
 
     // Registra um aluno (ou professor) na sala quando ele se conecta.
@@ -81,7 +101,7 @@ public class JogoSalaController {
         // sai da sala, e não por login - ver JogoSalaService.aoDesconectar
         String sessaoId = headers != null ? headers.getSessionId() : null;
         String nomeSala = getNomeSala(codigo);
-        String nome = nomeExibicao(login, entrada.nome());
+        String nome = nomeExibicao(codigo, login, entrada.nome());
         boolean duelo = salaRepository.findByCodigo(codigo).map(s -> s.getTipo() == TipoSala.UM_V_UM).orElse(false);
         if (duelo) {
             boolean entrou = jogoService.registrarNoDuelo(codigo, login, nome, sessaoId);
@@ -130,14 +150,41 @@ public class JogoSalaController {
             return;
         }
         String nomeSala = getNomeSala(codigo);
+        // Grava na sala a configuração com que a partida está começando: os ajustes
+        // que o professor fez na tela de espera passam a ser o que ela tem guardado,
+        // então recarregar a página devolve o que ele escolheu, e não o padrão
+        configuracaoPartidaService.salvar(
+            codigo,
+            new ConfiguracaoPartidaService.ConfiguracaoPartida(
+                payload.tempoFacil(),
+                payload.tempoMedio(),
+                payload.tempoDificil(),
+                payload.qtdFacil(),
+                payload.qtdMedio(),
+                payload.qtdDificil(),
+                payload.palavrasExtrasIds(),
+                payload.palavrasIds()
+            )
+        );
         EstadoJogoDTO estado = jogoService.iniciar(codigo, nomeSala, payload, principal.getName());
         broadcast(codigo, estado);
     }
 
-    // Avança para a próxima palavra (chamado automaticamente pelo frontend quando o tempo esgota).
-    // Restrito ao professor da sala.
+    /**
+     * Passa para a próxima palavra na hora, a pedido de quem comanda a sala (botão
+     * "Todos responderam"). Restrito ao professor da sala.
+     *
+     * O tempo normal da rodada NÃO depende mais desta mensagem: quem vira a rodada
+     * quando o ranking acaba é o relógio do servidor (JogoSalaRodadaScheduler). Antes
+     * era o navegador do professor que contava os 8 segundos e pedia a virada, e a aba
+     * dele fechando deixava a turma parada no ranking para sempre.
+     *
+     * indiceAtual: a rodada que o cliente acha que está terminando. Serve para um
+     * pedido atrasado (ou um clique junto com a virada do servidor) não pular uma
+     * palavra. Opcional, para um cliente antigo ainda em cache continuar funcionando.
+     */
     @MessageMapping("/sala/{codigo}/proxima")
-    public void proxima(@DestinationVariable String codigo, Principal principal) {
+    public void proxima(@DestinationVariable String codigo, @Payload(required = false) AvancoPayload payload, Principal principal) {
         if (!isProfessorDaSala(codigo, principal)) {
             LOG.warn(
                 "Tentativa não autorizada de avançar palavra em sala {} por {}",
@@ -147,7 +194,8 @@ public class JogoSalaController {
             return;
         }
         String nomeSala = getNomeSala(codigo);
-        EstadoJogoDTO estado = jogoService.proximaPalavra(codigo, nomeSala, principal.getName());
+        Integer indiceEsperado = payload != null ? payload.indiceAtual() : null;
+        EstadoJogoDTO estado = jogoService.proximaPalavra(codigo, nomeSala, principal.getName(), indiceEsperado);
         if (estado != null) broadcast(codigo, estado);
     }
 

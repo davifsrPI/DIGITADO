@@ -17,6 +17,7 @@ import CriarSala from 'app/modules/sala/criar-sala';
 import SalaJogo from 'app/modules/sala/sala-jogo';
 import MinhasSalas from 'app/modules/sala/minhas-salas';
 import SalaEstatisticas from 'app/modules/sala/sala-estatisticas';
+import IdentificacaoAluno from 'app/modules/sala/identificacao-aluno';
 import Conquistas from 'app/modules/conquistas/conquistas';
 import MeuDesempenho from 'app/modules/desempenho/meu-desempenho';
 import Ranking from 'app/modules/ranking/ranking';
@@ -102,6 +103,18 @@ const AppRoutes = () => {
           element={
             <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <SalaEstatisticas />
+            </PrivateRoute>
+          }
+        />
+        {/* Tela de entrada do aluno (nome, turma, apelido). Vem ANTES de
+            sala/:codigo pelo mesmo motivo do caminho acima: o mais específico
+            precisa casar primeiro. Dono da sala e duelo 1v1 caem direto na
+            partida, a própria tela redireciona. */}
+        <Route
+          path="sala/:codigo/entrar"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+              <IdentificacaoAluno />
             </PrivateRoute>
           }
         />

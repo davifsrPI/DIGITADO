@@ -1,0 +1,327 @@
+/* Tela de entrada na sala: nome, turma e a escolha de aparecer pelo apelido.
+   Mesma linguagem visual do lobby (fundo escuro, card em vidro, brilhos sem
+   filter: blur - ver o comentário em lobby.scss sobre o custo no celular). */
+
+body.identificacao-page {
+  background: #0f172a !important;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+
+  .jh-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .view-container {
+    padding: 0 !important;
+  }
+}
+
+.ident-wrapper {
+  font-family: 'Poppins', sans-serif;
+  color: white;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+/* Brilhos de fundo pintados direto no elemento, sem blur */
+.ident-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(520px 520px at 88% -8%, rgba(37, 99, 235, 0.38), rgba(37, 99, 235, 0)),
+    radial-gradient(420px 420px at 6% 104%, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0)),
+    radial-gradient(320px 320px at 52% 44%, rgba(250, 204, 21, 0.16), rgba(250, 204, 21, 0));
+}
+
+.ident-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ident-carregando {
+  position: relative;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 15px;
+}
+
+.ident-back {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 2px;
+  font-family: inherit;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #e2e8f0;
+  }
+}
+
+.ident-card {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.14), rgba(37, 99, 235, 0.05));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 26px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.35);
+}
+
+.ident-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.ident-codigo-pill {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 999px;
+  padding: 5px 14px;
+}
+
+.ident-titulo {
+  font-size: 23px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.ident-sub {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.ident-erro {
+  background: rgba(127, 29, 29, 0.55);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.ident-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ident-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.ident-obrig {
+  color: #f87171;
+}
+
+.ident-input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1.5px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  color: white;
+  font-size: 16px; /* 16px evita o zoom automático do iOS ao focar o campo */
+  font-family: inherit;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+
+  &::placeholder {
+    color: rgba(148, 163, 184, 0.65);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
+  }
+}
+
+.ident-input--erro {
+  border-color: #ef4444;
+
+  &:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22);
+  }
+}
+
+/* O campo do apelido entra junto com a escolha: a descida curta mostra que ele
+   pertence à chave logo acima, em vez de "aparecer" do nada */
+.ident-input--apelido {
+  animation: ident-desce 0.22s ease-out;
+}
+
+@keyframes ident-desce {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ident-msg-erro {
+  font-size: 13px;
+  color: #fca5a5;
+}
+
+.ident-dica {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+
+/* ── Chave tic-tac: nome ⇄ apelido ──
+   A pastilha ocupa metade da largura e corre de um lado para o outro; os dois
+   rótulos ficam por cima dela, e o que está selecionado escurece para ler bem
+   sobre o azul. Tudo em transform/left, que o compositor anima sozinho. */
+
+.ident-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  width: 100%;
+  height: 52px;
+  padding: 5px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1.5px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  overflow: hidden;
+
+  &:focus-visible {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
+  }
+}
+
+.ident-switch-pastilha {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: calc(50% - 5px);
+  height: calc(100% - 10px);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #4f46e5);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.42);
+  /* A curva com leve ultrapassagem é o que dá o "tic-tac": a pastilha chega,
+     passa um fio do destino e volta, como o pêndulo de um relógio */
+  transition: transform 0.32s cubic-bezier(0.68, -0.4, 0.32, 1.4);
+}
+
+.ident-switch--apelido .ident-switch-pastilha {
+  transform: translateX(100%);
+  background: linear-gradient(135deg, #22c55e, #0ea5e9);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+}
+
+.ident-switch-opcao {
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: center;
+  transition: color 0.25s;
+  user-select: none;
+}
+
+.ident-switch .ident-switch-opcao:first-of-type {
+  color: white;
+}
+
+.ident-switch--apelido .ident-switch-opcao:first-of-type {
+  color: #94a3b8;
+}
+
+.ident-switch--apelido .ident-switch-opcao:last-of-type {
+  color: white;
+}
+
+/* Quem pediu para não ter animação vê a pastilha trocar de lado direto */
+@media (prefers-reduced-motion: reduce) {
+  .ident-switch-pastilha {
+    transition: none;
+  }
+
+  .ident-input--apelido {
+    animation: none;
+  }
+}
+
+.ident-entrar-btn {
+  width: 100%;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6, #4f46e5);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+@media (max-width: 520px) {
+  .ident-card {
+    padding: 26px 20px;
+    border-radius: 22px;
+  }
+
+  .ident-titulo {
+    font-size: 20px;
+  }
+}

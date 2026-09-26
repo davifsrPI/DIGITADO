@@ -9,6 +9,15 @@ interface Props {
   // Posições da rodada anterior (login -> índice), mantidas pelo componente pai
   // para que a animação de ultrapassagem funcione mesmo entre rodadas.
   posRef: MutableRefObject<Map<string, number>>;
+  /**
+   * Só na tela do PROFESSOR: login -> nome verdadeiro e login -> turma, de
+   * useNomesParticipantes. O placar trafega com o nome público (o apelido, para
+   * quem escolheu se esconder dos colegas), e quem comanda a sala precisa saber
+   * de quem é cada pontuação. Sem estes mapas - as telas dos alunos - continua
+   * valendo o nome público.
+   */
+  nomes?: Record<string, string>;
+  turmas?: Record<string, string>;
 }
 
 // Altura de cada caixa + espaçamento, deve casar com o CSS (.rn-nuvem)
@@ -19,7 +28,7 @@ const ROW_H = 74;
  * quando um jogador passa outro entre rodadas, a caixa desliza da posição
  * anterior para a nova, dando o efeito de um passando o outro.
  */
-export const RankingNuvem: React.FC<Props> = ({ placar, meuLogin, posRef }) => {
+export const RankingNuvem: React.FC<Props> = ({ placar, meuLogin, posRef, nomes, turmas }) => {
   const top5 = placar.slice(0, 5);
   // Posições calculadas sobre o placar COMPLETO: quem empata divide o lugar, e a
   // numeração do top 5 é a mesma que aparece no ranking final da partida
@@ -65,10 +74,11 @@ export const RankingNuvem: React.FC<Props> = ({ placar, meuLogin, posRef }) => {
           style={{ top: i * ROW_H }}
         >
           <span className="rn-rank">{posicoes[i]}º</span>
-          <span className="rn-avatar">{(p.nome || p.login).charAt(0).toUpperCase()}</span>
+          <span className="rn-avatar">{(nomes?.[p.login] || p.nome || p.login).charAt(0).toUpperCase()}</span>
           <span className="rn-nome">
-            {p.nome || p.login}
+            {nomes?.[p.login] || p.nome || p.login}
             {p.login === meuLogin ? ' (você)' : ''}
+            {turmas?.[p.login] && <span className="rn-turma">{turmas[p.login]}</span>}
           </span>
           <span className="rn-pts">{p.pontos} pts</span>
         </div>

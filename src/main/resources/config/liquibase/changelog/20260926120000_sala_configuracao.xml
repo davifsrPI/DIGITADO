@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Configuracao da partida gravada na sala: tempo e quantidade por dificuldade,
+        palavras extras escolhidas a mao e as palavras ja sorteadas na criacao.
+
+        Antes isso existia so no cliente - viajava no estado de navegacao do React
+        Router, com uma copia no sessionStorage para os duelos. Recarregar a tela de
+        espera perdia a lista de palavras que o professor havia conferido uma por uma,
+        e a partida comecava com a configuracao PADRAO sorteando palavras novas, sem
+        avisar. No duelo, abrir o link em outro aparelho dava o mesmo resultado.
+
+        Coluna json, como a descricao: quem monta o conteudo e o backend.
+        E NUNCA sai na listagem publica - palavrasIds sao as respostas da partida,
+        entao a configuracao so e devolvida ao dono da sala.
+    -->
+    <changeSet id="20260926120000-1" author="digitado">
+        <addColumn tableName="sala">
+            <column name="configuracao" type="json"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

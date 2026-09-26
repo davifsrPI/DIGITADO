@@ -1,0 +1,196 @@
+/* Resumo pessoal da partida (aluno) e a mesma peça na tela do professor quando
+   ele abre a métrica de um aluno. Mesma paleta escura das telas de jogo. */
+
+.ra-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.ra-cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ra-cabecalho-nome {
+  font-size: 17px;
+  font-weight: 700;
+  color: white;
+}
+
+.ra-cabecalho-sub {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* Os números grandes: acertos, erros, sem resposta e a média da turma */
+.ra-numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.ra-numero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 8px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.ra-numero-val {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.ra-numero-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.ra-numero--ok .ra-numero-val {
+  color: #4ade80;
+}
+
+.ra-numero--erro .ra-numero-val {
+  color: #f87171;
+}
+
+.ra-numero--vazio .ra-numero-val {
+  color: #fbbf24;
+}
+
+.ra-numero--turma .ra-numero-val {
+  color: #60a5fa;
+}
+
+.ra-comparacao {
+  margin: 0;
+  font-size: 13.5px;
+  color: #cbd5e1;
+}
+
+/* Duas colunas no desktop (acertou | errou), empilhadas no celular */
+.ra-listas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.ra-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ra-lista-titulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ra-lista-titulo--ok {
+  color: #4ade80;
+}
+
+.ra-lista-titulo--erro {
+  color: #f87171;
+}
+
+.ra-lista-vazia {
+  margin: 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.ra-palavras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ra-palavra {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.55);
+  border-left: 3px solid transparent;
+}
+
+.ra-palavra--ok {
+  border-left-color: #22c55e;
+}
+
+.ra-palavra--erro {
+  border-left-color: #ef4444;
+}
+
+.ra-palavra-icone {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.ra-palavra--ok .ra-palavra-icone {
+  color: #4ade80;
+}
+
+.ra-palavra--erro .ra-palavra-icone {
+  color: #f87171;
+}
+
+.ra-palavra-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ra-palavra-topo {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ra-palavra-texto {
+  font-size: 15px;
+  font-weight: 700;
+  color: white;
+  overflow-wrap: anywhere;
+}
+
+.ra-palavra-dif {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ra-palavra-escrita {
+  font-size: 12.5px;
+  color: #fca5a5;
+  overflow-wrap: anywhere;
+}
+
+.ra-palavra-turma {
+  font-size: 12px;
+  color: #94a3b8;
+}

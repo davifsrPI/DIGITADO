@@ -17,6 +17,12 @@ public record EstadoJogoDTO(
     int tempoLimite,
     long timestampInicio,
     long timestampServidor,
+    // Quando a rodada fechou (todos responderam) ou fecha (fim do tempo), e quantos
+    // segundos de ranking vêm depois dela. Quem vira a palavra é o SERVIDOR: antes o
+    // tempo era contado no navegador de quem comandava a sala, e a aba dele fechando
+    // deixava a turma parada no ranking para sempre. A tela só desenha a contagem.
+    long timestampFechamento,
+    int tempoRanking,
     List<PlacarEntry> placar,
     String nomeSala,
     String codigoSala,

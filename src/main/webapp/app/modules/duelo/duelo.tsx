@@ -5,9 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import TelaCarregamento from 'app/shared/layout/loading/tela-carregamento';
 import { useBodyClass } from 'app/shared/util/use-body-class';
-
-// Os códigos de sala têm sempre 6 caracteres (mesma regra de criar-sala)
-const CODE_LEN = 6;
+import { TAMANHO_CODIGO_SALA as CODE_LEN } from 'app/shared/util/codigo-sala';
 
 // A descrição agora é um objeto JSON vindo do backend: o texto livre + o modo da sala
 interface DescricaoSala {

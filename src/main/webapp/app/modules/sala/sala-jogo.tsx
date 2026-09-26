@@ -32,18 +32,20 @@ export const SalaJogo: React.FC = () => {
       palavrasIds?: number[];
     };
   } | null;
-  // Configuração escolhida na criação: vem pelo estado de navegação; se ele se
-  // perdeu (reload, entrada pela lista de duelos), recupera a cópia gravada no
-  // sessionStorage pela tela de criação (só existe para duelos 1v1)
-  const gameConfig = React.useMemo(() => {
-    if (locationState?.gameConfig) return locationState.gameConfig;
-    try {
-      const salvo = sessionStorage.getItem(`duelo-cfg-${codigo}`);
-      return salvo ? (JSON.parse(salvo) as NonNullable<typeof locationState>['gameConfig']) : undefined;
-    } catch {
-      return undefined;
-    }
-  }, [locationState, codigo]);
+  /**
+   * Configuração da partida: quem manda é a que está GRAVADA NA SALA.
+   *
+   * Antes ela vinha só pelo estado de navegação, com uma cópia no sessionStorage
+   * para os duelos: recarregar esta tela perdia a lista de palavras que o professor
+   * conferiu uma por uma na criação, e a partida sorteava outras sem avisar. Agora
+   * a tela busca no servidor (endpoint restrito ao dono da sala - palavrasIds são
+   * as respostas da partida).
+   *
+   * O estado de navegação continua valendo como atalho para a primeira
+   * renderização, até a resposta do servidor chegar e substituí-lo.
+   */
+  const [configuracaoSalva, setConfiguracaoSalva] = useState<NonNullable<typeof locationState>['gameConfig'] | null>(null);
+  const gameConfig = configuracaoSalva ?? locationState?.gameConfig;
 
   // O papel de professor chega pelo estado de navegação, mas ele se perde ao
   // RECARREGAR a página, sem esta recuperação, o professor caía para sempre na
@@ -72,9 +74,50 @@ export const SalaJogo: React.FC = () => {
       .catch(() => setModo1v1(false));
   }, [codigo]);
 
-  // Ainda não sabemos o papel (reload + resposta do servidor pendente) ou o modo da
-  // sala: segura a renderização para não mostrar a visão errada por um instante
-  const verificandoPapel = (papelDesconhecido && souProfessorServidor === null) || (isProfessor && modo1v1 === null);
+  /**
+   * O aluno já se identificou NESTA sala? (nome e turma, na tela de entrada)
+   *
+   * Vale também para quem chegou direto pela URL ou recarregou a página: sem esta
+   * checagem, /sala/{codigo} entrava na partida sem nome nem turma, e o professor
+   * via no placar um login em vez de um aluno. Quem não se identificou é mandado
+   * para o formulário. Professor e duelo 1v1 não passam por ele.
+   * null = ainda verificando.
+   */
+  const papelResolvido = !papelDesconhecido || souProfessorServidor !== null;
+  const [identificado, setIdentificado] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!papelResolvido || modo1v1 === null) return;
+    if (isProfessor || modo1v1) {
+      setIdentificado(true);
+      return;
+    }
+    axios
+      .get(`/api/salas/${codigo}/identificacao`)
+      .then(() => setIdentificado(true))
+      .catch(() => {
+        setIdentificado(false);
+        navigate(`/sala/${codigo}/entrar`, { replace: true });
+      });
+  }, [codigo, papelResolvido, isProfessor, modo1v1, navigate]);
+
+  // Busca a configuração gravada na sala. Só quem comanda precisa (e só ele tem
+  // acesso): é a tela de espera que usa, para iniciar a partida com o que foi
+  // escolhido na criação, inclusive depois de recarregar a página.
+  useEffect(() => {
+    if (!isProfessor) return;
+    axios
+      .get<NonNullable<typeof locationState>['gameConfig']>(`/api/salas/${codigo}/configuracao`)
+      .then(res => setConfiguracaoSalva(res.data))
+      .catch(() => {
+        // Sem configuração gravada (sala antiga) ou sem acesso: fica o que veio
+        // pelo estado de navegação, e a tela cai no padrão dela se não vier nada
+      });
+  }, [codigo, isProfessor]);
+
+  // Ainda não sabemos o papel (reload + resposta do servidor pendente), o modo da
+  // sala ou se o aluno se identificou: segura a renderização para não mostrar a
+  // visão errada por um instante
+  const verificandoPapel = !papelResolvido || modo1v1 === null || identificado !== true;
 
   // Remove o card branco padrão do layout (jh-card), a página tem fundo escuro próprio
   useBodyClass('sala-jogo-page');
@@ -124,11 +167,14 @@ export const SalaJogo: React.FC = () => {
     setTimeout(() => setErroWS(null), 6000);
   }, []);
 
-  // Conexão WebSocket
+  // Conexão WebSocket. Só abre depois que a tela sabe quem é quem: o "entrar" que
+  // o hook publica ao conectar é o que registra o participante na sala, e ele não
+  // pode acontecer enquanto o aluno ainda está a caminho do formulário de entrada.
   const { conectado, iniciar, proxima, pausar, encerrar, responder, pedirEstado } = useSalaWebSocket({
     codigoSala: codigo,
     login,
     nome,
+    habilitado: identificado === true,
     onEstado: handleEstado,
     onFeedback: handleFeedback,
     onErro: handleErro,
@@ -156,8 +202,9 @@ export const SalaJogo: React.FC = () => {
           <div style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', padding: '60px 0', fontSize: 15 }}>Carregando sala...</div>
         ) : isProfessor && modo1v1 ? (
           // APENAS no duelo 1v1 o criador joga junto: recebe a mesma tela do
-          // jogador (áudio + digitação), acrescida do botão de iniciar o duelo
-          // e do avanço automático das rodadas (papéis que seriam do professor)
+          // jogador (áudio + digitação), acrescida do botão de iniciar o duelo.
+          // O avanço das rodadas NÃO é mais dele: quem vira a palavra é o relógio
+          // do servidor, igual para os dois jogadores
           <SalaJogoAluno
             estado={estado}
             feedback={feedback}
@@ -168,7 +215,6 @@ export const SalaJogo: React.FC = () => {
             criadorDuelo
             codigoSala={codigo}
             onIniciar={iniciar}
-            onProxima={proxima}
             onPedirEstado={pedirEstado}
             initialGameConfig={gameConfig}
           />
@@ -198,6 +244,8 @@ export const SalaJogo: React.FC = () => {
             conectado={conectado}
             duelo1v1={modo1v1 === true}
             onPedirEstado={pedirEstado}
+            // A tela busca com ele o resumo pessoal quando a partida encerra
+            codigoSala={codigo}
           />
         )}
       </div>

@@ -1,11 +1,9 @@
 import './minhas-salas.scss';
 
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useBodyClass } from 'app/shared/util/use-body-class';
-
-type Filtro = 'todas' | 'abertas' | 'fechadas';
 
 // A descrição vem do backend como objeto JSON: o texto livre + o modo da sala (1v1/normal)
 interface DescricaoSala {
@@ -18,9 +16,8 @@ interface Sala {
   codigo: string;
   nome: string;
   descricao?: DescricaoSala | string | null;
-  ativo: boolean;
   // A sala já teve uma partida encerrada e guardada? É o que libera o botão
-  // "Ver estatísticas", fechar a sala não apaga mais o desempenho da turma
+  // "Ver estatísticas"
   temEstatisticas?: boolean;
 }
 
@@ -30,42 +27,38 @@ const textoDescricao = (d: Sala['descricao']): string | null => (typeof d === 's
 // A sala é de duelo 1v1? (lido do JSON da descrição)
 const ehDuelo = (d: Sala['descricao']): boolean => typeof d === 'object' && d?.modo === '1v1';
 
-// Página do professor para gerenciar suas salas: lista, filtra por status (abertas/fechadas)
-// e permite entrar como professor direto para a tela de jogo
+// Página do professor para gerenciar suas salas: lista todas e permite entrar
+// como professor direto para a tela de jogo.
+//
+// Sala NÃO FECHA MAIS. Aqui havia um cadeado por card e um filtro
+// abertas/fechadas: a sala fechava sozinha quando esvaziava e, fechada, sumia
+// da listagem e nem o dono entrava - levando junto o caminho para o desempenho
+// da turma. Toda sala fica aberta, então o filtro e o cadeado saíram.
 export const MinhasSalas = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [salas, setSalas] = useState<Sala[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtro, setFiltro] = useState<Filtro>('todas');
+  // Acabou de chegar da tela de criação pelo "criar e deixar pronta": a sala nova
+  // ganha um aviso no topo e um destaque no card, senão o professor voltaria para
+  // uma lista igual à de antes, sem saber se a sala foi mesmo criada
+  const salaCriada = (location.state as { salaCriada?: string } | null)?.salaCriada ?? null;
 
   // Adiciona classe ao body para aplicar o fundo específico desta página
   useBodyClass('minhas-salas-page');
 
-  // Busca as salas do professor sempre que o filtro muda, passa o parâmetro ativo quando necessário
+  // Busca as salas do usuário logado
   useEffect(() => {
     setLoading(true);
     // meus=true: esta tela lista as salas DO USUÁRIO logado. Sem o parâmetro o
     // backend devolve ao admin a listagem crua das telas CRUD, sem o campo
     // temEstatisticas, e o botão "Ver estatísticas" some do card
-    const params: Record<string, string> = { meus: 'true' };
-    if (filtro === 'abertas') params.ativo = 'true';
-    if (filtro === 'fechadas') params.ativo = 'false';
     axios
-      .get<Sala[]>('/api/salas', { params })
+      .get<Sala[]>('/api/salas', { params: { meus: 'true' } })
       .then(res => setSalas(res.data))
       .catch(() => setSalas([]))
       .finally(() => setLoading(false));
-  }, [filtro]);
-
-  // Alterna o status da sala entre aberta/fechada via PATCH e atualiza o estado local
-  const toggleAtivo = async (sala: Sala) => {
-    try {
-      await axios.patch(`/api/salas/${sala.codigo}`, { codigo: sala.codigo, ativo: !sala.ativo });
-      setSalas(prev => prev.map(s => (s.codigo === sala.codigo ? { ...s, ativo: !s.ativo } : s)));
-    } catch {
-      // silent
-    }
-  };
+  }, []);
 
   return (
     <div className="ms-wrapper">
@@ -87,13 +80,15 @@ export const MinhasSalas = () => {
           </Link>
         </div>
 
-        <div className="ms-filters">
-          {(['todas', 'abertas', 'fechadas'] as Filtro[]).map(f => (
-            <button key={f} className={`ms-filter-btn${filtro === f ? ' ms-filter-btn--active' : ''}`} onClick={() => setFiltro(f)}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
+        {salaCriada && (
+          <div className="ms-criada">
+            <span className="ms-criada-icone">✓</span>
+            <div className="ms-criada-texto">
+              <strong>Sala {salaCriada} criada e pronta.</strong> As palavras já estão guardadas nela - no dia da aula, entre como professor
+              e confira a lista antes de começar.
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="ms-loading">Carregando salas...</div>
@@ -108,30 +103,19 @@ export const MinhasSalas = () => {
         ) : (
           <div className="ms-grid">
             {salas.map(sala => (
-              <div key={sala.codigo} className={`ms-card${sala.ativo ? '' : ' ms-card--closed'}`}>
-                <div className="ms-card-top">
-                  <span className={`ms-badge${sala.ativo ? ' ms-badge--open' : ' ms-badge--closed'}`}>
-                    {sala.ativo ? 'Aberta' : 'Fechada'}
-                  </span>
-                  <button className="ms-toggle-btn" onClick={() => toggleAtivo(sala)} title={sala.ativo ? 'Fechar sala' : 'Reabrir sala'}>
-                    {sala.ativo ? '🔓' : '🔒'}
-                  </button>
-                </div>
+              <div key={sala.codigo} className={`ms-card${sala.codigo === salaCriada ? ' ms-card--nova' : ''}`}>
                 <div className="ms-card-nome">
                   {ehDuelo(sala.descricao) && <span title="Duelo 1v1">⚔️ </span>}
                   {sala.nome}
                 </div>
                 {textoDescricao(sala.descricao) && <div className="ms-card-desc">{textoDescricao(sala.descricao)}</div>}
                 <div className="ms-card-codigo">{sala.codigo}</div>
-                <button
-                  className="ms-entrar-btn"
-                  onClick={() => navigate(`/sala/${sala.codigo}`, { state: { isProfessor: true } })}
-                  disabled={!sala.ativo}
-                >
-                  {sala.ativo ? 'Entrar como professor →' : 'Sala fechada'}
+                <button className="ms-entrar-btn" onClick={() => navigate(`/sala/${sala.codigo}`, { state: { isProfessor: true } })}>
+                  Entrar como professor →
                 </button>
-                {/* Desempenho da última partida, lido do snapshot no banco, então
-                    a sala não precisa ser reaberta (reabrir a devolve zerada) */}
+                {/* Desempenho da última partida, lido do snapshot no banco - e é
+                    de lá que sai também o resumo de cada aluno, inclusive nas
+                    salas jogadas antes desta tela existir */}
                 {sala.temEstatisticas && (
                   <button className="ms-estatisticas-btn" onClick={() => navigate(`/sala/${sala.codigo}/estatisticas`)}>
                     📊 Ver estatísticas

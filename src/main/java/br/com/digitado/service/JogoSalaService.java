@@ -29,6 +29,28 @@ public class JogoSalaService {
     // folga de rede: aceita resposta até 2s depois do tempo da rodada
     private static final long FOLGA_RESPOSTA_MS = 2000;
 
+    /**
+     * Segundos de ranking entre uma palavra e a próxima.
+     *
+     * Este tempo era contado no navegador de quem comandava a sala, que também era
+     * quem pedia a próxima palavra: com a aba fechada, sem rede ou com o celular
+     * suspendendo a aba em segundo plano, a turma inteira ficava parada no ranking
+     * para sempre - o servidor nunca virava a rodada sozinho. Agora ele é o dono do
+     * relógio (ver avancarRodadasVencidas) e manda este valor para as telas, que só
+     * desenham a contagem.
+     */
+    public static final int TEMPO_RANKING_SEGUNDOS = 8;
+
+    /**
+     * Folga antes de o SERVIDOR virar a rodada por conta própria.
+     *
+     * Quem comanda a sala continua podendo passar a palavra na hora (botão "Todos
+     * responderam"). Esta folga evita que as duas coisas briguem por um décimo de
+     * segundo: a virada automática só entra depois que o tempo de ranking acabou de
+     * verdade para todos os aparelhos.
+     */
+    private static final long FOLGA_AVANCO_MS = 1500;
+
     // Espaço fixo (U+00A0): vem em texto colado de documento e sobrevive ao trim,
     // que só apara caracteres de controle e o espaço comum
     private static final char ESPACO_FIXO = (char) 0x00A0;
@@ -36,8 +58,34 @@ public class JogoSalaService {
     // ninguém digita mais rápido que ~80ms por letra; abaixo disso trato como bot
     private static final long MIN_MS_POR_LETRA = 80;
 
+    /**
+     * Equivalências fonéticas do português, aplicadas em ordem: grafias distintas
+     * que soam igual caem no mesmo texto. É a tabela que separa ERRO_FONETICO
+     * ("xave" por "chave") de um erro qualquer de digitação.
+     *
+     * Espelha a tabela da tela (validarResposta.ts), que dá o retorno imediato ao
+     * aluno enquanto a resposta do servidor não chega. Quem grava no histórico é
+     * este lado - mudou aqui, muda lá.
+     *
+     * Aplicada sobre o texto AINDA acentuado, por causa da cedilha - ver som().
+     */
+    private static final String[][] REGRAS_FONETICAS = {
+        { "ç", "s" },
+        { "ss", "s" },
+        { "rr", "r" },
+        { "ph", "f" },
+        { "ch", "x" },
+        { "lh", "l" },
+        { "nh", "n" },
+        { "[qk]", "c" },
+        { "y", "i" },
+        { "w", "v" },
+        { "[sz]", "z" },
+    };
+
     private final PalavraRepository palavraRepository;
     private final PalavraEstatisticaService palavraEstatisticaService;
+    private final PalavraAudioService palavraAudioService;
     private final ConquistaEngineService conquistaEngine;
     private final EstatisticaPartidaService estatisticaPartidaService;
     private final HistoricoRespostaService historicoRespostaService;
@@ -64,12 +112,14 @@ public class JogoSalaService {
     public JogoSalaService(
         PalavraRepository palavraRepository,
         PalavraEstatisticaService palavraEstatisticaService,
+        PalavraAudioService palavraAudioService,
         ConquistaEngineService conquistaEngine,
         EstatisticaPartidaService estatisticaPartidaService,
         HistoricoRespostaService historicoRespostaService
     ) {
         this.palavraRepository = palavraRepository;
         this.palavraEstatisticaService = palavraEstatisticaService;
+        this.palavraAudioService = palavraAudioService;
         this.conquistaEngine = conquistaEngine;
         this.estatisticaPartidaService = estatisticaPartidaService;
         this.historicoRespostaService = historicoRespostaService;
@@ -155,13 +205,14 @@ public class JogoSalaService {
     }
 
     /**
-     * Tira a sala do mapa quando o professor a fecha ou o último participante
-     * sai - senão o estado ficaria na memória até reiniciar o servidor.
+     * Tira a sala do mapa quando o último participante sai - senão o estado
+     * ficaria na memória até reiniciar o servidor. A sala em si continua
+     * ABERTA no banco: ela não fecha mais.
      *
      * ANTES de soltar o estado, grava o snapshot do que foi jogado. Sem isto, só
      * a partida levada até o fim (botão "Encerrar" ou última palavra) era salva:
-     * fechar a sala no meio do jogo, ou todo mundo sair da tela, apagava o
-     * desempenho da turma - e a sala reaberta voltava zerada, sem nada para ver.
+     * todo mundo sair da tela no meio do jogo apagava o desempenho da turma - e
+     * a sala, ao ser reaberta, voltava zerada, sem nada para ver.
      */
     public void descartarSala(String codigoSala) {
         EstadoJogo jogo = jogos.remove(codigoSala);
@@ -249,16 +300,39 @@ public class JogoSalaService {
         }
         Collections.shuffle(palavras);
         jogo.iniciar(palavras, payload.tempoFacil(), payload.tempoMedio(), payload.tempoDificil());
+        // Áudio da 1ª palavra pronto ANTES de transmitir o estado: é o que permite
+        // omitir o texto da palavra da transmissão (ver buildEstado)
+        palavraAudioService.prepararAudio(jogo.getPalavraAtual());
         return buildEstado(codigoSala, nomeSala, jogo, "INICIADA");
     }
 
     // Avança para a próxima palavra; se não houver mais, encerra o jogo.
     // loginProfessor: quem comanda a sala - excluído da contagem de silenciosos.
     public EstadoJogoDTO proximaPalavra(String codigoSala, String nomeSala, String loginProfessor) {
+        return proximaPalavra(codigoSala, nomeSala, loginProfessor, null);
+    }
+
+    /**
+     * Avança para a próxima palavra, uma vez só por rodada.
+     *
+     * indiceEsperado: a rodada que o chamador acha que está terminando. Existe
+     * porque agora há DOIS caminhos possíveis para virar a palavra - o botão de
+     * quem comanda a sala e o relógio do servidor - e sem esta reserva os dois
+     * podiam virar a mesma rodada, pulando uma palavra e contando as estatísticas
+     * em dobro. Quem chega primeiro vira; o segundo recebe null e não faz nada.
+     * null = "vire a rodada que estiver aberta" (usado pelos testes e pelo caminho
+     * antigo).
+     */
+    public EstadoJogoDTO proximaPalavra(String codigoSala, String nomeSala, String loginProfessor, Integer indiceEsperado) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null) return null;
+        if (!jogo.reservarAvanco(indiceEsperado)) return null;
         contabilizarSilenciosos(jogo, loginProfessor);
         boolean temProxima = jogo.avancar();
+        if (temProxima) {
+            // Áudio da palavra nova antes de transmitir, pelo mesmo motivo de iniciar()
+            palavraAudioService.prepararAudio(jogo.getPalavraAtual());
+        }
         if (!temProxima) {
             premiarFimDePartida(jogo);
             salvarEstatisticas(codigoSala, jogo, loginProfessor);
@@ -291,8 +365,8 @@ public class JogoSalaService {
      * relatório por palavra) para a tela "Ver estatísticas" do professor.
      *
      * Sem este snapshot o desempenho da turma vivia só no EstadoJogo em memória:
-     * fechar a sala chamava descartarSala e apagava tudo, e reabri-la devolvia
-     * uma sala zerada.
+     * esvaziar a sala chamava descartarSala e apagava tudo, e voltar nela
+     * devolvia uma sala zerada.
      *
      * O professor fica FORA do ranking gravado - ele comanda a partida, não
      * compete (mesma regra da tela e de contabilizarSilenciosos). No duelo 1v1
@@ -387,6 +461,43 @@ public class JogoSalaService {
                 }
             }
         }
+    }
+
+    /** Uma rodada que o servidor virou sozinho, e o estado a transmitir para a sala. */
+    public record RodadaAvancada(String codigoSala, EstadoJogoDTO estado) {}
+
+    /**
+     * Vira as rodadas cujo tempo de ranking já passou - o relógio da partida.
+     *
+     * Chamado de segundo em segundo pelo JogoSalaRodadaScheduler. É o que faz a
+     * partida andar sozinha: antes quem contava o tempo e pedia a próxima palavra
+     * era o navegador de quem comandava a sala, e bastava a aba fechar, a rede cair
+     * ou o celular suspender a aba para a turma ficar parada no ranking sem fim. No
+     * duelo era pior: quem avançava era o cliente do criador, e o oponente ficava
+     * preso se ele saísse.
+     *
+     * Sala pausada ou já encerrada fica de fora, e quem comanda continua podendo
+     * passar a palavra na hora - a reserva em proximaPalavra garante uma virada só.
+     */
+    public List<RodadaAvancada> avancarRodadasVencidas() {
+        long agora = Instant.now().toEpochMilli();
+        List<RodadaAvancada> avancadas = new ArrayList<>();
+        jogos.forEach((codigo, jogo) -> {
+            if (!jogo.rodadaVencida(agora)) {
+                return;
+            }
+            String nomeSala = jogo.getNomeSala() != null ? jogo.getNomeSala() : codigo;
+            try {
+                EstadoJogoDTO estado = proximaPalavra(codigo, nomeSala, jogo.getLoginProfessor(), jogo.getIndiceAtual());
+                if (estado != null) {
+                    avancadas.add(new RodadaAvancada(codigo, estado));
+                }
+            } catch (Exception e) {
+                // Uma sala com problema não pode parar o relógio das outras
+                LOG.error("Falha ao virar a rodada da sala {}: {}", codigo, e.getMessage(), e);
+            }
+        });
+        return avancadas;
     }
 
     // Retorna o estado atual da sala (usado logo após o entrar para sincronizar o cliente)
@@ -514,13 +625,10 @@ public class JogoSalaService {
             );
         }
 
-        // Classifica o tipo de erro para dar feedback mais detalhado ao aluno
-        String tipoErro = null;
-        if (!correta) {
-            tipoErro = normalizar(dLower).equals(normalizar(cLower))
-                ? "ACENTUACAO"
-                : classificarErro(normalizar(dLower), normalizar(cLower));
-        }
+        // Classifica o tipo de erro para dar feedback mais detalhado ao aluno.
+        // Recebe o texto canônico, ainda COM acento e cedilha: a classificação
+        // precisa deles (ver classificarErro) e tira o que não interessa por dentro.
+        String tipoErro = correta ? null : classificarErro(dLower, cLower);
 
         // só conta a estatística da palavra em duelo 1v1; sala de professor fica de
         // fora pra turma não distorcer a dificuldade
@@ -578,6 +686,11 @@ public class JogoSalaService {
         // recebe o estado completo, que é o que alimenta a tela de ranking com a
         // pontuação nova. Fora disso, durante a rodada, vai só o aviso leve.
         boolean fechouARodada = jogo.todosJogadoresResponderam();
+        // Todos responderam antes do tempo: a rodada fecha AGORA, e é deste instante
+        // que o servidor conta o ranking até virar a palavra
+        if (fechouARodada) {
+            jogo.marcarFechamentoRodada();
+        }
         EstadoJogoDTO estado = (fechouARodada || jogo.isModo1v1()) ? buildEstado(codigoSala, nomeSala, jogo, jogo.getTipo()) : null;
         RespostaRodada evento = new RespostaRodada(
             jogo.getIndiceAtual(),
@@ -611,16 +724,53 @@ public class JogoSalaService {
         return Normalizer.normalize(s.trim().toLowerCase(), Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
-    // Classifica o tipo de erro comparando as versões normalizadas com distância de Levenshtein
-    private String classificarErro(String digitadoNorm, String corretoNorm) {
-        if (digitadoNorm.equals(corretoNorm)) return "ACENTUACAO";
-        int dist = levenshtein(digitadoNorm, corretoNorm);
+    /**
+     * Classifica o erro do aluno, na ordem em que a tela explica para ele:
+     * acentuação, som, uma letra fora de lugar, e por fim o erro genérico.
+     *
+     * Recebe o texto CANÔNICO (minúsculo, mas ainda com acento e cedilha), porque
+     * cada camada precisa de uma forma diferente: a acentuação compara sem acento,
+     * o som precisa da cedilha, e a contagem de letras compara sem acento.
+     *
+     * A camada FONÉTICA vivia só no frontend: a tela dizia "erro fonético (som
+     * certo, escrita diferente)" e o servidor gravava OUTRO no histórico. O
+     * ERRO_FONETICO existia no enum e no painel "Meu Desempenho" sem nunca chegar
+     * lá - justamente o erro mais útil de se ver num app de ortografia.
+     */
+    private String classificarErro(String digitadoCanonico, String corretoCanonico) {
+        String digitadoSemAcento = normalizar(digitadoCanonico);
+        String corretoSemAcento = normalizar(corretoCanonico);
+        if (digitadoSemAcento.equals(corretoSemAcento)) return "ACENTUACAO";
+        // Escreveu com o som certo e a grafia errada ("xave" por "chave"): vem antes
+        // da contagem de letras porque "ss" → "s" muda o tamanho e o erro cairia em
+        // LETRA_FALTANDO, que não diz nada ao aluno sobre o que ele confundiu
+        if (som(digitadoCanonico).equals(som(corretoCanonico))) return "ERRO_FONETICO";
+        int dist = levenshtein(digitadoSemAcento, corretoSemAcento);
         if (dist == 1) {
-            if (digitadoNorm.length() < corretoNorm.length()) return "LETRA_FALTANDO";
-            if (digitadoNorm.length() > corretoNorm.length()) return "LETRA_EXTRA";
+            if (digitadoSemAcento.length() < corretoSemAcento.length()) return "LETRA_FALTANDO";
+            if (digitadoSemAcento.length() > corretoSemAcento.length()) return "LETRA_EXTRA";
             return "TROCA_LETRA";
         }
         return "OUTRO";
+    }
+
+    /**
+     * Reduz a palavra ao "som" dela, para separar quem errou a GRAFIA de quem
+     * errou a palavra. Grafias diferentes que soam igual caem no mesmo texto:
+     * "caça" e "cassa" viram "casa"; "xave" e "chave" viram "xave".
+     *
+     * A ordem importa e é o que estava errado antes: as regras rodam ANTES de
+     * tirar os acentos, porque o NFD decompõe "ç" em "c" + cedilha e a cedilha é
+     * um diacrítico como qualquer outro - tirada primeiro, "caça" virava "caca" e
+     * a regra ç → s nunca chegava a valer. Os acentos de vogal saem depois: a
+     * diferença só de acento já foi tratada como ACENTUACAO na camada anterior.
+     */
+    private String som(String canonico) {
+        String r = canonico;
+        for (String[] regra : REGRAS_FONETICAS) {
+            r = r.replaceAll(regra[0], regra[1]);
+        }
+        return normalizar(r);
     }
 
     // Algoritmo de Levenshtein: calcula o número mínimo de edições (inserção, remoção, substituição)
@@ -644,7 +794,9 @@ public class JogoSalaService {
     // incluindo palavra atual, placar, alunos conectados e progresso da rodada
     private EstadoJogoDTO buildEstado(String codigoSala, String nomeSala, EstadoJogo jogo, String tipo) {
         Palavra p = jogo.getPalavraAtual();
-        PalavraDTO palavraDTO = p == null ? null : new PalavraDTO(p.getId(), p.getTexto(), p.getDificuldade().name(), p.getCategoria());
+        PalavraDTO palavraDTO = p == null
+            ? null
+            : new PalavraDTO(p.getId(), textoTransmissivel(jogo, p), p.getDificuldade().name(), p.getCategoria());
         // Placar ordenado do maior para o menor pontuação. O professor da turma fica
         // de fora do placar e da lista de conectados: ele comanda a partida, não
         // compete - e ocupando uma linha ele empurrava a posição de todos os alunos.
@@ -682,11 +834,60 @@ public class JogoSalaService {
             // Hora do servidor no instante do envio: referência para o cliente
             // corrigir a diferença do próprio relógio antes de contar o tempo
             Instant.now().toEpochMilli(),
+            // Quando a rodada fechou (ou fecha) e quanto dura o ranking: com os dois,
+            // a tela desenha a contagem até a próxima palavra sem precisar contá-la
+            // por conta própria - quem vira a rodada agora é o servidor
+            jogo.getTimestampFechamento(),
+            TEMPO_RANKING_SEGUNDOS,
             placar,
             nomeSala,
             codigoSala,
             conectados
         );
+    }
+
+    /**
+     * O texto da palavra pode ser transmitido AGORA?
+     *
+     * Este é o ponto que fechava o maior furo do jogo. O estado vai para o tópico da
+     * sala, que TODO aluno assina, e o texto ia junto porque o aparelho dele precisava
+     * dele para a síntese de voz do navegador: a resposta chegava ao aluno antes de ele
+     * responder, e bastava abrir o console para lê-la. Bloquear colagem, corretor e
+     * resposta rápida demais não servia de nada diante disso.
+     *
+     * Agora o texto só sai em duas situações:
+     *
+     * - a rodada JÁ FECHOU (o tempo acabou ou todos responderam) - aí a palavra certa
+     *   é justamente o que a tela de correção mostra;
+     * - não existe áudio pronto para ela no servidor. Nesse caso o aluno precisa do
+     *   texto para o navegador falar, e ficar sem áudio nenhum seria pior que o risco
+     *   de alguém espiar o console. A degradação é consciente e por palavra.
+     */
+    private String textoTransmissivel(EstadoJogo jogo, Palavra palavra) {
+        boolean rodadaAberta = "NOVA_PALAVRA".equals(jogo.getTipo()) && Instant.now().toEpochMilli() < jogo.getTimestampFechamento();
+        if (rodadaAberta && palavraAudioService.temAudio(palavra.getId())) {
+            return null;
+        }
+        return palavra.getTexto();
+    }
+
+    /**
+     * A palavra da rodada atual desta sala.
+     *
+     * Serve a dois endpoints com permissões bem diferentes: o do ÁUDIO (qualquer
+     * participante, que recebe só o som) e o do TEXTO (apenas quem comanda a sala,
+     * que precisa ditar a palavra para a turma). Quem decide quem pode o quê é o
+     * SalaResource - aqui só devolvemos a palavra.
+     */
+    public Optional<Palavra> palavraAtualDaSala(String codigoSala) {
+        EstadoJogo jogo = jogos.get(codigoSala);
+        return jogo == null ? Optional.empty() : Optional.ofNullable(jogo.getPalavraAtual());
+    }
+
+    /** O login está conectado nesta sala? Porta de entrada do endpoint de áudio. */
+    public boolean estaNaSala(String codigoSala, String login) {
+        EstadoJogo jogo = jogos.get(codigoSala);
+        return jogo != null && login != null && jogo.getAlunosConectados().containsKey(login);
     }
 
     // ===== Contadores para monitoramento (usados pelo JogoSalaHealthIndicator) =====
@@ -713,11 +914,37 @@ public class JogoSalaService {
 
         private List<Palavra> palavras = new ArrayList<>();
         private int indiceAtual = -1;
+        /**
+         * Índice da última palavra que a turma CHEGOU a jogar.
+         *
+         * Diferente de indiceAtual: o encerramento antecipado joga indiceAtual
+         * para o fim da lista, e o relatório passava a incluir as palavras que
+         * nunca foram ditadas - cada uma como "ninguém respondeu". No resumo do
+         * aluno isso viraria uma fila de "você não respondeu" por palavra que ele
+         * nem ouviu. -1 enquanto a partida não começou.
+         */
+        private int ultimoIndiceJogado = -1;
         // Tempo de rodada por dificuldade - o tempo efetivo depende da palavra atual
         private int tempoFacil = 30;
         private int tempoMedio = 30;
         private int tempoDificil = 30;
         private long timestampInicio = 0;
+        /**
+         * Quando a rodada FECHOU antes do tempo, porque todos os jogadores já
+         * responderam (0 = ainda aberta, ou fechada pelo tempo esgotar).
+         *
+         * É daqui que sai a contagem do ranking: sem isto, a turma que termina em 10
+         * segundos uma rodada de 45 ficaria olhando o ranking pelos 35 restantes.
+         */
+        private volatile long timestampFechamentoRodada = 0;
+        /**
+         * Última rodada cuja virada já foi reservada por alguém.
+         *
+         * Guarda contra a rodada ser virada duas vezes agora que existem dois
+         * caminhos - o botão de quem comanda a sala e o relógio do servidor. Ver
+         * reservarAvanco.
+         */
+        private final java.util.concurrent.atomic.AtomicInteger avancoReservado = new java.util.concurrent.atomic.AtomicInteger(-1);
         private String tipo = "AGUARDANDO";
         private final Map<String, AlunoInfo> placar = new ConcurrentHashMap<>();
         private final Map<String, String> alunosConectados = new ConcurrentHashMap<>();
@@ -787,8 +1014,12 @@ public class JogoSalaService {
             this.tempoMedio = tempoMedio;
             this.tempoDificil = tempoDificil;
             this.indiceAtual = 0;
+            this.ultimoIndiceJogado = palavras.isEmpty() ? -1 : 0;
             this.tipo = "NOVA_PALAVRA";
             this.timestampInicio = Instant.now().toEpochMilli();
+            this.timestampFechamentoRodada = 0;
+            // Partida nova: a reserva da partida anterior não pode travar a rodada 0
+            this.avancoReservado.set(-1);
             respondeuNaRodada.clear();
             ordemRespostas = 0;
             ordemAcertos = 0;
@@ -810,7 +1041,9 @@ public class JogoSalaService {
                 return false;
             }
             tipo = "NOVA_PALAVRA";
+            ultimoIndiceJogado = indiceAtual;
             timestampInicio = Instant.now().toEpochMilli();
+            timestampFechamentoRodada = 0;
             respondeuNaRodada.clear();
             ordemRespostas = 0;
             ordemAcertos = 0;
@@ -829,6 +1062,52 @@ public class JogoSalaService {
 
         boolean jaRespondeu(String login) {
             return respondeuNaRodada.contains(login);
+        }
+
+        /** Registra que a rodada fechou agora (todos os jogadores responderam). */
+        void marcarFechamentoRodada() {
+            if (timestampFechamentoRodada == 0) {
+                timestampFechamentoRodada = Instant.now().toEpochMilli();
+            }
+        }
+
+        /**
+         * Quando esta rodada fechou (ou vai fechar): o instante em que todos
+         * responderam, ou o fim do tempo dela. É o marco zero do ranking, e vai para
+         * as telas no estado do jogo para elas desenharem a contagem certa.
+         */
+        long getTimestampFechamento() {
+            return timestampFechamentoRodada > 0 ? timestampFechamentoRodada : timestampInicio + getTempoLimite() * 1000L;
+        }
+
+        /**
+         * Já passou o ranking desta rodada, ou seja: está na hora de o SERVIDOR virar
+         * a palavra. Sala parada (aguardando), pausada ou encerrada nunca vence.
+         */
+        boolean rodadaVencida(long agora) {
+            if (!"NOVA_PALAVRA".equals(tipo) || palavras.isEmpty()) {
+                return false;
+            }
+            return agora >= getTimestampFechamento() + TEMPO_RANKING_SEGUNDOS * 1000L + FOLGA_AVANCO_MS;
+        }
+
+        /**
+         * Reserva a virada da rodada para quem chamar primeiro.
+         *
+         * Devolve true uma única vez por rodada: o segundo pedido (o botão de quem
+         * comanda a sala chegando junto com o relógio do servidor) recebe false e não
+         * vira nada. Sem isto os dois caminhos pulariam uma palavra e contariam as
+         * estatísticas em dobro.
+         *
+         * indiceEsperado nulo significa "a rodada que estiver aberta"; um índice que
+         * não é mais o atual é pedido atrasado, e não vira nada.
+         */
+        boolean reservarAvanco(Integer indiceEsperado) {
+            int atual = indiceAtual;
+            if (indiceEsperado != null && indiceEsperado != atual) {
+                return false;
+            }
+            return avancoReservado.getAndSet(atual) != atual;
         }
 
         // Marca que o aluno respondeu e retorna sua posição de chegada (1º, 2º, 3º...)
@@ -864,15 +1143,17 @@ public class JogoSalaService {
 
         /**
          * Consolida o relatório da partida: uma entrada por palavra já jogada
-         * (índice 0 até o atual, inclusive - a rodada em curso entra com as
-         * respostas que já chegaram, alimentando o painel ao vivo do professor).
-         * Palavras ainda não sorteadas para jogo ficam de fora: o relatório nunca
-         * antecipa o que vem pela frente.
+         * (índice 0 até a última ditada, inclusive - a rodada em curso entra com
+         * as respostas que já chegaram, alimentando o painel ao vivo do
+         * professor). Palavras que a turma não chegou a ouvir ficam de fora: o
+         * relatório nunca antecipa o que vem pela frente, nem enche a lista com
+         * o que o encerramento antecipado deixou para trás.
          */
         List<RelatorioPalavra> gerarRelatorio() {
             List<RelatorioPalavra> relatorio = new ArrayList<>();
-            // Partida encerrada: indiceAtual pode ter passado do fim da lista
-            int ultimo = Math.min(indiceAtual, palavras.size() - 1);
+            // Até a última palavra DITADA - não indiceAtual, que o encerramento
+            // antecipado leva para o fim da lista e traria palavras nunca jogadas
+            int ultimo = Math.min(ultimoIndiceJogado, palavras.size() - 1);
             for (int i = 0; i <= ultimo; i++) {
                 Palavra p = palavras.get(i);
                 List<RespostaDetalhe> respostas = respostasDetalhadas.getOrDefault(i, List.of());
@@ -916,10 +1197,16 @@ public class JogoSalaService {
         // synchronized com removerSessao: entrada e saída mexem nos dois mapas juntos, e
         // elas se cruzam justamente na reconexão, quando a sessão nova chega antes de a
         // antiga ser encerrada.
+        //
+        // O nome do placar é REESCRITO a cada entrada (mantendo os pontos): o aluno pode
+        // voltar à tela de entrada e trocar de apelido, e o placar ficaria com o nome
+        // antigo enquanto a partida durasse. Quem resolve o nome é sempre o servidor.
         synchronized void registrarAluno(String login, String nome, String sessaoId) {
             alunosConectados.put(login, nome);
             abrirSessao(login, sessaoId);
-            placar.computeIfAbsent(login, k -> new AlunoInfo(nome, 0, "AGUARDANDO"));
+            placar.compute(login, (k, atual) ->
+                atual == null ? new AlunoInfo(nome, 0, "AGUARDANDO") : new AlunoInfo(nome, atual.pontos(), atual.statusAtual())
+            );
         }
 
         // Professor da turma: conecta (a sala não está vazia enquanto ele está nela),

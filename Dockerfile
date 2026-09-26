@@ -32,8 +32,17 @@ FROM eclipse-temurin:17-jre AS runtime
 # curl atende ao healthcheck do docker-compose.yml, que e como o compose
 # descobre que a aplicacao terminou de subir (e nao apenas que o processo
 # iniciou). A imagem do Temurin nao traz curl.
+#
+# espeak-ng gera no SERVIDOR o audio das palavras do ditado. Sem ele, o texto da
+# palavra tem de ser transmitido ao aparelho do aluno para o navegador dele falar -
+# e o estado do jogo vai para o topico que TODOS os alunos assinam, ou seja, a
+# resposta chegaria ao aluno antes de ele responder. Ver PalavraAudioService.
+#
+# A voz do espeak e mais robotica que a do navegador. Para trocar por um
+# sintetizador melhor (Piper, por exemplo), instale-o aqui e aponte
+# digitado.audio-palavra.comando para ele.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl espeak-ng \
     && rm -rf /var/lib/apt/lists/*
 
 # Rodar como root dentro do container e desnecessario: a aplicacao so precisa

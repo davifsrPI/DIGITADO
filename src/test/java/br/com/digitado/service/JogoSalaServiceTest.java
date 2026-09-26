@@ -1,15 +1,19 @@
 package br.com.digitado.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.enumeration.Dificuldade;
 import br.com.digitado.repository.PalavraRepository;
 import br.com.digitado.web.websocket.dto.EstadoJogoDTO;
+import br.com.digitado.web.websocket.dto.FeedbackAluno;
 import br.com.digitado.web.websocket.dto.IniciarPayload;
 import br.com.digitado.web.websocket.dto.PlacarEntry;
 import java.text.Normalizer;
@@ -43,6 +47,11 @@ class JogoSalaServiceTest {
     @Mock
     private PalavraEstatisticaService palavraEstatisticaService;
 
+    // Audio da palavra: mock devolve "sem audio pronto", entao o texto continua sendo
+    // transmitido no estado - e o que estes testes conferem
+    @Mock
+    private PalavraAudioService palavraAudioService;
+
     @Mock
     private ConquistaEngineService conquistaEngine;
 
@@ -59,6 +68,7 @@ class JogoSalaServiceTest {
         service = new JogoSalaService(
             palavraRepository,
             palavraEstatisticaService,
+            palavraAudioService,
             conquistaEngine,
             estatisticaPartidaService,
             historicoRespostaService
@@ -344,6 +354,268 @@ class JogoSalaServiceTest {
             assertThat(r.feedback().correta()).isFalse();
             assertThat(r.feedback().tipoErro()).isEqualTo("ACENTUACAO");
         }
+
+        // A cedilha e uma letra como as outras na hora de acertar ou errar: quem
+        // escreve "caca" no lugar de "caça" NAO acertou, ainda que o som bata
+        @Test
+        void cedilhaContaParaOAcerto() {
+            comPalavras(palavra(1L, "caça"));
+            service.registrarAluno(SALA, "ana", "Ana", "s1");
+            service.registrarAluno(SALA, "bia", "Bia", "s2");
+            iniciarPartida(30);
+
+            assertThat(service.responder(SALA, NOME_SALA, "ana", "Ana", "caça", 0).feedback().correta()).isTrue();
+            assertThat(service.responder(SALA, NOME_SALA, "bia", "Bia", "caca", 0).feedback().correta()).isFalse();
+        }
+
+        /**
+         * Responde UMA palavra numa partida recem-iniciada e devolve o feedback.
+         *
+         * Uma palavra por partida de proposito: iniciar() embaralha a lista, e o mock
+         * do sorteio devolve o mesmo conteudo em cada faixa de dificuldade - com duas
+         * palavras nao se sabe qual e a da rodada.
+         */
+        private FeedbackAluno feedbackDe(String palavraCorreta, String respostaDigitada) {
+            comPalavras(palavra(1L, palavraCorreta));
+            service.registrarAluno(SALA, "ana", "Ana", "s1");
+            iniciarPartida(30);
+            return service.responder(SALA, NOME_SALA, "ana", "Ana", respostaDigitada, 0).feedback();
+        }
+
+        @Test
+        void todasAsLetrasDoAlfabetoSaoAceitas() {
+            // k, w e y entraram no alfabeto oficial em 2009; a cedilha e as vogais
+            // acentuadas completam o conjunto que um ditado em portugues precisa
+            assertThat(feedbackDe("kiwi", "kiwi").correta()).isTrue();
+            assertThat(feedbackDe("coração", "coração").correta()).isTrue();
+            assertThat(feedbackDe("yakisoba", "yakisoba").correta()).isTrue();
+            assertThat(feedbackDe("show", "show").correta()).isTrue();
+            assertThat(feedbackDe("pêssego", "pêssego").correta()).isTrue();
+            assertThat(feedbackDe("guarda-chuva", "guarda-chuva").correta()).isTrue();
+        }
+
+        // Som certo, grafia errada: e o erro mais util de se registrar num app de
+        // ortografia, e antes ele era gravado como OUTRO no historico
+        @Test
+        void grafiaDiferenteComMesmoSomEhErroFonetico() {
+            assertThat(feedbackDe("chave", "xave").tipoErro()).isEqualTo("ERRO_FONETICO");
+
+            // "cassa" por "caça" so e reconhecido porque a tabela fonetica roda ANTES
+            // de tirar os acentos: a cedilha e um diacritico como outro qualquer, e o
+            // NFD a removia - "caça" virava "caca" e a regra c-cedilha -> s morria
+            assertThat(feedbackDe("caça", "cassa").tipoErro()).isEqualTo("ERRO_FONETICO");
+        }
+
+        @Test
+        void erroQueNaoEDeSomContinuaClassificadoPelasLetras() {
+            assertThat(feedbackDe("casa", "cas").tipoErro()).isEqualTo("LETRA_FALTANDO");
+            assertThat(feedbackDe("casa", "casaa").tipoErro()).isEqualTo("LETRA_EXTRA");
+            assertThat(feedbackDe("casa", "cada").tipoErro()).isEqualTo("TROCA_LETRA");
+            assertThat(feedbackDe("paralelepipedo", "prlpp").tipoErro()).isEqualTo("OUTRO");
+        }
+    }
+
+    @Nested
+    @DisplayName("o texto da palavra nao vaza para o aluno")
+    class TextoDaPalavra {
+
+        @BeforeEach
+        void iniciar() {
+            comPalavras(palavra(1L, "casa"));
+            service.registrarProfessor(SALA, PROFESSOR, "Professora Ana", "s-prof");
+            service.registrarAluno(SALA, "ana", "Ana", "s1");
+        }
+
+        /**
+         * O furo que isto fecha: o estado do jogo vai para o topico da sala, que TODO
+         * aluno assina, e o texto da palavra ia junto porque o aparelho dele precisava
+         * dele para a sintese de voz do navegador. A resposta chegava ao aluno antes de
+         * ele responder - bastava abrir o console.
+         */
+        @Test
+        @DisplayName("com audio pronto no servidor, a rodada aberta nao transmite o texto")
+        void rodadaAbertaNaoTransmiteOTexto() {
+            when(palavraAudioService.temAudio(1L)).thenReturn(true);
+
+            EstadoJogoDTO estado = iniciarPartida(30);
+
+            assertThat(estado.palavraAtual()).isNotNull();
+            assertThat(estado.palavraAtual().texto()).as("o texto da palavra nao pode ir no ar durante a rodada").isNull();
+            // O resto continua: o aluno precisa saber a dificuldade e o id para pedir o audio
+            assertThat(estado.palavraAtual().id()).isEqualTo(1L);
+            assertThat(estado.palavraAtual().dificuldade()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("rodada fechada revela o texto, que e o que a tela de correcao mostra")
+        void rodadaFechadaRevelaOTexto() {
+            when(palavraAudioService.temAudio(1L)).thenReturn(true);
+            iniciarPartida(30);
+
+            // Unico jogador respondeu: a rodada fecha na hora
+            service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
+            EstadoJogoDTO fechada = service.getEstado(SALA, NOME_SALA);
+
+            assertThat(fechada.palavraAtual().texto()).isEqualTo("casa");
+        }
+
+        /**
+         * Degradacao consciente: sem sintetizador no servidor o aluno precisa do texto
+         * para o navegador dele falar. Ficar sem audio nenhum pararia a aula, o que e
+         * pior que o risco de alguem espiar o console.
+         */
+        @Test
+        @DisplayName("sem audio pronto, o texto continua sendo transmitido")
+        void semAudioOTextoContinuaIndo() {
+            when(palavraAudioService.temAudio(1L)).thenReturn(false);
+
+            EstadoJogoDTO estado = iniciarPartida(30);
+
+            assertThat(estado.palavraAtual().texto()).isEqualTo("casa");
+        }
+
+        @Test
+        @DisplayName("o audio da palavra e preparado quando ela entra em jogo")
+        void audioEPreparadoNaEntradaDaPalavra() {
+            iniciarPartida(30);
+
+            // Uma vez por rodada, nao a cada mensagem: sintetizar e processo externo
+            verify(palavraAudioService).prepararAudio(argThat(pal -> pal != null && "casa".equals(pal.getTexto())));
+        }
+
+        @Test
+        @DisplayName("so quem esta na sala alcanca o audio")
+        void somenteParticipanteAlcancaOAudio() {
+            iniciarPartida(30);
+
+            assertThat(service.estaNaSala(SALA, "ana")).isTrue();
+            assertThat(service.estaNaSala(SALA, "estranho")).isFalse();
+            assertThat(service.estaNaSala("OUTRA1", "ana")).isFalse();
+        }
+
+        @Test
+        @DisplayName("a palavra da rodada fica disponivel para os endpoints do servidor")
+        void palavraDaRodadaDisponivelNoServidor() {
+            iniciarPartida(30);
+
+            assertThat(service.palavraAtualDaSala(SALA)).isPresent().get().extracting("texto").isEqualTo("casa");
+            assertThat(service.palavraAtualDaSala("NAOEXISTE")).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("o relogio da partida vive no servidor")
+    class RelogioDoServidor {
+
+        @BeforeEach
+        void iniciar() {
+            comPalavras(palavra(1L, "casa"));
+            service.registrarProfessor(SALA, PROFESSOR, "Professora Ana", "s-prof");
+            service.registrarAluno(SALA, "ana", "Ana", "s1");
+        }
+
+        @Test
+        @DisplayName("rodada recem-aberta nao e virada pelo relogio")
+        void rodadaRecemAbertaNaoEVirada() {
+            iniciarPartida(30);
+
+            assertThat(service.avancarRodadasVencidas()).isEmpty();
+            assertThat(service.getEstado(SALA, NOME_SALA).indiceAtual()).isZero();
+        }
+
+        @Test
+        @DisplayName("sala parada, sem partida, nunca vence")
+        void salaSemPartidaNuncaVence() {
+            assertThat(service.avancarRodadasVencidas()).isEmpty();
+        }
+
+        /**
+         * O teste que justifica a mudanca: NINGUEM pede a proxima palavra aqui - nem
+         * professor, nem aluno, nem duelista. Antes o tempo era contado no navegador
+         * de quem comandava a sala, e a aba dele fechando deixava a turma parada no
+         * ranking para sempre.
+         *
+         * Espera real de alguns segundos porque o marco e o relogio: rodada de tempo
+         * zero, mais o tempo de ranking, mais a folga do avanco automatico.
+         */
+        @Test
+        @DisplayName("o servidor vira a rodada sozinho, sem nenhum cliente pedir")
+        void servidorViraARodadaSozinho() throws InterruptedException {
+            comPalavras(palavra(1L, "casa"));
+            // tempo de rodada 0: o que sobra para esperar e so o tempo de ranking
+            iniciarPartida(0);
+            long limite = System.currentTimeMillis() + (JogoSalaService.TEMPO_RANKING_SEGUNDOS + 6) * 1000L;
+
+            List<JogoSalaService.RodadaAvancada> viradas = List.of();
+            while (viradas.isEmpty() && System.currentTimeMillis() < limite) {
+                viradas = service.avancarRodadasVencidas();
+                if (viradas.isEmpty()) {
+                    Thread.sleep(250);
+                }
+            }
+
+            assertThat(viradas).as("o relogio do servidor precisa virar a rodada sozinho").hasSize(1);
+            assertThat(viradas.get(0).codigoSala()).isEqualTo(SALA);
+            // A rodada andou: saiu da palavra 0 sem ninguem pedir. Pode ter ido para a
+            // proxima ou encerrado a partida, conforme quantas palavras foram sorteadas
+            EstadoJogoDTO depois = viradas.get(0).estado();
+            assertThat(depois.indiceAtual()).as("a rodada tem de ter saido da palavra 0").isPositive();
+            assertThat(depois.tipo()).isIn("NOVA_PALAVRA", "ENCERRADA");
+        }
+
+        @Test
+        @DisplayName("botao de quem comanda e relogio do servidor nao viram a mesma rodada duas vezes")
+        void rodadaNaoViraDuasVezes() {
+            comPalavras(palavra(1L, "casa"), palavra(2L, "bola"));
+            iniciarPartida(30);
+            int rodadaAberta = service.getEstado(SALA, NOME_SALA).indiceAtual();
+
+            // Os dois caminhos enxergaram a MESMA rodada: so o primeiro vira
+            EstadoJogoDTO primeiro = service.proximaPalavra(SALA, NOME_SALA, PROFESSOR, rodadaAberta);
+            EstadoJogoDTO segundo = service.proximaPalavra(SALA, NOME_SALA, PROFESSOR, rodadaAberta);
+
+            assertThat(primeiro).isNotNull();
+            assertThat(segundo).as("o segundo pedido da mesma rodada nao pode virar nada").isNull();
+        }
+
+        @Test
+        @DisplayName("pedido atrasado, de uma rodada que ja passou, nao pula palavra")
+        void pedidoAtrasadoNaoPulaPalavra() {
+            comPalavras(palavra(1L, "casa"), palavra(2L, "bola"));
+            iniciarPartida(30);
+
+            service.proximaPalavra(SALA, NOME_SALA, PROFESSOR, 0);
+            int depois = service.getEstado(SALA, NOME_SALA).indiceAtual();
+            // Chega o clique que o professor deu na rodada 0, ja virada
+            EstadoJogoDTO atrasado = service.proximaPalavra(SALA, NOME_SALA, PROFESSOR, 0);
+
+            assertThat(atrasado).isNull();
+            assertThat(service.getEstado(SALA, NOME_SALA).indiceAtual()).isEqualTo(depois);
+        }
+
+        @Test
+        @DisplayName("rodada em que todos responderam fecha na hora, sem esperar o tempo")
+        void fechamentoAntecipadoQuandoTodosRespondem() {
+            EstadoJogoDTO aberta = iniciarPartida(30);
+            long fimDoTempo = aberta.timestampInicio() + 30_000L;
+
+            service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
+            EstadoJogoDTO fechada = service.getEstado(SALA, NOME_SALA);
+
+            // O ranking passa a contar de AGORA, nao do fim do tempo: a turma que
+            // termina em 10s uma rodada de 45 nao fica olhando os 35 restantes
+            assertThat(fechada.timestampFechamento()).isLessThan(fimDoTempo);
+            assertThat(fechada.timestampFechamento()).isCloseTo(System.currentTimeMillis(), within(5_000L));
+        }
+
+        @Test
+        @DisplayName("o estado leva o tempo de ranking, para as telas nao o inventarem")
+        void estadoLevaOTempoDeRanking() {
+            EstadoJogoDTO estado = iniciarPartida(30);
+
+            assertThat(estado.tempoRanking()).isEqualTo(JogoSalaService.TEMPO_RANKING_SEGUNDOS);
+            assertThat(estado.timestampFechamento()).isEqualTo(estado.timestampInicio() + 30_000L);
+        }
     }
 
     @Nested
@@ -418,6 +690,7 @@ class JogoSalaServiceTest {
             JogoSalaService serv2 = new JogoSalaService(
                 palavraRepository,
                 palavraEstatisticaService,
+                palavraAudioService,
                 conquistaEngine,
                 estatisticaPartidaService,
                 historicoRespostaService

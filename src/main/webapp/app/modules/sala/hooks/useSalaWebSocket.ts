@@ -7,7 +7,19 @@ import { Storage } from 'react-jhipster';
 
 export interface PalavraWS {
   id: number;
-  texto: string;
+  /**
+   * Texto da palavra - AUSENTE enquanto a rodada está aberta e o servidor tem
+   * áudio para ela.
+   *
+   * O estado do jogo vai para o tópico da sala, que todo aluno assina: com o texto
+   * aqui, a resposta chegava ao aluno antes de ele responder e bastava abrir o
+   * console para lê-la. Agora ele recebe o áudio (ver ouvir-palavra) e o texto só
+   * aparece quando a rodada fecha - que é quando a tela mostra a palavra certa.
+   *
+   * Vem preenchido quando o servidor não tem sintetizador de voz: aí o navegador do
+   * aluno precisa do texto para falar, e ficar sem áudio seria pior.
+   */
+  texto?: string | null;
   dificuldade: string;
   categoria?: string;
 }
@@ -38,6 +50,17 @@ export interface EstadoJogo {
   timestampInicio: number;
   // Hora do servidor quando a mensagem foi montada (referência da conversão)
   timestampServidor: number;
+  /**
+   * Quando a rodada fechou (todos responderam) ou fecha (fim do tempo), já no
+   * relógio do CLIENTE. Somado a tempoRanking dá a hora da próxima palavra.
+   *
+   * Quem VIRA a rodada é o servidor: antes o tempo era contado no navegador de quem
+   * comandava a sala, e a aba dele fechando deixava a turma parada no ranking para
+   * sempre. As telas só desenham a contagem a partir daqui.
+   */
+  timestampFechamento: number;
+  // Segundos de ranking entre uma palavra e a próxima (definido no servidor)
+  tempoRanking: number;
   placar: PlacarEntry[];
   nomeSala: string;
   codigoSala: string;
@@ -89,13 +112,28 @@ export interface ErroWS {
 export function corrigirRelogio(estado: EstadoJogo): EstadoJogo {
   if (!estado.timestampServidor) return estado;
   const diferenca = Date.now() - estado.timestampServidor;
-  return { ...estado, timestampInicio: estado.timestampInicio + diferenca };
+  return {
+    ...estado,
+    timestampInicio: estado.timestampInicio + diferenca,
+    // O fechamento da rodada passa pela mesma correção: é dele que sai a contagem
+    // até a próxima palavra, e um relógio fora de sincronia mostraria "0s" na hora
+    timestampFechamento: estado.timestampFechamento + diferenca,
+  };
 }
 
 interface UseSalaWebSocketOptions {
   codigoSala: string;
   login: string;
   nome: string;
+  /**
+   * Segura a conexão enquanto a tela ainda não sabe se pode entrar na sala.
+   *
+   * O aluno só é registrado na sala DEPOIS de se identificar (nome e turma): sem
+   * esta trava, abrir /sala/{codigo} direto no navegador já anunciava a entrada
+   * dele com o nome antigo da conta, e o professor via na tela de espera um aluno
+   * que ainda estava preenchendo o formulário. Padrão: conecta.
+   */
+  habilitado?: boolean;
   onEstado?: (estado: EstadoJogo) => void;
   onFeedback?: (feedback: FeedbackAluno) => void;
   onErro?: (erro: ErroWS) => void;
@@ -106,7 +144,16 @@ interface UseSalaWebSocketOptions {
 // Hook principal
 // Gerencia toda a conexão WebSocket com STOMP/SockJS para uma sala de jogo.
 // Retorna funções para enviar ações (iniciar, responder, próxima...) e o estado de conexão.
-export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback, onErro, onRespostaRodada }: UseSalaWebSocketOptions) {
+export function useSalaWebSocket({
+  codigoSala,
+  login,
+  nome,
+  onEstado,
+  onFeedback,
+  onErro,
+  onRespostaRodada,
+  habilitado = true,
+}: UseSalaWebSocketOptions) {
   const clientRef = useRef<Client | null>(null);
   const [conectado, setConectado] = useState(false);
 
@@ -139,6 +186,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
 
   // Cria e ativa o cliente STOMP ao montar o componente
   useEffect(() => {
+    if (!habilitado) return;
     const token = Storage.local.get('jhi-authenticationToken') || Storage.session.get('jhi-authenticationToken');
     const client = new Client({
       webSocketFactory: () => new SockJS('/websocket/sala'),
@@ -186,7 +234,7 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
     return () => {
       client.deactivate();
     };
-  }, [codigoSala, login]);
+  }, [codigoSala, login, habilitado]);
 
   // Publica uma mensagem no servidor. Devolve false quando NÃO foi possível enviar
   // (socket caído ou reconectando): sem esse retorno a resposta do aluno se perdia em
@@ -220,7 +268,10 @@ export function useSalaWebSocket({ codigoSala, login, nome, onEstado, onFeedback
       // Palavras pré-sorteadas na criação da sala (vazio = sortear ao iniciar)
       palavrasIds?: number[];
     }) => publicar('iniciar', payload),
-    proxima: () => publicar('proxima'),
+    // indiceAtual: a rodada que a tela está mostrando. O servidor só vira se ela
+    // ainda for a aberta, então um clique que chega junto com a virada automática do
+    // relógio do servidor não pula uma palavra
+    proxima: (indiceAtual?: number) => publicar('proxima', { indiceAtual: indiceAtual ?? null }),
     pausar: () => publicar('pausar'),
     encerrar: () => publicar('encerrar'),
     // tentativasBurla: nº de inserções bloqueadas (colar, corretor) durante a rodada,

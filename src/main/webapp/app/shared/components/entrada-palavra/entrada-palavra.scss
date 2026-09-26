@@ -1,6 +1,6 @@
 /* O campo de resposta usa o teclado normal do aparelho (o do sistema no celular, o
    físico no computador) - a blindagem contra o corretor está no componente, não aqui.
-   Cada tela dá o próprio estilo ao input; este wrapper só garante que ele ocupe a
+   Cada tela dá o próprio estilo ao campo; este wrapper só garante que ele ocupe a
    largura disponível sem estourar o container. */
 .ep-wrap {
   width: 100%;
@@ -9,5 +9,99 @@
 
   input {
     width: 100%;
+  }
+}
+
+/* MODO ESPELHO (celular e tablet)
+
+   O campo de verdade é do tipo senha - é o que cala o corretor e a barra de sugestões
+   do teclado do sistema. Senha aparece em bolinhas, então ele fica invisível por cima
+   e quem mostra a palavra é o espelho: uma caixa com a MESMA classe visual da tela
+   (borda, fundo, fonte), com o texto e o cursor desenhados pelo componente. */
+.ep-wrap--espelho {
+  position: relative;
+
+  .ep-espelho {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    /* Palavra centralizada como nos campos das telas; quando ela é maior que a caixa,
+       "safe" evita que o começo fique inalcançável para o scroll do cursor */
+    justify-content: center;
+    justify-content: safe center;
+    overflow: hidden;
+    white-space: pre;
+    /* Mesma altura de linha que o navegador usa dentro de um input */
+    line-height: normal;
+    min-height: 1.2em;
+    /* O toque tem que chegar no campo de verdade, que está por cima */
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .ep-espelho--off {
+    opacity: 0.5;
+  }
+
+  .ep-espelho-placeholder {
+    opacity: 0.45;
+    font-weight: 400;
+    letter-spacing: normal;
+  }
+
+  .ep-espelho-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.15em;
+    /* -1px de cada lado: o cursor não empurra as letras ao andar pela palavra */
+    margin: 0 -1px;
+    vertical-align: middle;
+    background: currentColor;
+    animation: ep-piscar 1.1s step-end infinite;
+  }
+
+  /* O campo de verdade: transparente, do tamanho da caixa, recebendo o toque */
+  .ep-captura {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
+    -webkit-text-fill-color: transparent;
+    /* Abaixo de 16px o iPhone dá zoom na página ao focar o campo */
+    font-size: 16px;
+    -webkit-touch-callout: none;
+
+    &::selection {
+      background: transparent;
+    }
+
+    /* Ícones que o navegador enfia dentro de campo de senha (revelar senha, chaveiro,
+       aviso de caps lock): aqui não há senha nenhuma, só a palavra do jogo */
+    &::-ms-reveal,
+    &::-ms-clear,
+    &::-webkit-credentials-auto-fill-button,
+    &::-webkit-strong-password-auto-fill-button,
+    &::-webkit-caps-lock-indicator {
+      display: none !important;
+      visibility: hidden;
+      width: 0;
+      height: 0;
+      margin: 0;
+      pointer-events: none;
+    }
+  }
+}
+
+@keyframes ep-piscar {
+  50% {
+    opacity: 0;
   }
 }

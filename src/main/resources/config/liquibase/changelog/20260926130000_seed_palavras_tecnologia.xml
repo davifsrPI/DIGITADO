@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        50 palavras do meio TECNOLOGICO para o acervo: o vocabulario que a turma
+        ja usa no dia a dia (computador, arquivo, nuvem) e os estrangeirismos que
+        aparecem escritos em todo lugar e quase ninguem escreve certo (software,
+        firmware, firewall, bluetooth).
+
+        Dificuldade cadastrada aqui vale so ate a palavra ter 15 tentativas - a
+        partir dai quem manda e a taxa de acerto real (Palavra.getDificuldade).
+        O criterio do chute inicial:
+        - FACIL: escrita previsivel, sem acento e do vocabulario de todo dia;
+        - MEDIO: palavra longa, acento simples ou estrangeirismo conhecido;
+        - DIFICIL: acento + sufixo -cao/-ncia, ou grafia estrangeira que nao
+          segue a fonetica do portugues.
+
+        possui_acento inclui a cedilha, como no seed de ortografia ("Cansaco"
+        entrou como 1): a checagem do sistema decompoe o texto em NFD, e a
+        cedilha conta como diacritico igual aos demais.
+
+        Sem espacos e sem hifen de proposito: o campo de resposta so aceita
+        letras do portugues e hifen, e trocar de teclado no celular para achar o
+        hifen atrapalha o ditado - por isso nada de "placa-mae" ou "wi-fi".
+
+        Mesmo INSERT ... SELECT com NOT EXISTS dos seeds anteriores: a comparacao
+        por LOWER(texto) ignora palavra que ja exista no banco, entao rodar num
+        banco que ja tem parte da lista nao duplica nada.
+    -->
+    <changeSet id="20260926130000-1" author="digitado">
+        <sql>
+            INSERT INTO palavra (texto, categoria, idioma, possui_acento, ativa, criador_id, dica, dificuldade)
+            SELECT s.texto, s.categoria, s.idioma, s.possui_acento, s.ativa, s.criador_id, s.dica, s.dificuldade
+            FROM (
+                SELECT 'Teclado' AS texto, 'TECNOLOGIA' AS categoria, 'PT-BR' AS idioma, 0 AS possui_acento, 1 AS ativa, NULL AS criador_id, NULL AS dica, 'FACIL' AS dificuldade
+                UNION ALL SELECT 'Monitor', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Computador', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Programa', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Arquivo', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Internet', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Nuvem', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Digital', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Sistema', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Modem', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'FACIL'
+                UNION ALL SELECT 'Software', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Firmware', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Hardware', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Processador', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Memória', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Servidor', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Roteador', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Aplicativo', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Navegador', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Download', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Upload', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Backup', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Usuário', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Algoritmo', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Compilador', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Linguagem', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Tecnologia', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Dispositivo', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Interface', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Protocolo', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Pendrive', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Notebook', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Smartphone', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Impressora', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Webcam', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'MEDIO'
+                UNION ALL SELECT 'Programação', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Eletrônico', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Atualização', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Instalação', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Antivírus', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Criptografia', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Depuração', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Configuração', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Cibersegurança', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Periférico', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Repositório', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Sincronização', 'TECNOLOGIA', 'PT-BR', 1, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Firewall', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Bluetooth', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'DIFICIL'
+                UNION ALL SELECT 'Desenvolvedor', 'TECNOLOGIA', 'PT-BR', 0, 1, NULL, NULL, 'DIFICIL'
+            ) s
+            WHERE NOT EXISTS (SELECT 1 FROM palavra p WHERE LOWER(p.texto) = LOWER(s.texto))
+        </sql>
+    </changeSet>
+</databaseChangeLog>

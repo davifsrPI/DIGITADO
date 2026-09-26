@@ -1,5 +1,6 @@
 package br.com.digitado.web.rest;
 
+import br.com.digitado.domain.ParticipanteSala;
 import br.com.digitado.domain.Sala;
 import br.com.digitado.domain.enumeration.TipoSala;
 import br.com.digitado.repository.SalaRepository;
@@ -7,8 +8,13 @@ import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.security.SecurityUtils;
+import br.com.digitado.service.CodigoSalaService;
+import br.com.digitado.service.ConfiguracaoPartidaService;
 import br.com.digitado.service.EstatisticaPartidaService;
 import br.com.digitado.service.JogoSalaService;
+import br.com.digitado.service.PalavraAudioService;
+import br.com.digitado.service.ParticipanteSalaService;
+import br.com.digitado.service.ResumoPartidaService;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import br.com.digitado.web.rest.vm.SalaResponseVM;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -53,6 +59,11 @@ public class SalaResource {
     private final UsuarioRepository usuarioRepository;
     private final JogoSalaService jogoSalaService;
     private final EstatisticaPartidaService estatisticaPartidaService;
+    private final ParticipanteSalaService participanteSalaService;
+    private final ResumoPartidaService resumoPartidaService;
+    private final CodigoSalaService codigoSalaService;
+    private final ConfiguracaoPartidaService configuracaoPartidaService;
+    private final PalavraAudioService palavraAudioService;
     private final ObjectMapper objectMapper;
 
     public SalaResource(
@@ -61,6 +72,11 @@ public class SalaResource {
         UsuarioRepository usuarioRepository,
         JogoSalaService jogoSalaService,
         EstatisticaPartidaService estatisticaPartidaService,
+        ParticipanteSalaService participanteSalaService,
+        ResumoPartidaService resumoPartidaService,
+        CodigoSalaService codigoSalaService,
+        ConfiguracaoPartidaService configuracaoPartidaService,
+        PalavraAudioService palavraAudioService,
         ObjectMapper objectMapper
     ) {
         this.salaRepository = salaRepository;
@@ -68,6 +84,11 @@ public class SalaResource {
         this.usuarioRepository = usuarioRepository;
         this.jogoSalaService = jogoSalaService;
         this.estatisticaPartidaService = estatisticaPartidaService;
+        this.participanteSalaService = participanteSalaService;
+        this.resumoPartidaService = resumoPartidaService;
+        this.codigoSalaService = codigoSalaService;
+        this.configuracaoPartidaService = configuracaoPartidaService;
+        this.palavraAudioService = palavraAudioService;
         this.objectMapper = objectMapper;
     }
 
@@ -107,6 +128,22 @@ public class SalaResource {
         return node.toString();
     }
 
+    /**
+     * Um código de sala livre, sorteado pelo SERVIDOR.
+     *
+     * A tela de criação pede este código em vez de sortear um por conta própria:
+     * o formato (alfabeto sem O/I/1/0 e os 6 caracteres) mora num lugar só, o
+     * CodigoSalaService, e o que chega aqui já foi conferido contra o banco.
+     *
+     * Caminho de dois segmentos de propósito: /api/salas/{codigo} tem um só, então
+     * não há como esta rota ser confundida com a busca de uma sala chamada
+     * "codigo" (mesma forma de /api/salas/1v1/publicas).
+     */
+    @GetMapping("/codigo/novo")
+    public ResponseEntity<Map<String, String>> novoCodigo() {
+        return ResponseEntity.ok(Map.of("codigo", codigoSalaService.gerarDisponivel()));
+    }
+
     // Cria uma nova sala. Automaticamente associa o usuário logado como professor da sala,
     // buscando o Usuario correspondente pelo e-mail do User autenticado.
     @PostMapping("")
@@ -135,6 +172,11 @@ public class SalaResource {
         }
         // A descrição vai para o banco como JSON {"descricao": texto, "modo": ...}
         sala.setDescricao(montarDescricaoJson(sala.getDescricao(), sala.getTipo()));
+        // Configuração da partida (tempos, quantidades, palavras escolhidas): gravada
+        // na sala, e não só no estado de navegação do cliente, que se perdia no
+        // primeiro recarregar da tela. Os números vêm do navegador, então passam pela
+        // normalização antes de virar uma partida.
+        sala.setConfiguracao(configuracaoPartidaService.serializar(configuracaoPartidaService.ler(sala.getConfiguracao()).orElse(null)));
         sala = salaRepository.save(sala);
         // Retorna apenas os campos públicos da sala (sem o professor, para não vazar dados)
         SalaResponseVM vm = toVM(sala);
@@ -193,15 +235,6 @@ public class SalaResource {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
 
-        // Sala fechada em definitivo (ativo=false): libera o estado do jogo da
-        // memória - o descarte GRAVA antes o snapshot da partida, para o botão
-        // "Ver estatísticas" continuar tendo o que mostrar depois.
-        // Fica ANTES da atualização de propósito: a gravação roda em transação
-        // própria e não pode esbarrar no lock da linha da sala sendo alterada.
-        if (Boolean.FALSE.equals(sala.getAtivo())) {
-            jogoSalaService.descartarSala(codigo);
-        }
-
         Optional<Sala> result = salaRepository
             .findById(sala.getCodigo())
             .map(existingSala -> {
@@ -212,8 +245,12 @@ public class SalaResource {
                     // O modo dentro do JSON segue o tipo REAL da sala no banco (PATCH não muda tipo)
                     existingSala.setDescricao(montarDescricaoJson(sala.getDescricao(), existingSala.getTipo()));
                 }
-                if (sala.getAtivo() != null) {
-                    existingSala.setAtivo(sala.getAtivo());
+                // Sala NÃO FECHA MAIS: só a reabertura passa daqui. Fechada, ela
+                // sumia das listagens e nem o dono entrava - e com ela ia embora o
+                // caminho para o desempenho da turma. Um ativo=false que ainda chegue
+                // (cliente antigo em cache) é ignorado de propósito.
+                if (Boolean.TRUE.equals(sala.getAtivo())) {
+                    existingSala.setAtivo(true);
                 }
                 return existingSala;
             })
@@ -365,6 +402,251 @@ public class SalaResource {
         }
         // Sem partida encerrada ainda: 404 e a tela mostra o estado vazio
         return ResponseUtil.wrapOrNotFound(estatisticaPartidaService.buscar(codigo));
+    }
+
+    /**
+     * O ÁUDIO da palavra da rodada - som, nunca texto.
+     *
+     * É por aqui que o aluno ouve o ditado depois que o texto da palavra parou de ser
+     * transmitido no estado do jogo (ver JogoSalaService.textoTransmissivel). Antes o
+     * texto ia no tópico da sala, que todo aluno assina, e a resposta chegava a ele
+     * antes de responder - bastava abrir o console.
+     *
+     * Abre para qualquer participante CONECTADO na sala: é o mesmo grupo que já ouve a
+     * palavra, e o corpo da resposta é um WAV. Quem não está na sala não passa.
+     */
+    @GetMapping("/{codigo}/audio")
+    public ResponseEntity<byte[]> getAudioDaPalavra(@PathVariable("codigo") String codigo) {
+        String login = SecurityUtils.getCurrentUserLogin().orElse(null);
+        if (login == null || !jogoSalaService.estaNaSala(codigo, login)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        return jogoSalaService
+            .palavraAtualDaSala(codigo)
+            .flatMap(palavra -> palavraAudioService.audio(palavra.getId()))
+            .map(audio ->
+                ResponseEntity.ok()
+                    .header("Content-Type", PalavraAudioService.TIPO_AUDIO)
+                    // Nada de cache: a palavra muda a cada rodada e o navegador não pode
+                    // devolver o áudio da anterior
+                    .header("Cache-Control", "no-store")
+                    .body(audio)
+            )
+            // 404 quando não há áudio: aí o texto está sendo transmitido no estado do
+            // jogo e a tela do aluno usa a voz do próprio navegador
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * O TEXTO da palavra da rodada, só para quem comanda a sala.
+     *
+     * O professor precisa dele para ditar a palavra à turma pela caixa de som e para
+     * acompanhar o painel. Ele saía junto no estado do jogo, mas o estado é
+     * transmitido para o tópico que os ALUNOS também assinam - então o texto passou a
+     * vir por aqui, onde dá para exigir que seja o dono da sala.
+     */
+    @GetMapping("/{codigo}/palavra-atual")
+    public ResponseEntity<Map<String, String>> getPalavraAtual(@PathVariable("codigo") String codigo) {
+        if (!isOwnerOrAdmin(codigo)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        return jogoSalaService
+            .palavraAtualDaSala(codigo)
+            .map(palavra -> ResponseEntity.ok(Map.of("texto", palavra.getTexto())))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Configuração da partida desta sala: tempos, quantidades por dificuldade e as
+     * palavras escolhidas na criação.
+     *
+     * Restrito ao dono (ou admin) por um motivo concreto: palavrasIds são as
+     * palavras que a partida vai usar, ou seja, as RESPOSTAS - um aluno com acesso
+     * a isto consultaria o acervo antes do ditado.
+     *
+     * É o que a tela de espera lê ao abrir. Antes ela dependia do estado de
+     * navegação do React Router: recarregar a página perdia a lista de palavras que
+     * o professor tinha conferido uma por uma, e a partida sorteava outras.
+     */
+    @GetMapping("/{codigo}/configuracao")
+    public ResponseEntity<ConfiguracaoPartidaService.ConfiguracaoPartida> getConfiguracao(@PathVariable("codigo") String codigo) {
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
+        }
+        if (!isOwnerOrAdmin(codigo)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        // Sala criada antes desta coluna existir: devolve o padrão, que é o mesmo
+        // que a tela mostrava quando não recebia configuração nenhuma
+        return ResponseEntity.ok(configuracaoPartidaService.buscar(codigo).orElseGet(ConfiguracaoPartidaService::padrao));
+    }
+
+    /**
+     * As palavras guardadas nesta sala: as sorteadas na criação e as que o professor
+     * escolheu a mão no acervo.
+     *
+     * A configuração guarda só os ids, e quem prepara a sala numa segunda-feira para
+     * usar na quinta não tem como lembrar o que caiu no sorteio. Este endpoint
+     * devolve o texto de cada uma, para a tela de espera listar a atividade inteira
+     * antes de começar.
+     *
+     * Restrito ao dono (ou admin) pelo mesmo motivo da configuração: são as RESPOSTAS
+     * do ditado.
+     */
+    @GetMapping("/{codigo}/palavras")
+    public ResponseEntity<ConfiguracaoPartidaService.PalavrasDaSala> getPalavras(@PathVariable("codigo") String codigo) {
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
+        }
+        if (!isOwnerOrAdmin(codigo)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        return ResponseEntity.ok(configuracaoPartidaService.palavras(codigo));
+    }
+
+    /**
+     * Identificação do aluno NESTA sala: nome de verdade, turma e a escolha de
+     * aparecer para os colegas pelo apelido.
+     *
+     * É a tela que abre logo depois de o aluno digitar o código. Cada um grava
+     * apenas a própria identificação (o login vem do token, não do corpo), e o
+     * nome de verdade nunca é devolvido a outro aluno - para isso existe a
+     * listagem /participantes, restrita ao dono da sala.
+     */
+    @PutMapping("/{codigo}/identificacao")
+    public ResponseEntity<ParticipanteSalaService.Identificacao> salvarIdentificacao(
+        @PathVariable("codigo") String codigo,
+        @RequestBody ParticipanteSalaService.Identificacao dados
+    ) {
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
+        }
+        String login = SecurityUtils.getCurrentUserLogin()
+            .orElseThrow(() -> new BadRequestAlertException("Usuário não autenticado", ENTITY_NAME, "naoautenticado"));
+        try {
+            ParticipanteSala salvo = participanteSalaService.salvar(codigo, login, dados);
+            return ResponseEntity.ok(
+                new ParticipanteSalaService.Identificacao(salvo.getNome(), salvo.getTurma(), salvo.isUsarApelido(), salvo.getApelido())
+            );
+        } catch (ParticipanteSalaService.IdentificacaoInvalidaException e) {
+            // Os três campos são obrigatórios DE VERDADE: a validação do formulário
+            // no navegador não vale como garantia de que eles chegaram preenchidos
+            throw new BadRequestAlertException(e.getMessage(), ENTITY_NAME, "identificacaoinvalida");
+        }
+    }
+
+    /**
+     * A própria identificação do usuário logado nesta sala (404 quando ele ainda
+     * não preencheu). A tela do jogo usa para saber se precisa mandar o aluno
+     * para o formulário de entrada - inclusive depois de recarregar a página.
+     */
+    @GetMapping("/{codigo}/identificacao")
+    public ResponseEntity<ParticipanteSalaService.Identificacao> minhaIdentificacao(@PathVariable("codigo") String codigo) {
+        return ResponseUtil.wrapOrNotFound(
+            SecurityUtils.getCurrentUserLogin()
+                .flatMap(login -> participanteSalaService.buscar(codigo, login))
+                .map(p -> new ParticipanteSalaService.Identificacao(p.getNome(), p.getTurma(), p.isUsarApelido(), p.getApelido()))
+        );
+    }
+
+    /**
+     * Quem se identificou nesta sala, com o NOME VERDADEIRO e a turma.
+     *
+     * Restrito ao professor dono (ou admin): o aluno que escolheu jogar de
+     * apelido esconde o nome dos COLEGAS, e é este endpoint - e só ele - que
+     * devolve o nome real, para o professor saber quem é quem no placar.
+     */
+    @GetMapping("/{codigo}/participantes")
+    public ResponseEntity<List<ParticipanteSalaService.ParticipanteVM>> getParticipantes(@PathVariable("codigo") String codigo) {
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
+        }
+        if (!isOwnerOrAdmin(codigo)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        return ResponseEntity.ok(participanteSalaService.listar(codigo));
+    }
+
+    /**
+     * Resumo PESSOAL do aluno logado na partida desta sala: o que ele acertou, o
+     * que errou, quantos acertos fez, a média da turma e quanta gente errou cada
+     * palavra.
+     *
+     * Só devolve os dados DELE - as respostas dos colegas entram apenas como
+     * percentual agregado, nunca nominalmente (para isso existe /relatorio, que
+     * é do professor). Serve tanto à partida recém-encerrada quanto às antigas:
+     * o relatório vem do jogo em memória e, quando ele já foi descartado, do
+     * snapshot gravado no banco.
+     */
+    @GetMapping("/{codigo}/meu-resumo")
+    public ResponseEntity<ResumoPartidaService.ResumoAluno> getMeuResumo(@PathVariable("codigo") String codigo) {
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
+        }
+        String login = SecurityUtils.getCurrentUserLogin()
+            .orElseThrow(() -> new BadRequestAlertException("Usuário não autenticado", ENTITY_NAME, "naoautenticado"));
+        return ResponseUtil.wrapOrNotFound(resumoDoAluno(codigo, login, false));
+    }
+
+    /**
+     * Resumo de UM aluno, para o professor abrir a métrica de cada um a partir
+     * do ranking da partida. Restrito ao dono da sala (ou admin) - é o mesmo
+     * resumo que o aluno vê, aqui com o nome verdadeiro dele no cabeçalho.
+     */
+    @GetMapping("/{codigo}/resumo/{login}")
+    public ResponseEntity<ResumoPartidaService.ResumoAluno> getResumoDoAluno(
+        @PathVariable("codigo") String codigo,
+        @PathVariable("login") String login
+    ) {
+        if (!salaRepository.existsById(codigo)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
+        }
+        if (!isOwnerOrAdmin(codigo)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        return ResponseUtil.wrapOrNotFound(resumoDoAluno(codigo, login, true));
+    }
+
+    /**
+     * Monta o resumo de um aluno na última partida da sala.
+     *
+     * A partida em memória tem a palavra da vez e vale enquanto a sala está
+     * viva; quando o estado já foi descartado (todo mundo saiu, servidor
+     * reiniciado) cai no snapshot - é o que faz o resumo existir também para as
+     * salas jogadas há semanas.
+     *
+     * visaoProfessor: troca o nome público pelo nome verdadeiro no cabeçalho.
+     */
+    private Optional<ResumoPartidaService.ResumoAluno> resumoDoAluno(String codigo, String login, boolean visaoProfessor) {
+        List<JogoSalaService.RelatorioPalavra> relatorio = jogoSalaService.gerarRelatorio(codigo);
+        if (relatorio.isEmpty()) {
+            relatorio = estatisticaPartidaService
+                .buscar(codigo)
+                .map(EstatisticaPartidaService.EstatisticasPartida::relatorio)
+                .orElse(List.of());
+        }
+        Optional<ResumoPartidaService.ResumoAluno> resumo = resumoPartidaService.montar(relatorio, login, login);
+        if (visaoProfessor) {
+            // O professor vê o nome real (com o apelido entre parênteses quando o
+            // aluno escolheu jogar escondido dos colegas)
+            String nomeReal = participanteSalaService.nomesParaProfessor(codigo).get(login);
+            if (nomeReal != null) {
+                resumo = resumo.map(r ->
+                    new ResumoPartidaService.ResumoAluno(
+                        r.login(),
+                        nomeReal,
+                        r.totalPalavras(),
+                        r.acertos(),
+                        r.erros(),
+                        r.semResposta(),
+                        r.mediaAcertosTurma(),
+                        r.totalParticipantes(),
+                        r.palavras()
+                    )
+                );
+            }
+        }
+        return resumo;
     }
 
     // O papel de professor vive no estado de navegação do front e se perde ao

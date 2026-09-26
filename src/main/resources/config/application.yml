@@ -248,3 +248,29 @@ application:
     # (nginx/Caddy/Cloudflare). Direto na internet, o cliente forja o cabeçalho
     # e escapa do limite. Veja o comentário em RateLimitFilter.ipDoCliente.
     confiar-x-forwarded-for: false
+
+digitado:
+  # Áudio das palavras do ditado, gerado NO SERVIDOR.
+  #
+  # Por que isso existe: o estado do jogo é transmitido para o tópico da sala, que
+  # todo aluno assina, e o texto da palavra ia junto - o aparelho dele precisava
+  # dele para a síntese de voz do navegador. A resposta chegava ao aluno antes de
+  # ele responder, e bastava abrir o console para lê-la; nenhum bloqueio de
+  # colagem, corretor ou tempo mínimo por letra resolvia isso.
+  #
+  # Com áudio gerado aqui, o texto para de ser transmitido enquanto a rodada está
+  # aberta e o aluno recebe som. Ver PalavraAudioService.
+  audio-palavra:
+    # false volta ao comportamento antigo: o texto é transmitido e quem fala é o
+    # navegador do aluno (voz melhor, mas a resposta vai no pacote).
+    habilitado: true
+    # Comando de síntese. Vazio = descoberta automática: espeak-ng no PATH (é o que
+    # o Dockerfile instala) e, no Windows, a voz do sistema pela SAPI.
+    #
+    # Dois marcadores são substituídos: {arquivoTexto} (UTF-8, com a palavra) e
+    # {arquivoAudio} (WAV a ser gerado). O texto vai por ARQUIVO, nunca embutido na
+    # linha de comando - o comando roda sem shell.
+    #
+    # Para uma voz melhor que a do espeak, aponte para o seu sintetizador, ex.:
+    # comando: "piper --model pt_BR-faber-medium.onnx -f {arquivoAudio} -i {arquivoTexto}"
+    comando: ''

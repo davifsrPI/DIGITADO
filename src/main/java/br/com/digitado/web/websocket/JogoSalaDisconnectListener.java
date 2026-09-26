@@ -16,10 +16,13 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
  *
  * Duas responsabilidades:
  * 1. Remover o jogador da lista de conectados das salas em que estava e avisar quem ficou;
- * 2. Assim que o último participante sai e a sala fica vazia (em qualquer estado: lobby,
- *    em jogo ou encerrada), fechar a sala no banco (ativo = false) - a sala não volta a
- *    aparecer como aberta nem aceita novas entradas pela listagem; o dono ainda pode
- *    reabri-la em "Minhas Salas".
+ * 2. Quando o último participante sai, soltar o estado da sala da memória - o descarte
+ *    GRAVA antes o snapshot da partida, então o desempenho da turma continua disponível.
+ *
+ * A sala NÃO é mais fechada no banco. Ela fechava sozinha aqui (ativo = false) assim que
+ * esvaziava, e fechada sumia das listagens e não deixava ninguém entrar - nem o dono, que
+ * perdia o caminho para o resumo da partida. A sala agora fica aberta para sempre; só o
+ * estado em memória é liberado.
  */
 @Component
 public class JogoSalaDisconnectListener {
@@ -48,21 +51,10 @@ public class JogoSalaDisconnectListener {
         // conectado - ver JogoSalaService.aoDesconectar
         JogoSalaService.ResultadoDesconexao resultado = jogoService.aoDesconectar(login, event.getSessionId());
 
-        // Sala ficou vazia (qualquer estado) → fecha no banco (ativo = false)
+        // Sala vazia: o estado em memória já foi descartado (com o snapshot gravado) dentro
+        // de aoDesconectar. A sala em si continua ABERTA - o dono volta nela quando quiser.
         for (String codigo : resultado.salasVazias()) {
-            try {
-                salaRepository
-                    .findById(codigo)
-                    .filter(sala -> !Boolean.FALSE.equals(sala.getAtivo()))
-                    .ifPresent(sala -> {
-                        sala.setAtivo(false);
-                        salaRepository.save(sala);
-                        LOG.info("Sala {} fechada automaticamente: ficou sem participantes", codigo);
-                    });
-            } catch (Exception e) {
-                // Fechar a sala é manutenção - nunca pode derrubar o tratamento da desconexão
-                LOG.error("Falha ao fechar sala {} após desconexão: {}", codigo, e.getMessage(), e);
-            }
+            LOG.info("Sala {} ficou sem participantes: estado liberado da memória, sala segue aberta", codigo);
         }
 
         // Nas salas que continuam com gente, atualiza a lista de conectados de quem ficou

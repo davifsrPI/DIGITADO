@@ -9,6 +9,13 @@ interface Props {
   meuLogin?: string;
   // Chamado quando a vinheta termina, o pai então mostra o placar final completo
   onFim: () => void;
+  /**
+   * Só na tela do PROFESSOR: login -> nome verdadeiro e login -> turma, de
+   * useNomesParticipantes. No pódio da turma vale o nome público (é o que os
+   * colegas veem); quem comanda a sala vê o nome de verdade e a série.
+   */
+  nomes?: Record<string, string>;
+  turmas?: Record<string, string>;
 }
 
 // Fases da vinheta de suspense exibida quando a partida termina.
@@ -35,7 +42,7 @@ const CORES_CONFETE = ['#fbbf24', '#6366f1', '#4ade80', '#f87171', '#38bdf8'];
  * Após a revelação do campeão os vencedores comemoram saltando em arco e um
  * botão "Continuar" avança para o placar final completo (via onFim).
  */
-export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
+export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim, nomes, turmas }) => {
   const top3 = placar.slice(0, 3);
   const [fase, setFase] = useState(FASE_SLAM);
   // Ref para o callback, a linha do tempo é agendada uma única vez na montagem
@@ -115,11 +122,12 @@ export const VinhetaPodio: React.FC<Props> = ({ placar, meuLogin, onFim }) => {
                     {revelado ? (
                       <>
                         <span className="vp-medalha">{medalha}</span>
-                        <span className="vp-avatar">{(p.nome || p.login).charAt(0).toUpperCase()}</span>
+                        <span className="vp-avatar">{(nomes?.[p.login] || p.nome || p.login).charAt(0).toUpperCase()}</span>
                         <span className={`vp-nome${p.login === meuLogin ? ' vp-nome--eu' : ''}`}>
-                          {p.nome || p.login}
+                          {nomes?.[p.login] || p.nome || p.login}
                           {p.login === meuLogin ? ' (você)' : ''}
                         </span>
+                        {turmas?.[p.login] && <span className="vp-turma">{turmas[p.login]}</span>}
                         <span className="vp-pts">{p.pontos} pts</span>
                       </>
                     ) : (

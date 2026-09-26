@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Sala não fecha mais.
+
+        A sala era fechada sozinha (ativo = false) assim que o último participante
+        desconectava, e o professor ainda tinha o botão "Encerrar e fechar sala".
+        Fechada, ela sumia das listagens e não deixava ninguém entrar - inclusive o
+        próprio dono, que perdia o caminho para o desempenho da turma.
+
+        O fechamento automático saiu do código (JogoSalaDisconnectListener) e o
+        botão saiu da tela. Aqui reabrimos TODAS as salas que já tinham sido
+        fechadas, para que o resumo das partidas antigas volte a ficar acessível.
+        defaultValueBoolean cobre a sala criada sem o campo preenchido.
+    -->
+    <changeSet id="20260925130000-1" author="digitado">
+        <update tableName="sala">
+            <column name="ativo" valueBoolean="true"/>
+            <where>ativo IS NULL OR ativo = :value</where>
+            <whereParams>
+                <param valueBoolean="false"/>
+            </whereParams>
+        </update>
+    </changeSet>
+</databaseChangeLog>

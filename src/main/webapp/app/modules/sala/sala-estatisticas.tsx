@@ -6,6 +6,8 @@ import axios from 'axios';
 
 import { useBodyClass } from 'app/shared/util/use-body-class';
 import { PosicaoRanking, RankingPartida, RelatorioPalavra, RelatorioPorPalavra } from './relatorio-partida';
+import { MetricasPorAluno } from './metricas-aluno';
+import { useNomesParticipantes } from './hooks/useNomesParticipantes';
 
 // Tela "Ver estatísticas": o desempenho da turma na ÚLTIMA partida da sala.
 //
@@ -40,6 +42,17 @@ export const SalaEstatisticas: React.FC = () => {
   const [carregando, setCarregando] = useState(true);
   // Mensagem de erro/estado vazio, separa "ainda não houve partida" de "não pode ver"
   const [erro, setErro] = useState<string | null>(null);
+
+  // Nome verdadeiro e turma de cada aluno: o ranking gravado guarda o nome
+  // PÚBLICO (o apelido, para quem escolheu se esconder dos colegas), e é aqui
+  // que ele é traduzido de volta para quem só o professor pode ver
+  // Os logins do ranking vão junto: se algum deles ainda não tiver nome (a
+  // identificação chegou depois desta tela abrir), a lista é buscada de novo
+  const { nomes: nomesReais, turmas } = useNomesParticipantes(
+    codigo,
+    true,
+    (estatisticas?.ranking ?? []).map(p => p.login),
+  );
 
   // Remove o card branco padrão do layout, a página tem fundo escuro próprio
   useBodyClass('sala-jogo-page');
@@ -93,10 +106,16 @@ export const SalaEstatisticas: React.FC = () => {
                   </p>
 
                   <h3 className="sj-rel-secao">Ranking da partida</h3>
-                  <RankingPartida posicoes={estatisticas.ranking} />
+                  <RankingPartida posicoes={estatisticas.ranking} nomes={nomesReais} turmas={turmas} />
+
+                  {/* Métrica de cada aluno: o mesmo resumo que ele viu ao fim da
+                      partida - vale também para as salas jogadas há semanas, o
+                      servidor monta o resumo a partir deste mesmo snapshot */}
+                  <h3 className="sj-rel-secao">Resumo de cada aluno</h3>
+                  <MetricasPorAluno codigoSala={codigo} posicoes={estatisticas.ranking} nomes={nomesReais} turmas={turmas} />
 
                   <h3 className="sj-rel-secao">Relatório por palavra</h3>
-                  <RelatorioPorPalavra relatorio={estatisticas.relatorio} />
+                  <RelatorioPorPalavra relatorio={estatisticas.relatorio} nomes={nomesReais} />
                 </>
               )
             )}
