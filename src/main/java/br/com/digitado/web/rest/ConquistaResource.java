@@ -9,6 +9,7 @@ import br.com.digitado.repository.UsuarioConquistaRepository;
 import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.security.SecurityUtils;
+import br.com.digitado.service.ConquistaEngineService;
 import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import br.com.digitado.web.rest.vm.ConquistaUsuarioVM;
 import br.com.digitado.web.rest.vm.MinhasConquistasVM;
@@ -103,13 +104,17 @@ public class ConquistaResource {
             .map(c -> {
                 UsuarioConquista registro = registros.get(c.getId());
                 boolean desbloqueada = registro != null && Boolean.TRUE.equals(registro.getConcluida());
+                Integer meta = ConquistaEngineService.metaDe(c.getNome());
+                Integer progresso = registro != null && registro.getProgresso() != null ? registro.getProgresso() : 0;
                 return new ConquistaUsuarioVM(
                     c.getId(),
                     c.getNome(),
                     c.getDescricao(),
                     c.getXpRecompensa(),
                     desbloqueada,
-                    registro != null ? registro.getProgresso() : null,
+                    desbloqueada && meta != null ? meta : progresso,
+                    meta,
+                    ConquistaUsuarioVM.percentual(desbloqueada, progresso, meta),
                     desbloqueada ? registro.getDataConquista() : null
                 );
             })

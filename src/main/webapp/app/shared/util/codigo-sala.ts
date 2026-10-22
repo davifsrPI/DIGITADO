@@ -25,3 +25,19 @@ export const limparCodigoSala = (valor: string): string =>
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
     .slice(0, TAMANHO_CODIGO_SALA);
+
+/**
+ * O código dentro de um texto COLADO no campo.
+ *
+ * O professor costuma mandar o código numa mensagem ("Entrem na sala FB5P4D!"),
+ * e o aluno cola a mensagem inteira. Limpar e cortar nos 6 primeiros caracteres
+ * dava "ENTREM" - um código errado que ele nem tinha digitado. Aqui o código é
+ * procurado como palavra de 6 letras/números; havendo mais de uma, vence a que tem
+ * número (como os códigos do servidor costumam ter). Sem nenhuma, vale a limpeza
+ * comum, como se tivesse sido digitado.
+ */
+export const extrairCodigoColado = (texto: string): string => {
+  const candidatos = (texto.toUpperCase().match(/[A-Z0-9]+/g) ?? []).filter(p => p.length === TAMANHO_CODIGO_SALA);
+  if (candidatos.length === 0) return limparCodigoSala(texto);
+  return candidatos.find(p => /\d/.test(p)) ?? candidatos[candidatos.length - 1];
+};

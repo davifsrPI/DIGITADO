@@ -195,3 +195,6 @@ dados/*
 # as contas padrão admin/user. Nenhum dado de usuário real: é o que faz um
 # clone novo já nascer utilizável. Regenerar com sanitizar-banco.ps1.
 !dados/seed-digitado.sql
+
+# Token de métricas do Prometheus (ver MONITORING.md)
+src/main/docker/prometheus/token-metricas

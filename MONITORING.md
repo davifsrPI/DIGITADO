@@ -64,6 +64,18 @@ JHipster/Spring Boot e o que foi adicionado.
   (estava desligado; corrigido em `application-prod.yml`).
 - Já coletados: latência HTTP com percentis (p50/p75/p95/p99) por endpoint, heap/GC,
   CPU do processo e do sistema, threads, pool Hikari, tempo por repositório.
+- **Adicionado - memória da MÁQUINA**: [`MemoriaMaquinaMetrics`](src/main/java/br/com/digitado/management/MemoriaMaquinaMetrics.java)
+  lê do sistema operacional quanto a máquina inteira usa (todos os programas, não só a JVM):
+  `digitado_maquina_memoria_fisica_bytes`, `_livre_bytes`, `_usada_bytes`, `digitado_maquina_memoria_uso_ratio`
+  e o swap (`digitado_maquina_swap_tamanho_bytes`, `_livre_bytes`). Vale no Windows e no container
+  (no container, a memória do container). Dashboard **DIGITADO - Máquina** no Grafana
+  ([`Maquina.json`](src/main/docker/grafana/provisioning/dashboards/Maquina.json)): uso em %, total,
+  disponível, swap, e o gráfico "Quanto do uso é o DIGITADO" (máquina x JVM) - se a máquina está
+  cheia e a JVM não, o consumo é de outro programa.
+- **Quem lê `/management/prometheus`**: o admin logado, qualquer chamada da própria máquina (127.0.0.1)
+  e, se configurado, quem mandar o cabeçalho `X-Token-Metricas` com o valor de
+  `APPLICATION_MONITORAMENTO_TOKEN_METRICAS`. Antes só o admin lia - e o Prometheus, sem JWT,
+  recebia 401: o dashboard JVM ficava vazio.
 - `GET /management/threaddump` para depurar travamentos (ADMIN).
 
 ## 8. Testes de regressão dos fluxos críticos
@@ -77,8 +89,9 @@ JHipster/Spring Boot e o que foi adicionado.
 ## 9. Alertas configuráveis para anomalias
 
 - **Adicionado**: [`alert-rules.yml`](src/main/docker/prometheus/alert-rules.yml) com alertas de:
-  instância fora do ar, taxa de 5xx > 5%, latência p95 > 1s, heap > 90%, CPU > 90% e
-  pool de conexões esgotado. Thresholds ajustáveis por edição do arquivo.
+  instância fora do ar, taxa de 5xx > 5%, latência p95 > 1s, heap > 90%, CPU > 90%,
+  pool de conexões esgotado e **memória da máquina** acima de 90% por 5 min (`MemoriaDaMaquinaAlta`)
+  ou de 97% por 2 min (`MemoriaDaMaquinaCritica`). Thresholds ajustáveis por edição do arquivo.
 - Roteamento por [`alertmanager.yml`](src/main/docker/alertmanager/alertmanager.yml)
   (troque o receiver placeholder por Slack/e-mail/webhook do time).
 - Subir o stack completo (Prometheus + Alertmanager + Grafana):
@@ -86,7 +99,16 @@ JHipster/Spring Boot e o que foi adicionado.
   docker compose -f src/main/docker/monitoring.yml up -d
   ```
   Prometheus: `http://localhost:9090` · Alertmanager: `http://localhost:9093` ·
-  Grafana: `http://localhost:3000` (admin/admin, dashboard JVM provisionado).
+  Grafana: `http://localhost:3000` (admin/admin, dashboards JVM e **DIGITADO - Máquina** provisionados).
+- **Rede do stack**: os containers usam rede bridge e acham o DIGITADO em `host.docker.internal:8080`.
+  O `network_mode: host` de antes não funciona no Docker Desktop (Windows/macOS): o Prometheus não
+  enxergava o DIGITADO e nem o Grafana abria no navegador.
+  - DIGITADO rodando direto no Windows (`setup-ambiente.ps1`): funciona sem configurar nada - o
+    Docker Desktop entrega a raspagem como se viesse de 127.0.0.1.
+  - DIGITADO em container (`iniciar-container.ps1`) ou Prometheus no Linux/noutro servidor: o pedido
+    chega por outro IP. Defina `APPLICATION_MONITORAMENTO_TOKEN_METRICAS` no DIGITADO, grave o mesmo
+    valor em `src/main/docker/prometheus/token-metricas` (fora do git) e descomente o bloco
+    `http_headers` em [`prometheus.yml`](src/main/docker/prometheus/prometheus.yml).
 
 ## 10. Deploy monitorado com rollback automático
 

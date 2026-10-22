@@ -72,6 +72,10 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
 
     Page<Palavra> findByAtivaTrue(Pageable pageable);
 
+    // O acervo ativo inteiro: o modo individual avalia todas as palavras na equação
+    // que escolhe a próxima (EquacaoPalavraIndividual) - são poucas centenas
+    List<Palavra> findAllByAtivaTrue();
+
     // Incremento atômico das colunas de estatística da palavra (total_tentativas e
     // total_acertos) - único ponto que escreve nesses contadores. Seguro mesmo com
     // vários jogadores respondendo ao mesmo tempo em salas diferentes.

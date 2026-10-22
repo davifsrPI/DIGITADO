@@ -126,6 +126,7 @@ public final class DesempenhoVM {
         long totalRespostas,
         long totalAcertos,
         long totalErros,
+        long totalNaoRespondeu,
         int taxaGeral,
         long totalAlunos,
         long alunosBons,
@@ -136,6 +137,36 @@ public final class DesempenhoVM {
         List<PontoEvolucaoVM> evolucao,
         List<PalavraDesempenhoVM> palavrasMaisAcertadas,
         List<PalavraDesempenhoVM> palavrasMaisErradas,
-        List<TipoErroVM> errosPorTipo
+        List<TipoErroVM> errosPorTipo,
+        FiltroTipoErroVM filtro
+    ) {}
+
+    /** Um mês do recorte por tipo de erro: quantas respostas e quantas tiveram aquele erro. */
+    public record PontoTipoErroVM(String mes, long respostas, long ocorrencias, double taxa) {}
+
+    /** Uma palavra onde o tipo de erro filtrado acontece. percentual = ocorrências / respostas. */
+    public record PalavraTipoErroVM(Long palavraId, String texto, String dificuldade, long respostas, long ocorrencias, int percentual) {}
+
+    /**
+     * O painel recortado por UM tipo de erro (filtro "Tipos de erro da turma").
+     *
+     * taxa* são a fatia das respostas do mês que tiveram este erro, com uma casa
+     * decimal: um tipo de erro raramente passa de poucos por cento das respostas, e
+     * arredondar para inteiro faria 1,4% e 0,6% parecerem a mesma coisa.
+     * veredito: MELHOROU quando a turma cometeu MENOS este erro que no mês passado.
+     */
+    public record FiltroTipoErroVM(
+        String tipo,
+        long ocorrencias,
+        int percentualDosErros,
+        double percentualDasRespostas,
+        long alunosAfetados,
+        long palavrasAfetadas,
+        double taxaMesAtual,
+        double taxaMesAnterior,
+        String veredito,
+        String resumo,
+        List<PontoTipoErroVM> evolucao,
+        List<PalavraTipoErroVM> palavras
     ) {}
 }

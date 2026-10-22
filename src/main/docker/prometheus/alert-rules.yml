@@ -54,6 +54,27 @@ groups:
           summary: 'Uso de heap acima de 90%'
           description: 'Risco de OutOfMemoryError. Capture um heap dump antes de reiniciar, se possível.'
 
+      # Memória da MÁQUINA (todos os programas, não só a JVM) acima de 90% por 5 min.
+      # Métrica da própria aplicação (MemoriaMaquinaMetrics), vale no Windows e no container.
+      - alert: MemoriaDaMaquinaAlta
+        expr: digitado_maquina_memoria_uso_ratio > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Memória da máquina acima de 90% em {{ $labels.instance }}'
+          description: 'Veja no dashboard "DIGITADO - Máquina" se o consumo é do DIGITADO (JVM) ou de outro programa aberto no servidor.'
+
+      # Memória da máquina praticamente esgotada: o sistema começa a usar o swap e tudo fica lento
+      - alert: MemoriaDaMaquinaCritica
+        expr: digitado_maquina_memoria_uso_ratio > 0.97
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Memória da máquina esgotada (>97%) em {{ $labels.instance }}'
+          description: 'As partidas em andamento podem travar. Feche programas no servidor ou aumente a memória.'
+
       # CPU do processo acima de 90% por 5 minutos
       - alert: CpuAlta
         expr: process_cpu_usage > 0.9

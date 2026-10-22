@@ -20,6 +20,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +45,9 @@ class PalavraDoDiaResourceIT {
     @Autowired
     private MockMvc restMockMvc;
 
+    @Autowired
+    private PalavraDoDiaService palavraDoDiaService;
+
     private Palavra palavraDoDia;
 
     @BeforeEach
@@ -54,6 +58,10 @@ class PalavraDoDiaResourceIT {
         todas.forEach(p -> p.setAtiva(false));
         palavraRepository.saveAllAndFlush(todas);
         palavraDoDia = palavraRepository.saveAndFlush(new Palavra().texto("escola").categoria("Educação").ativa(true));
+        // O serviço guarda a palavra do dia em memória o dia inteiro: sem limpar, o
+        // segundo teste recebia a "escola" do primeiro - que o rollback já tinha
+        // apagado do banco - e a tentativa estourava a FK de palavra_do_dia_tentativa
+        ReflectionTestUtils.setField(palavraDoDiaService, "cache", null);
     }
 
     @Test

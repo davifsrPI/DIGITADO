@@ -5,7 +5,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import TelaCarregamento from 'app/shared/layout/loading/tela-carregamento';
 import { useBodyClass } from 'app/shared/util/use-body-class';
-import { TAMANHO_CODIGO_SALA as CODE_LEN } from 'app/shared/util/codigo-sala';
+import { extrairCodigoColado, TAMANHO_CODIGO_SALA as CODE_LEN } from 'app/shared/util/codigo-sala';
+import { verificarSala } from 'app/shared/util/verificar-sala';
 
 // A descrição agora é um objeto JSON vindo do backend: o texto livre + o modo da sala
 interface DescricaoSala {
@@ -33,6 +34,8 @@ export const Duelo = () => {
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [codigoPrivado, setCodigoPrivado] = useState('');
+  const [verificando, setVerificando] = useState(false);
+  const [erroCodigo, setErroCodigo] = useState<string | null>(null);
 
   useBodyClass('duelo-page');
 
@@ -58,10 +61,23 @@ export const Duelo = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const entrarPrivado = (e: React.FormEvent) => {
+  // Confere o código antes de sair da tela, como no lobby: código errado fica aqui,
+  // com o aviso. Código de sala de TURMA segue para a entrada da turma.
+  const entrarPrivado = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = codigoPrivado.trim().toUpperCase();
-    if (code.length === CODE_LEN) navigate(`/sala/${code}`);
+    if (code.length !== CODE_LEN || verificando) return;
+    setVerificando(true);
+    setErroCodigo(null);
+    const resultado = await verificarSala(code);
+    setVerificando(false);
+    if (resultado.status === 'ok') {
+      navigate(resultado.tipo === 'UM_V_UM' ? `/sala/${code}` : `/sala/${code}/entrar`);
+    } else if (resultado.status === 'inexistente') {
+      setErroCodigo(`Não encontramos nenhum duelo com o código ${code}.`);
+    } else {
+      setErroCodigo('Não foi possível conferir o código agora. Tente de novo.');
+    }
   };
 
   return (
@@ -146,14 +162,21 @@ export const Duelo = () => {
                 className="duelo-priv-input"
                 placeholder="CÓDIGO"
                 value={codigoPrivado}
-                onChange={e =>
+                onChange={e => {
+                  setErroCodigo(null);
                   setCodigoPrivado(
                     e.target.value
                       .toUpperCase()
                       .replace(/[^A-Z0-9]/g, '')
                       .slice(0, CODE_LEN),
-                  )
-                }
+                  );
+                }}
+                // Mensagem colada inteira: traz só o código (mesma regra do lobby)
+                onPaste={e => {
+                  e.preventDefault();
+                  setErroCodigo(null);
+                  setCodigoPrivado(extrairCodigoColado(e.clipboardData.getData('text')));
+                }}
                 maxLength={CODE_LEN}
                 autoComplete="off"
                 autoCorrect="off"
@@ -161,10 +184,15 @@ export const Duelo = () => {
                 spellCheck={false}
                 aria-label="Código do duelo privado"
               />
-              <button type="submit" className="duelo-join-btn" disabled={codigoPrivado.length < CODE_LEN}>
-                Entrar no duelo →
+              <button type="submit" className="duelo-join-btn" disabled={codigoPrivado.length < CODE_LEN || verificando}>
+                {verificando ? 'Conferindo...' : 'Entrar no duelo →'}
               </button>
             </form>
+            {erroCodigo && (
+              <div className="duelo-erro" role="alert">
+                {erroCodigo}
+              </div>
+            )}
           </div>
         </div>
 

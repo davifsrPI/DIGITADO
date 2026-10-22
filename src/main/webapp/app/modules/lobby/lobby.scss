@@ -592,3 +592,16 @@ body.lobby-page {
     gap: 14px 28px;
   }
 }
+
+// Código de sala que não existe: o aviso aparece aqui, sem sair do lobby
+.room-code-erro {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fecaca;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}

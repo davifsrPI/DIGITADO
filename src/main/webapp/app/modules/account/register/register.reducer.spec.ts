@@ -31,6 +31,7 @@ describe('Creating account tests', () => {
           registrationSuccess: true,
           registrationFailure: true,
           registrationBloqueada: true,
+          registrationConflito: 'EMAIL',
           errorMessage: '',
           successMessage: '',
         },
@@ -66,6 +67,25 @@ describe('Creating account tests', () => {
       registrationFailure: true,
       errorMessage: error.message,
     });
+  });
+
+  // E-mail ou login ja cadastrado: o servidor diz qual dos dois, e a tela avisa
+  // so depois de tentar criar a conta (nao existe mais checagem durante a digitacao)
+  it('should flag the e-mail conflict on CREATE_ACCOUNT failure', () => {
+    const resultado = register(undefined, {
+      type: handleRegister.rejected.type,
+      error: { message: 'Request failed with status code 400', response: { status: 400, data: { message: 'error.emailexists' } } },
+    });
+    expect(resultado.registrationFailure).toBe(true);
+    expect(resultado.registrationConflito).toBe('EMAIL');
+  });
+
+  it('should flag the login conflict on CREATE_ACCOUNT failure', () => {
+    const resultado = register(undefined, {
+      type: handleRegister.rejected.type,
+      error: { message: 'Request failed with status code 400', response: { status: 400, data: { message: 'error.userexists' } } },
+    });
+    expect(resultado.registrationConflito).toBe('LOGIN');
   });
 
   // O 429 do RateLimitFilter tem aviso proprio na tela: sem esta flag a pessoa

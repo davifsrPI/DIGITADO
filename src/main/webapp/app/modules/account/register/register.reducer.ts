@@ -10,6 +10,9 @@ export const initialState = {
   registrationSuccess: false,
   registrationFailure: false,
   registrationBloqueada: false,
+  // Qual cadastro já existe, quando é esse o motivo da recusa: o servidor diz se foi
+  // o e-mail ou o login, e a tela avisa o que corrigir
+  registrationConflito: null as 'EMAIL' | 'LOGIN' | null,
   errorMessage: null,
   successMessage: null,
 };
@@ -41,13 +44,16 @@ export const RegisterSlice = createSlice({
       .addCase(handleRegister.rejected, (state, action) => {
         // 429 vem do RateLimitFilter, e precisa de aviso próprio: dizer "erro no
         // cadastro" faria a pessoa tentar de novo, o que renova o bloqueio.
-        const erro = action.error as { message?: string; response?: { status?: number } };
+        const erro = action.error as { message?: string; response?: { status?: number; data?: { message?: string } } };
         const status = erro?.response?.status ?? Number(/\b(\d{3})\b\s*$/.exec(erro?.message ?? '')?.[1]);
+        // EmailAlreadyUsedException / LoginAlreadyUsedException do servidor
+        const chave = erro?.response?.data?.message;
 
         return {
           ...initialState,
           registrationFailure: true,
           registrationBloqueada: status === 429,
+          registrationConflito: chave === 'error.emailexists' ? 'EMAIL' : chave === 'error.userexists' ? 'LOGIN' : null,
           errorMessage: erro?.message,
         };
       })

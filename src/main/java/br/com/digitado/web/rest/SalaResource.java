@@ -2,6 +2,7 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.ParticipanteSala;
 import br.com.digitado.domain.Sala;
+import br.com.digitado.domain.Usuario;
 import br.com.digitado.domain.enumeration.TipoSala;
 import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.repository.UserRepository;
@@ -625,25 +626,16 @@ public class SalaResource {
                 .map(EstatisticaPartidaService.EstatisticasPartida::relatorio)
                 .orElse(List.of());
         }
-        Optional<ResumoPartidaService.ResumoAluno> resumo = resumoPartidaService.montar(relatorio, login, login);
+        Optional<ResumoPartidaService.ResumoAluno> resumo = resumoPartidaService
+            .montar(relatorio, login, login)
+            // XP que a partida rendeu, enquanto ela ainda está em memória
+            .map(r -> r.comXp(jogoSalaService.xpDaPartida(codigo, login).orElse(null)));
         if (visaoProfessor) {
             // O professor vê o nome real (com o apelido entre parênteses quando o
             // aluno escolheu jogar escondido dos colegas)
             String nomeReal = participanteSalaService.nomesParaProfessor(codigo).get(login);
             if (nomeReal != null) {
-                resumo = resumo.map(r ->
-                    new ResumoPartidaService.ResumoAluno(
-                        r.login(),
-                        nomeReal,
-                        r.totalPalavras(),
-                        r.acertos(),
-                        r.erros(),
-                        r.semResposta(),
-                        r.mediaAcertosTurma(),
-                        r.totalParticipantes(),
-                        r.palavras()
-                    )
-                );
+                resumo = resumo.map(r -> r.comNome(nomeReal));
             }
         }
         return resumo;
@@ -658,6 +650,58 @@ public class SalaResource {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
         return ResponseEntity.ok(Map.of("souProfessor", isOwnerOrAdmin(codigo)));
+    }
+
+    /**
+     * Duplica a sala: mesma configuração de partida (tempos, quantidades, palavras
+     * sorteadas e as escolhidas a mão), mesmo tipo e descrição, código NOVO.
+     *
+     * É o caso do professor que dá a mesma atividade para a turma B depois da A:
+     * antes ele montava tudo de novo, palavra por palavra, ou usava a mesma sala -
+     * e aí as duas turmas se misturavam no mesmo placar e nas mesmas estatísticas.
+     * A cópia nasce limpa: sem partida, sem participantes, sem histórico.
+     *
+     * Só o dono (ou admin) duplica: a configuração carrega as palavras da partida,
+     * que são as respostas do ditado. A cópia pertence a quem duplicou.
+     */
+    @PostMapping("/{codigo}/duplicar")
+    public ResponseEntity<SalaResponseVM> duplicarSala(@PathVariable("codigo") String codigo) throws URISyntaxException {
+        LOG.debug("REST request to duplicate Sala : {}", codigo);
+        Sala original = salaRepository
+            .findById(codigo)
+            .orElseThrow(() -> new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound"));
+        if (!isOwnerOrAdmin(codigo)) {
+            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        Sala copia = new Sala();
+        copia.setCodigo(codigoSalaService.gerarDisponivel());
+        copia.setNome(nomeDaCopia(original.getNome()));
+        TipoSala tipo = original.getTipo() != null ? original.getTipo() : TipoSala.TURMA;
+        copia.setTipo(tipo);
+        copia.setPrivada(tipo == TipoSala.UM_V_UM ? original.getPrivada() : Boolean.TRUE);
+        copia.setDescricao(montarDescricaoJson(original.getDescricao(), tipo));
+        copia.setConfiguracao(original.getConfiguracao());
+        copia.setAtivo(true);
+        copia.setDataCriacao(java.time.Instant.now());
+        // Dono da cópia: quem duplicou. O admin que duplica a sala de alguém e não
+        // tem cadastro de jogador deixa a cópia com o professor original
+        Usuario dono = SecurityUtils.getCurrentUserLogin()
+            .flatMap(userRepository::findOneByLogin)
+            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
+            .orElse(original.getProfessor());
+        copia.setProfessor(dono);
+        copia = salaRepository.save(copia);
+        return ResponseEntity.created(new URI("/api/salas/" + copia.getCodigo()))
+            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, copia.getCodigo()))
+            .body(toVM(copia));
+    }
+
+    // "Turma 3A" -> "Turma 3A (cópia)"; duplicar a cópia não empilha "(cópia) (cópia)"
+    static String nomeDaCopia(String nome) {
+        String base = nome == null ? "Sala" : nome.replaceAll("\\s*\\(cópia\\)$", "").trim();
+        String copia = base + " (cópia)";
+        // O nome da tela de criação vai até 80 caracteres: a cópia respeita o mesmo teto
+        return copia.length() <= 80 ? copia : base.substring(0, 80 - " (cópia)".length()).trim() + " (cópia)";
     }
 
     // Exclui uma sala - apenas o professor dono ou admin podem excluir

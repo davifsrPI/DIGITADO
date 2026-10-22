@@ -11,6 +11,7 @@ import { posicoesRanking } from './utils/posicoes-ranking';
 import { EntradaPalavra } from 'app/shared/components/entrada-palavra/entrada-palavra';
 import { IconeAudio } from 'app/shared/components/icone-audio/icone-audio';
 import { ResumoAluno, ResumoAlunoPartida } from './resumo-aluno';
+import { useCopiar } from 'app/shared/util/copiar-texto';
 
 // Configuração enviada ao iniciar a partida, mesmo shape usado pela tela do professor
 interface GameConfig {
@@ -71,17 +72,13 @@ const EsperaCriadorDuelo: React.FC<{
   onIniciar?: (cfg: GameConfig) => void;
 }> = ({ estado, conectado, codigoSala, cfg, onIniciar }) => {
   // "✓ Copiado!" temporário ao clicar no código do duelo
-  const [copied, setCopied] = useState(false);
+  const { estado: estadoCopia, copiar } = useCopiar();
   const jogadores = estado?.alunosConectados?.length ?? 0;
   const temOponente = jogadores >= 2;
   const totalPalavras = cfg.qtdFacil + cfg.qtdMedio + cfg.qtdDificil + (cfg.palavrasExtrasIds?.length ?? 0);
 
   const copiarCodigo = () => {
-    if (!codigoSala) return;
-    navigator.clipboard.writeText(codigoSala).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    if (codigoSala) void copiar(codigoSala);
   };
 
   return (
@@ -95,7 +92,13 @@ const EsperaCriadorDuelo: React.FC<{
         <button type="button" className="sj-codigo-block" onClick={copiarCodigo} title="Clique para copiar">
           <span className="sj-codigo-label">CÓDIGO DO DUELO</span>
           <span className="sj-codigo-val">{codigoSala}</span>
-          <span className="sj-codigo-copy">{copied ? '✓ Copiado!' : 'clique para copiar'}</span>
+          <span className="sj-codigo-copy">
+            {estadoCopia === 'copiado'
+              ? '✓ Copiado!'
+              : estadoCopia === 'falhou'
+                ? 'Não deu para copiar: anote o código'
+                : 'clique para copiar'}
+          </span>
         </button>
       )}
       <p className="sj-waiting-sub">
@@ -200,6 +203,13 @@ const TelaFimDaPartida: React.FC<{
   return (
     <div className="sj-ended">
       <h2>Atividade encerrada!</h2>
+      {/* XP que a partida rendeu: cresce com os acertos, com o tamanho da partida e
+          com a quantidade de colegas na sala (ver XpService no servidor) */}
+      {resumo?.xpGanho != null && resumo.xpGanho > 0 && (
+        <div className="sj-xp-ganho" role="status">
+          ⚡ +{resumo.xpGanho} XP nesta partida
+        </div>
+      )}
       <div className="sj-final-placar">
         {placar.map((p, i) => (
           <div key={p.login} className={`sj-final-row${p.login === meuLogin ? ' sj-final-me' : ''}`}>
@@ -428,6 +438,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
           setAudioBloqueado(false);
           ouvirPalavraDaRodada({
             codigoSala,
+            chave: estado.palavraAtual.id,
             texto: estado.palavraAtual.texto,
             onEnd: () => setFalando(false),
             onBloqueadoPeloNavegador: () => setAudioBloqueado(true),
@@ -465,6 +476,7 @@ export const SalaJogoAluno: React.FC<Props> = ({
     setAudioBloqueado(false);
     ouvirPalavraDaRodada({
       codigoSala,
+      chave: estado.palavraAtual.id,
       texto: estado.palavraAtual.texto,
       pausaMs: 0,
       onEnd: () => setFalando(false),
@@ -586,11 +598,14 @@ export const SalaJogoAluno: React.FC<Props> = ({
         <div className="sj-waiting-icon">
           <AmpulhetaAnimada />
         </div>
-        <h2>Aguardando o professor iniciar...</h2>
+        {/* No duelo não há professor: quem inicia é quem criou o duelo */}
+        <h2>{duelo1v1 ? 'Aguardando quem criou o duelo iniciar...' : 'Aguardando o professor iniciar...'}</h2>
         <p className="sj-waiting-sub">{conectado ? `Conectado à sala ${estado?.nomeSala ?? ''}` : 'Conectando...'}</p>
         {estado && estado.alunosConectados.length > 0 && (
           <div className="sj-connected-list">
-            <span className="sj-connected-label">{estado.alunosConectados.length} aluno(s) na sala</span>
+            <span className="sj-connected-label">
+              {duelo1v1 ? `${estado.alunosConectados.length}/2 jogadores no duelo` : `${estado.alunosConectados.length} aluno(s) na sala`}
+            </span>
           </div>
         )}
       </div>

@@ -17,6 +17,8 @@ public class ApplicationProperties {
 
     private final Websocket websocket = new Websocket();
 
+    private final Monitoramento monitoramento = new Monitoramento();
+
     // jhipster-needle-application-properties-property
 
     public Liquibase getLiquibase() {
@@ -29,6 +31,10 @@ public class ApplicationProperties {
 
     public Websocket getWebsocket() {
         return websocket;
+    }
+
+    public Monitoramento getMonitoramento() {
+        return monitoramento;
     }
 
     // jhipster-needle-application-properties-property-getter
@@ -62,13 +68,6 @@ public class ApplicationProperties {
         // contra uma conta específica). Como a chave inclui a conta, um aluno
         // errando a senha não atrapalha os colegas que saem do mesmo IP da escola.
         private int autenticacaoPorMinuto = 10;
-
-        // Consultas de "este e-mail já existe?" por minuto, por IP. Teto próprio e
-        // mais alto porque a tela de cadastro consulta a cada pausa na digitação do
-        // e-mail: com o mesmo teto do resto, só de preencher o formulário a pessoa
-        // gastava o orçamento e o cadastro (ou o login seguinte) era recusado.
-        // Ainda limita enumeração de contas, que é o motivo de o endpoint ser contado.
-        private int verificacaoEmailPorMinuto = 30;
 
         // Teto de chamadas ao login por IP, independente de acertar ou errar.
         // Existe porque o contador acima só sobe na falha: sem este limite, quem
@@ -104,14 +103,6 @@ public class ApplicationProperties {
 
         public void setAutenticacaoPorMinuto(int autenticacaoPorMinuto) {
             this.autenticacaoPorMinuto = autenticacaoPorMinuto;
-        }
-
-        public int getVerificacaoEmailPorMinuto() {
-            return verificacaoEmailPorMinuto;
-        }
-
-        public void setVerificacaoEmailPorMinuto(int verificacaoEmailPorMinuto) {
-            this.verificacaoEmailPorMinuto = verificacaoEmailPorMinuto;
         }
 
         public int getAutenticacaoTotalPorMinuto() {
@@ -154,6 +145,31 @@ public class ApplicationProperties {
 
         public void setAllowedOrigins(String allowedOrigins) {
             this.allowedOrigins = allowedOrigins;
+        }
+    }
+
+    /**
+     * Raspagem das métricas pelo Prometheus (application.monitoramento).
+     */
+    public static class Monitoramento {
+
+        /**
+         * Token que o Prometheus manda no cabeçalho X-Token-Metricas para ler
+         * /management/prometheus sem login. Vazio = desligado: aí só a própria
+         * máquina (127.0.0.1) e o admin logado leem as métricas.
+         *
+         * Precisa dele quem raspa de OUTRO endereço - o Prometheus noutro servidor,
+         * ou o DIGITADO rodando em container (o pedido chega pela rede do Docker,
+         * não pelo 127.0.0.1). Ver MONITORING.md.
+         */
+        private String tokenMetricas = "";
+
+        public String getTokenMetricas() {
+            return tokenMetricas;
+        }
+
+        public void setTokenMetricas(String tokenMetricas) {
+            this.tokenMetricas = tokenMetricas;
         }
     }
     // jhipster-needle-application-properties-property-class

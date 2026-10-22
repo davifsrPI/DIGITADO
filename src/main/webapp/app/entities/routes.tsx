@@ -13,6 +13,7 @@ import ErroOrtografico from './erro-ortografico';
 import Ranking from './ranking';
 import Conquista from './conquista';
 import UsuarioConquista from './usuario-conquista';
+import TabelaDoJogo from './tabelas-jogo/tabelas-jogo';
 /* jhipster-needle-add-route-import - JHipster will add routes here */
 
 export default () => {
@@ -30,6 +31,7 @@ export default () => {
         <Route path="ranking/*" element={<Ranking />} />
         <Route path="conquista/*" element={<Conquista />} />
         <Route path="usuario-conquista/*" element={<UsuarioConquista />} />
+        <Route path="tabelas/:nome" element={<TabelaDoJogo />} />
         {/* jhipster-needle-add-route-path - JHipster will add routes here */}
       </ErrorBoundaryRoutes>
     </div>

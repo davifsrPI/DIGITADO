@@ -713,6 +713,31 @@ body.criar-sala-page .view-container {
   letter-spacing: 10px;
   color: #4ade80;
   font-family: monospace;
+  // É um botão (clique copia o código): sem a aparência padrão de botão
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba(34, 197, 94, 0.14);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.cs-code-copiar {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #86efac;
+  opacity: 0.85;
 }
 
 .cs-code-row {

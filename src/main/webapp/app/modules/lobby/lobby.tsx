@@ -5,24 +5,42 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { useAppSelector } from 'app/config/store';
 import { useBodyClass } from 'app/shared/util/use-body-class';
-import { limparCodigoSala, TAMANHO_CODIGO_SALA as CODE_LEN } from 'app/shared/util/codigo-sala';
+import { extrairCodigoColado, limparCodigoSala, TAMANHO_CODIGO_SALA as CODE_LEN } from 'app/shared/util/codigo-sala';
+import { verificarSala } from 'app/shared/util/verificar-sala';
 
 export const Lobby = () => {
   const account = useAppSelector(state => state.authentication.account);
   const [roomCode, setRoomCode] = useState('');
   const [codeFocused, setCodeFocused] = useState(false);
+  const [verificando, setVerificando] = useState(false);
+  const [erroCodigo, setErroCodigo] = useState<string | null>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useBodyClass('lobby-page');
 
   // O aluno passa antes pela tela de entrada (nome, turma, apelido): é lá que a
-  // sala descobre quem ele é. Quem for o dono da sala, ou entrar num duelo 1v1,
-  // é mandado direto para a partida pela própria tela.
-  const handleEnterRoom = (e: React.FormEvent) => {
+  // sala descobre quem ele é. Quem for o dono da sala é mandado direto para a
+  // partida pela própria tela; o duelo 1v1 nem passa por ela.
+  //
+  // O código é conferido AQUI, antes de sair do lobby: errado, o aluno fica onde
+  // está, com o aviso, e corrige sem perder o que digitou.
+  const handleEnterRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = roomCode.trim().toUpperCase();
-    if (code) navigate(`/sala/${code}/entrar`);
+    if (!code || verificando) return;
+    setVerificando(true);
+    setErroCodigo(null);
+    const resultado = await verificarSala(code);
+    setVerificando(false);
+    if (resultado.status === 'ok') {
+      navigate(resultado.tipo === 'UM_V_UM' ? `/sala/${code}` : `/sala/${code}/entrar`);
+    } else if (resultado.status === 'inexistente') {
+      setErroCodigo(`Não encontramos nenhuma sala com o código ${code}. Confira com o seu professor.`);
+      codeInputRef.current?.focus();
+    } else {
+      setErroCodigo('Não foi possível conferir a sala agora. Verifique a conexão e tente de novo.');
+    }
   };
 
   return (
@@ -74,7 +92,18 @@ export const Lobby = () => {
                 type="text"
                 className="code-hidden-input"
                 value={roomCode}
-                onChange={e => setRoomCode(limparCodigoSala(e.target.value))}
+                onChange={e => {
+                  setRoomCode(limparCodigoSala(e.target.value));
+                  setErroCodigo(null);
+                }}
+                // Colar a mensagem inteira do professor ("Entrem na sala FB5P4D!") traz
+                // só o código. Tratado aqui, e não no onChange: o maxLength cortaria o
+                // texto colado nos 6 primeiros caracteres antes de ele chegar lá
+                onPaste={e => {
+                  e.preventDefault();
+                  setRoomCode(extrairCodigoColado(e.clipboardData.getData('text')));
+                  setErroCodigo(null);
+                }}
                 onFocus={() => setCodeFocused(true)}
                 onBlur={() => setCodeFocused(false)}
                 maxLength={CODE_LEN}
@@ -83,10 +112,17 @@ export const Lobby = () => {
                 autoCapitalize="characters"
                 spellCheck={false}
                 aria-label="Código da sala"
+                aria-invalid={!!erroCodigo}
+                aria-describedby={erroCodigo ? 'lobby-erro-codigo' : undefined}
               />
             </div>
-            <button type="submit" className="room-enter-btn" disabled={roomCode.length < CODE_LEN}>
-              Entrar na sala →
+            {erroCodigo && (
+              <p id="lobby-erro-codigo" className="room-code-erro" role="alert">
+                {erroCodigo}
+              </p>
+            )}
+            <button type="submit" className="room-enter-btn" disabled={roomCode.length < CODE_LEN || verificando}>
+              {verificando ? 'Conferindo o código...' : 'Entrar na sala →'}
             </button>
           </form>
         </div>
@@ -100,6 +136,12 @@ export const Lobby = () => {
         <Link to="/duelo" className="create-room-link">
           <span className="create-room-link-icon">⚔️</span>
           Duelo 1v1: desafie alguém
+          <span className="create-room-link-arrow">→</span>
+        </Link>
+
+        <Link to="/individual" className="create-room-link">
+          <span className="create-room-link-icon">🎯</span>
+          Modo individual: até onde você chega?
           <span className="create-room-link-arrow">→</span>
         </Link>
 

@@ -5,7 +5,6 @@ import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.enumeration.Dificuldade;
 import br.com.digitado.repository.PalavraRepository;
 import br.com.digitado.web.websocket.dto.*;
-import java.text.Normalizer;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,37 +50,8 @@ public class JogoSalaService {
      */
     private static final long FOLGA_AVANCO_MS = 1500;
 
-    // Espaço fixo (U+00A0): vem em texto colado de documento e sobrevive ao trim,
-    // que só apara caracteres de controle e o espaço comum
-    private static final char ESPACO_FIXO = (char) 0x00A0;
-
     // ninguém digita mais rápido que ~80ms por letra; abaixo disso trato como bot
     private static final long MIN_MS_POR_LETRA = 80;
-
-    /**
-     * Equivalências fonéticas do português, aplicadas em ordem: grafias distintas
-     * que soam igual caem no mesmo texto. É a tabela que separa ERRO_FONETICO
-     * ("xave" por "chave") de um erro qualquer de digitação.
-     *
-     * Espelha a tabela da tela (validarResposta.ts), que dá o retorno imediato ao
-     * aluno enquanto a resposta do servidor não chega. Quem grava no histórico é
-     * este lado - mudou aqui, muda lá.
-     *
-     * Aplicada sobre o texto AINDA acentuado, por causa da cedilha - ver som().
-     */
-    private static final String[][] REGRAS_FONETICAS = {
-        { "ç", "s" },
-        { "ss", "s" },
-        { "rr", "r" },
-        { "ph", "f" },
-        { "ch", "x" },
-        { "lh", "l" },
-        { "nh", "n" },
-        { "[qk]", "c" },
-        { "y", "i" },
-        { "w", "v" },
-        { "[sz]", "z" },
-    };
 
     private final PalavraRepository palavraRepository;
     private final PalavraEstatisticaService palavraEstatisticaService;
@@ -89,6 +59,7 @@ public class JogoSalaService {
     private final ConquistaEngineService conquistaEngine;
     private final EstatisticaPartidaService estatisticaPartidaService;
     private final HistoricoRespostaService historicoRespostaService;
+    private final XpService xpService;
 
     // Mapa em memória: código da sala → estado do jogo
     private final Map<String, EstadoJogo> jogos = new ConcurrentHashMap<>();
@@ -115,7 +86,8 @@ public class JogoSalaService {
         PalavraAudioService palavraAudioService,
         ConquistaEngineService conquistaEngine,
         EstatisticaPartidaService estatisticaPartidaService,
-        HistoricoRespostaService historicoRespostaService
+        HistoricoRespostaService historicoRespostaService,
+        XpService xpService
     ) {
         this.palavraRepository = palavraRepository;
         this.palavraEstatisticaService = palavraEstatisticaService;
@@ -123,6 +95,7 @@ public class JogoSalaService {
         this.conquistaEngine = conquistaEngine;
         this.estatisticaPartidaService = estatisticaPartidaService;
         this.historicoRespostaService = historicoRespostaService;
+        this.xpService = xpService;
     }
 
     // Registra um participante na sala (cria o estado da sala se ainda não existir).
@@ -414,53 +387,116 @@ public class JogoSalaService {
             boolean isento = !jogo.ehJogador(login) || (!jogo.isModo1v1() && login.equals(loginProfessor));
             if (!isento && !jogo.jaRespondeu(login)) {
                 palavraEstatisticaService.registrarTentativa(atual.getId(), false);
+                // No histórico PESSOAL a rodada sem resposta entra como "não respondeu":
+                // sem esta linha, quem deixava o tempo acabar sumia do painel do admin,
+                // como se a palavra nunca tivesse sido ditada para ele
+                historicoRespostaService.registrar(
+                    login,
+                    atual,
+                    false,
+                    ComparadorPalavras.NAO_RESPONDEU,
+                    null,
+                    0,
+                    jogo.isModo1v1() ? HistoricoResposta.Origem.DUELO : HistoricoResposta.Origem.PARTIDA
+                );
             }
         }
     }
 
-    // Ao terminar a partida (fim natural ou encerramento antecipado), dispara os
-    // eventos de conquista para cada participante (quem respondeu ao menos uma vez):
-    // partida jogada, vitória, pódio e partida perfeita. Nunca derruba o jogo.
+    /**
+     * Fim da partida (natural ou antecipado): XP de cada um e os eventos de
+     * conquista - partida jogada, vitória, pódio, partida perfeita e os do duelo.
+     * Nunca derruba o jogo.
+     *
+     * Participa quem respondeu ao menos uma vez; o professor da turma fica de fora
+     * mesmo que tenha respondido (ele comanda, não compete). Vitória e pódio contam
+     * quem tem MAIS pontos: antes a ordem de uma lista decidia o empate, e numa
+     * partida 0 a 0 um dos dois "vencia" por sorteio.
+     */
     private void premiarFimDePartida(EstadoJogo jogo) {
         if (jogo.isFimPremiado()) {
             return; // encerramento duplo não premia duas vezes
         }
         jogo.marcarFimPremiado();
         int totalPalavras = jogo.getTotalPalavras();
-        // Participantes ordenados por pontos (define vitória e pódio)
-        List<String> ordenados = jogo
-            .getParticipantes()
-            .stream()
-            .sorted(
-                Comparator.comparingInt((String login) -> {
-                    EstadoJogo.AlunoInfo info = jogo.getPlacar().get(login);
-                    return info != null ? info.pontos() : 0;
-                }).reversed()
-            )
-            .toList();
-        for (int i = 0; i < ordenados.size(); i++) {
-            String login = ordenados.get(i);
+        int palavrasJogadas = jogo.getPalavrasJogadas();
+        List<String> participantes = jogo.getParticipantes().stream().filter(jogo::ehJogador).toList();
+        int jogadores = participantes.size();
+        for (String login : participantes) {
+            int meusPontos = jogo.pontosDe(login);
+            int aFrente = (int) participantes.stream().filter(o -> jogo.pontosDe(o) > meusPontos).count();
+            int superados = (int) participantes.stream().filter(o -> jogo.pontosDe(o) < meusPontos).count();
+            boolean venceu = superados == jogadores - 1;
             int[] estat = jogo.getEstatisticaPartida(login);
             boolean perfeita = totalPalavras > 0 && estat[0] == totalPalavras && estat[1] == totalPalavras;
+            // XP da sala de turma; o do duelo é calculado abaixo, com o resultado do confronto
+            if (!jogo.isModo1v1()) {
+                creditarXpDaPartida(
+                    jogo,
+                    login,
+                    XpService.xpPartidaSala(estat[1], palavrasJogadas, jogadores, superados),
+                    "partida de sala"
+                );
+            }
             try {
-                conquistaEngine.aoConcluirPartida(login, i == 0, i < 3, perfeita);
+                conquistaEngine.aoConcluirPartida(login, venceu, aFrente < 3, perfeita, !jogo.isModo1v1());
             } catch (Exception e) {
                 LOG.error("Falha ao premiar fim de partida para {}: {}", login, e.getMessage(), e);
             }
         }
-        // Conquistas exclusivas do modo Duelo 1v1 - só valem com os dois oponentes
-        // tendo participado ("Primeiro Duelo", "Duelista", "Vença de um Desenvolvedor"...)
-        if (jogo.isModo1v1() && ordenados.size() == 2) {
-            for (int i = 0; i < 2; i++) {
-                String login = ordenados.get(i);
-                String oponente = ordenados.get(1 - i);
-                try {
-                    conquistaEngine.aoConcluirDuelo(login, i == 0, oponente);
-                } catch (Exception e) {
-                    LOG.error("Falha ao premiar duelo 1v1 para {}: {}", login, e.getMessage(), e);
-                }
+        if (jogo.isModo1v1()) {
+            premiarDuelo(jogo, palavrasJogadas);
+        }
+    }
+
+    /**
+     * Conquistas e XP exclusivos do duelo 1v1 ("Primeiro Duelo", "Duelista",
+     * "Vença de um Desenvolvedor"...).
+     *
+     * Os DOIS duelistas contam, tenham respondido ou não. Antes só entrava quem
+     * respondeu ao menos uma palavra: se o oponente deixava o tempo correr, o duelo
+     * ficava com um participante só e nada era premiado - foi assim que vencer o
+     * desenvolvedor parado não desbloqueava a conquista.
+     */
+    private void premiarDuelo(EstadoJogo jogo, int palavrasJogadas) {
+        List<String> duelistas = jogo.getPlacar().keySet().stream().sorted().toList();
+        if (duelistas.size() != 2) {
+            return;
+        }
+        for (int i = 0; i < 2; i++) {
+            String login = duelistas.get(i);
+            String oponente = duelistas.get(1 - i);
+            int meus = jogo.pontosDe(login);
+            int dele = jogo.pontosDe(oponente);
+            XpService.ResultadoDuelo resultado = meus > dele
+                ? XpService.ResultadoDuelo.VITORIA
+                : meus == dele ? XpService.ResultadoDuelo.EMPATE : XpService.ResultadoDuelo.DERROTA;
+            int[] estat = jogo.getEstatisticaPartida(login);
+            // Quem não respondeu nada não ganha XP, e bônus de vitória/empate exige
+            // ao menos um acerto: dois jogadores parados não podem fabricar XP
+            if (estat[0] > 0) {
+                XpService.ResultadoDuelo paraXp = estat[1] > 0 ? resultado : XpService.ResultadoDuelo.DERROTA;
+                creditarXpDaPartida(jogo, login, XpService.xpDuelo(estat[1], palavrasJogadas, paraXp), "duelo 1v1");
+            }
+            try {
+                conquistaEngine.aoConcluirDuelo(login, resultado == XpService.ResultadoDuelo.VITORIA, oponente);
+            } catch (Exception e) {
+                LOG.error("Falha ao premiar duelo 1v1 para {}: {}", login, e.getMessage(), e);
             }
         }
+    }
+
+    // Credita e guarda no estado quanto XP a pessoa levou nesta partida: é o que a
+    // tela de fim de partida mostra no resumo dela
+    private void creditarXpDaPartida(EstadoJogo jogo, String login, long xp, String motivo) {
+        long creditado = xpService.creditarPorLogin(login, xp, motivo);
+        jogo.registrarXp(login, creditado);
+    }
+
+    /** XP que o login ganhou na última partida desta sala, enquanto ela está em memória. */
+    public Optional<Long> xpDaPartida(String codigoSala, String login) {
+        EstadoJogo jogo = jogos.get(codigoSala);
+        return jogo == null ? Optional.empty() : jogo.xpDe(login);
     }
 
     /** Uma rodada que o servidor virou sozinho, e o estado a transmitir para a sala. */
@@ -606,8 +642,8 @@ public class JogoSalaService {
         }
 
         String textoCorreto = jogo.getPalavraAtual().getTexto();
-        String dLower = canonico(respostaDigitada);
-        String cLower = canonico(textoCorreto);
+        String dLower = ComparadorPalavras.canonico(respostaDigitada);
+        String cLower = ComparadorPalavras.canonico(textoCorreto);
         boolean correta = dLower.equals(cLower);
 
         // marca como suspeita se tentou colar/corretor ou respondeu rápido demais.
@@ -628,7 +664,8 @@ public class JogoSalaService {
         // Classifica o tipo de erro para dar feedback mais detalhado ao aluno.
         // Recebe o texto canônico, ainda COM acento e cedilha: a classificação
         // precisa deles (ver classificarErro) e tira o que não interessa por dentro.
-        String tipoErro = correta ? null : classificarErro(dLower, cLower);
+        String tipoErro = correta ? null : ComparadorPalavras.classificarErro(dLower, cLower);
+        int similaridade = ComparadorPalavras.similaridade(dLower, cLower);
 
         // só conta a estatística da palavra em duelo 1v1; sala de professor fica de
         // fora pra turma não distorcer a dificuldade
@@ -641,12 +678,16 @@ public class JogoSalaService {
         // contadores da palavra são do acervo inteiro e não sabem quem respondeu.
         // Grava sempre, inclusive em sala de professor: aqui não há risco de
         // distorcer a dificuldade da palavra - o número é só do jogador.
+        // Lido ANTES de gravar a resposta nova: um acerto depois de um erro na mesma
+        // palavra é o que move "Aprendendo com os Erros" e "Superação"
+        boolean tinhaErrado = correta && historicoRespostaService.tinhaErrado(login, jogo.getPalavraAtual().getId());
         historicoRespostaService.registrar(
             login,
             jogo.getPalavraAtual(),
             correta,
             tipoErro,
             (int) decorrido,
+            similaridade,
             jogo.isModo1v1() ? HistoricoResposta.Origem.DUELO : HistoricoResposta.Origem.PARTIDA
         );
 
@@ -674,7 +715,14 @@ public class JogoSalaService {
         // Motor de conquistas: acerto, rapidez, acentos/cedilha e sequência.
         // Transação própria e try/catch - conquista nunca derruba a partida.
         try {
-            conquistaEngine.aoResponderNaPartida(login, jogo.getPalavraAtual(), correta, decorrido, jogo.getSequenciaAcertos(login));
+            conquistaEngine.aoResponderNaPartida(
+                login,
+                jogo.getPalavraAtual(),
+                correta,
+                decorrido,
+                jogo.getSequenciaAcertos(login),
+                tinhaErrado
+            );
         } catch (Exception e) {
             LOG.error("Falha ao processar conquistas da resposta de {}: {}", login, e.getMessage(), e);
         }
@@ -700,94 +748,6 @@ public class JogoSalaService {
             jogo.totalAcertosNaRodada()
         );
         return new ResultadoResposta(feedback, estado, evento);
-    }
-
-    /**
-     * Forma canônica usada para decidir se a resposta bate com a palavra.
-     *
-     * NFC: "ã" pode chegar como um caractere só ou como "a" + til combinante. Para
-     * quem lê é a mesma letra, mas como texto são sequências diferentes - sem
-     * normalizar, uma palavra cadastrada por cópia de um documento (é comum vir
-     * decomposta) marcava como ERRADA a resposta digitada exatamente igual, e o aluno
-     * terminava a rodada sem ponto jurando que tinha acertado.
-     *
-     * O espaço fixo (NBSP) também vem nessas colagens e sobrevive ao trim comum, por
-     * isso vira espaço normal antes de aparar as pontas.
-     */
-    private String canonico(String s) {
-        if (s == null) return "";
-        return Normalizer.normalize(s, Normalizer.Form.NFC).replace(ESPACO_FIXO, ' ').trim().toLowerCase(Locale.ROOT);
-    }
-
-    // Remove acentos para comparação sem diferenciar versões acentuadas
-    private String normalizar(String s) {
-        return Normalizer.normalize(s.trim().toLowerCase(), Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-    }
-
-    /**
-     * Classifica o erro do aluno, na ordem em que a tela explica para ele:
-     * acentuação, som, uma letra fora de lugar, e por fim o erro genérico.
-     *
-     * Recebe o texto CANÔNICO (minúsculo, mas ainda com acento e cedilha), porque
-     * cada camada precisa de uma forma diferente: a acentuação compara sem acento,
-     * o som precisa da cedilha, e a contagem de letras compara sem acento.
-     *
-     * A camada FONÉTICA vivia só no frontend: a tela dizia "erro fonético (som
-     * certo, escrita diferente)" e o servidor gravava OUTRO no histórico. O
-     * ERRO_FONETICO existia no enum e no painel "Meu Desempenho" sem nunca chegar
-     * lá - justamente o erro mais útil de se ver num app de ortografia.
-     */
-    private String classificarErro(String digitadoCanonico, String corretoCanonico) {
-        String digitadoSemAcento = normalizar(digitadoCanonico);
-        String corretoSemAcento = normalizar(corretoCanonico);
-        if (digitadoSemAcento.equals(corretoSemAcento)) return "ACENTUACAO";
-        // Escreveu com o som certo e a grafia errada ("xave" por "chave"): vem antes
-        // da contagem de letras porque "ss" → "s" muda o tamanho e o erro cairia em
-        // LETRA_FALTANDO, que não diz nada ao aluno sobre o que ele confundiu
-        if (som(digitadoCanonico).equals(som(corretoCanonico))) return "ERRO_FONETICO";
-        int dist = levenshtein(digitadoSemAcento, corretoSemAcento);
-        if (dist == 1) {
-            if (digitadoSemAcento.length() < corretoSemAcento.length()) return "LETRA_FALTANDO";
-            if (digitadoSemAcento.length() > corretoSemAcento.length()) return "LETRA_EXTRA";
-            return "TROCA_LETRA";
-        }
-        return "OUTRO";
-    }
-
-    /**
-     * Reduz a palavra ao "som" dela, para separar quem errou a GRAFIA de quem
-     * errou a palavra. Grafias diferentes que soam igual caem no mesmo texto:
-     * "caça" e "cassa" viram "casa"; "xave" e "chave" viram "xave".
-     *
-     * A ordem importa e é o que estava errado antes: as regras rodam ANTES de
-     * tirar os acentos, porque o NFD decompõe "ç" em "c" + cedilha e a cedilha é
-     * um diacrítico como qualquer outro - tirada primeiro, "caça" virava "caca" e
-     * a regra ç → s nunca chegava a valer. Os acentos de vogal saem depois: a
-     * diferença só de acento já foi tratada como ACENTUACAO na camada anterior.
-     */
-    private String som(String canonico) {
-        String r = canonico;
-        for (String[] regra : REGRAS_FONETICAS) {
-            r = r.replaceAll(regra[0], regra[1]);
-        }
-        return normalizar(r);
-    }
-
-    // Algoritmo de Levenshtein: calcula o número mínimo de edições (inserção, remoção, substituição)
-    // para transformar uma string na outra - usado para classificar erros de digitação
-    private int levenshtein(String a, String b) {
-        int m = a.length(), n = b.length();
-        int[][] dp = new int[m + 1][n + 1];
-        for (int i = 0; i <= m; i++) dp[i][0] = i;
-        for (int j = 0; j <= n; j++) dp[0][j] = j;
-        for (int i = 1; i <= m; i++) {
-            for (int j = 1; j <= n; j++) {
-                dp[i][j] = a.charAt(i - 1) == b.charAt(j - 1)
-                    ? dp[i - 1][j - 1]
-                    : 1 + Math.min(dp[i - 1][j - 1], Math.min(dp[i - 1][j], dp[i][j - 1]));
-            }
-        }
-        return dp[m][n];
     }
 
     // Monta o DTO que será enviado via WebSocket para todos os clientes,
@@ -972,6 +932,8 @@ public class JogoSalaService {
         private final Map<String, Integer> sequenciaAcertos = new ConcurrentHashMap<>();
         private final Map<String, int[]> estatisticasPartida = new ConcurrentHashMap<>();
         private volatile boolean fimPremiado = false;
+        // XP que cada jogador levou na partida encerrada (para o resumo da tela final)
+        private final Map<String, Long> xpPorLogin = new ConcurrentHashMap<>();
         // Sala de duelo 1v1: no máximo 2 jogadores e conquistas próprias no fim
         private volatile boolean modo1v1 = false;
 
@@ -1029,6 +991,7 @@ public class JogoSalaService {
             // Partida nova = relatório novo: as respostas da partida anterior são descartadas
             respostasDetalhadas.clear();
             fimPremiado = false;
+            xpPorLogin.clear();
             // Reseta o status de todos para "AGUARDANDO" ao começar
             placar.replaceAll((k, v) -> new AlunoInfo(v.nome(), v.pontos(), "AGUARDANDO"));
         }
@@ -1323,6 +1286,25 @@ public class JogoSalaService {
 
         boolean isFimPremiado() {
             return fimPremiado;
+        }
+
+        void registrarXp(String login, long xp) {
+            xpPorLogin.merge(login, xp, Long::sum);
+        }
+
+        Optional<Long> xpDe(String login) {
+            return Optional.ofNullable(xpPorLogin.get(login));
+        }
+
+        int pontosDe(String login) {
+            AlunoInfo info = placar.get(login);
+            return info != null ? info.pontos() : 0;
+        }
+
+        // Quantas palavras a turma chegou a ouvir (o encerramento antecipado não conta
+        // as que ficaram para trás) - é o "palavras jogadas" do XP
+        int getPalavrasJogadas() {
+            return palavras.isEmpty() ? 0 : Math.min(ultimoIndiceJogado, palavras.size() - 1) + 1;
         }
 
         void marcarFimPremiado() {

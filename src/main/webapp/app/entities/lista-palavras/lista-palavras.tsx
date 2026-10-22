@@ -71,7 +71,12 @@ export const ListaPalavras = () => {
             <FontAwesomeIcon icon="sync" spin={loading} />{' '}
             <Translate contentKey="digitadoApp.listaPalavras.home.refreshListLabel">Refresh List</Translate>
           </Button>
-          <Link to="/lista-palavras/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+          <Link
+            to="/entidades/lista-palavras/new"
+            className="btn btn-primary jh-create-entity"
+            id="jh-create-entity"
+            data-cy="entityCreateButton"
+          >
             <FontAwesomeIcon icon="plus" />
             &nbsp;
             <Translate contentKey="digitadoApp.listaPalavras.home.createLabel">Create new Lista Palavras</Translate>
@@ -112,7 +117,7 @@ export const ListaPalavras = () => {
               {listaPalavrasList.map((listaPalavras, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
-                    <Button tag={Link} to={`/lista-palavras/${listaPalavras.id}`} color="link" size="sm">
+                    <Button tag={Link} to={`/entidades/lista-palavras/${listaPalavras.id}`} color="link" size="sm">
                       {listaPalavras.id}
                     </Button>
                   </td>
@@ -123,18 +128,28 @@ export const ListaPalavras = () => {
                     {listaPalavras.palavras
                       ? listaPalavras.palavras.map((val, j) => (
                           <span key={j}>
-                            <Link to={`/palavra/${val.id}`}>{val.id}</Link>
+                            <Link to={`/entidades/palavra/${val.id}`}>{val.id}</Link>
                             {j === listaPalavras.palavras.length - 1 ? '' : ', '}
                           </span>
                         ))
                       : null}
                   </td>
                   <td>
-                    {listaPalavras.professor ? <Link to={`/usuario/${listaPalavras.professor.id}`}>{listaPalavras.professor.id}</Link> : ''}
+                    {listaPalavras.professor ? (
+                      <Link to={`/entidades/usuario/${listaPalavras.professor.id}`}>{listaPalavras.professor.id}</Link>
+                    ) : (
+                      ''
+                    )}
                   </td>
                   <td className="text-end">
                     <div className="btn-group flex-btn-group-container">
-                      <Button tag={Link} to={`/lista-palavras/${listaPalavras.id}`} color="info" size="sm" data-cy="entityDetailsButton">
+                      <Button
+                        tag={Link}
+                        to={`/entidades/lista-palavras/${listaPalavras.id}`}
+                        color="info"
+                        size="sm"
+                        data-cy="entityDetailsButton"
+                      >
                         <FontAwesomeIcon icon="eye" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.view">View</Translate>
@@ -142,7 +157,7 @@ export const ListaPalavras = () => {
                       </Button>
                       <Button
                         tag={Link}
-                        to={`/lista-palavras/${listaPalavras.id}/edit`}
+                        to={`/entidades/lista-palavras/${listaPalavras.id}/edit`}
                         color="primary"
                         size="sm"
                         data-cy="entityEditButton"
@@ -153,7 +168,7 @@ export const ListaPalavras = () => {
                         </span>
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = `/lista-palavras/${listaPalavras.id}/delete`)}
+                        onClick={() => (window.location.href = `/entidades/lista-palavras/${listaPalavras.id}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"

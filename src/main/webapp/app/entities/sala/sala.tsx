@@ -9,6 +9,7 @@ import { overrideSortStateWithQueryParams } from 'app/shared/util/entity-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
 import { getEntities } from './sala.reducer';
+import { textoDescricaoSala } from 'app/shared/model/sala.model';
 
 export const Sala = () => {
   const dispatch = useAppDispatch();
@@ -71,7 +72,7 @@ export const Sala = () => {
             <FontAwesomeIcon icon="sync" spin={loading} />{' '}
             <Translate contentKey="digitadoApp.sala.home.refreshListLabel">Refresh List</Translate>
           </Button>
-          <Link to="/sala/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+          <Link to="/entidades/sala/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
             <FontAwesomeIcon icon="plus" />
             &nbsp;
             <Translate contentKey="digitadoApp.sala.home.createLabel">Create new Sala</Translate>
@@ -111,19 +112,19 @@ export const Sala = () => {
               {salaList.map((sala, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
-                    <Button tag={Link} to={`/sala/${sala.codigo}`} color="link" size="sm">
+                    <Button tag={Link} to={`/entidades/sala/${sala.codigo}`} color="link" size="sm">
                       {sala.codigo}
                     </Button>
                   </td>
                   <td>{sala.nome}</td>
-                  <td>{sala.descricao}</td>
+                  <td>{textoDescricaoSala(sala.descricao)}</td>
                   <td>{sala.ativo ? 'true' : 'false'}</td>
-                  <td>{sala.professor ? <Link to={`/usuario/${sala.professor.id}`}>{sala.professor.id}</Link> : ''}</td>
+                  <td>{sala.professor ? <Link to={`/entidades/usuario/${sala.professor.id}`}>{sala.professor.id}</Link> : ''}</td>
                   <td>
                     {sala.alunos
                       ? sala.alunos.map((val, j) => (
                           <span key={j}>
-                            <Link to={`/usuario/${val.id}`}>{val.id}</Link>
+                            <Link to={`/entidades/usuario/${val.id}`}>{val.id}</Link>
                             {j === sala.alunos.length - 1 ? '' : ', '}
                           </span>
                         ))
@@ -131,20 +132,20 @@ export const Sala = () => {
                   </td>
                   <td className="text-end">
                     <div className="btn-group flex-btn-group-container">
-                      <Button tag={Link} to={`/sala/${sala.codigo}`} color="info" size="sm" data-cy="entityDetailsButton">
+                      <Button tag={Link} to={`/entidades/sala/${sala.codigo}`} color="info" size="sm" data-cy="entityDetailsButton">
                         <FontAwesomeIcon icon="eye" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.view">View</Translate>
                         </span>
                       </Button>
-                      <Button tag={Link} to={`/sala/${sala.codigo}/edit`} color="primary" size="sm" data-cy="entityEditButton">
+                      <Button tag={Link} to={`/entidades/sala/${sala.codigo}/edit`} color="primary" size="sm" data-cy="entityEditButton">
                         <FontAwesomeIcon icon="pencil-alt" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.edit">Edit</Translate>
                         </span>
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = `/sala/${sala.codigo}/delete`)}
+                        onClick={() => (window.location.href = `/entidades/sala/${sala.codigo}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"

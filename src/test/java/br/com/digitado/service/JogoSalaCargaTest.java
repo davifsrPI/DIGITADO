@@ -86,6 +86,9 @@ class JogoSalaCargaTest {
     @Mock
     private HistoricoRespostaService historicoRespostaService;
 
+    @Mock
+    private XpService xpService;
+
     private JogoSalaService service;
 
     @BeforeEach
@@ -96,7 +99,8 @@ class JogoSalaCargaTest {
             palavraAudioService,
             conquistaEngine,
             estatisticaPartidaService,
-            historicoRespostaService
+            historicoRespostaService,
+            xpService
         );
         List<Palavra> palavras = List.of(palavra(1L, "casa"), palavra(2L, "bola"), palavra(3L, "gato"));
         when(palavraRepository.findRandomByDificuldadeExcluindo(anyString(), anyInt(), anyList())).thenReturn(palavras);

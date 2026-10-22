@@ -55,6 +55,10 @@ export const IdentificacaoAluno: React.FC = () => {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // A sala não abriu (código inexistente ou falha de rede): no lugar do formulário
+  // fica só o aviso - preencher nome e turma para uma sala que não existe é o que
+  // o aluno fazia antes, para descobrir o erro só no fim
+  const [falhaAoAbrir, setFalhaAoAbrir] = useState(false);
   // Só valida os campos depois da primeira tentativa de enviar: marcar tudo de
   // vermelho antes de a pessoa digitar qualquer coisa é hostil
   const [tentouEnviar, setTentouEnviar] = useState(false);
@@ -91,11 +95,13 @@ export const IdentificacaoAluno: React.FC = () => {
         // 400 é o que o servidor responde para código que não existe. Qualquer
         // outra falha (rede, servidor fora) não pode acusar o código do aluno de
         // errado - ele ficaria conferindo uma letra por uma sem motivo.
+        const status = err?.response?.status;
         setErro(
-          err?.response?.status === 400
+          status === 400 || status === 404
             ? 'Não encontramos uma sala com esse código. Confira com o seu professor.'
             : 'Não foi possível abrir a sala agora. Verifique a conexão e tente de novo.',
         );
+        setFalhaAoAbrir(true);
         setCarregando(false);
       });
     return () => {
@@ -141,6 +147,26 @@ export const IdentificacaoAluno: React.FC = () => {
       <div className="ident-wrapper">
         <div className="ident-bg" />
         <div className="ident-carregando">Abrindo a sala...</div>
+      </div>
+    );
+  }
+
+  if (falhaAoAbrir) {
+    return (
+      <div className="ident-wrapper">
+        <div className="ident-bg" />
+        <div className="ident-content">
+          <div className="ident-card" role="alert">
+            <div className="ident-header">
+              <span className="ident-codigo-pill">SALA {codigo}</span>
+              <h1 className="ident-titulo">Sala não encontrada</h1>
+            </div>
+            <div className="ident-erro">⚠ {erro}</div>
+            <button type="button" className="ident-entrar-btn" onClick={() => navigate('/lobby')}>
+              ← Voltar e digitar outro código
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

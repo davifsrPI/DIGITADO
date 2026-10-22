@@ -228,6 +228,12 @@ jhipster:
 # ===================================================================
 
 application:
+  # Raspagem das métricas pelo Prometheus (/management/prometheus). Sem token, só a
+  # própria máquina (127.0.0.1) e o admin logado leem; com token, quem mandar o
+  # cabeçalho X-Token-Metricas também - é o caso do DIGITADO em container ou do
+  # Prometheus noutro servidor. Ver MONITORING.md.
+  monitoramento:
+    token-metricas: ${APPLICATION_MONITORAMENTO_TOKEN_METRICAS:}
   # Limite de requisições por identidade (login ou IP) - proteção contra abuso.
   # Estourou: HTTP 429 com Retry-After. Ajuste por ambiente se necessário.
   rate-limit:
@@ -240,10 +246,8 @@ application:
     # E este conta TODA chamada ao login por IP, acertando ou errando, contra
     # flood (cada tentativa gasta um BCrypt do servidor). Folgado para uma turma.
     autenticacao-total-por-minuto: 60
-    # Cadastro, reset de senha e checagem de e-mail têm cada um o seu contador por
-    # IP. A checagem tem teto próprio porque a tela consulta a cada pausa na
-    # digitação do e-mail; os outros dois usam o autenticacao-por-minuto.
-    verificacao-email-por-minuto: 30
+    # Cadastro e reset de senha têm cada um o seu contador por IP, com o teto do
+    # autenticacao-por-minuto.
     # SÓ ligue atrás de proxy reverso confiável que sobrescreve o X-Forwarded-For
     # (nginx/Caddy/Cloudflare). Direto na internet, o cliente forja o cabeçalho
     # e escapa do limite. Veja o comentário em RateLimitFilter.ipDoCliente.

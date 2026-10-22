@@ -11,6 +11,7 @@ import { getSession } from 'app/shared/reducers/authentication';
 import { LoadingSpinner } from 'app/shared/layout/loading/loading-spinner';
 import { reset, saveAccountSettings } from './settings.reducer';
 import { useBodyClass } from 'app/shared/util/use-body-class';
+import { CampoSenha } from 'app/shared/components/campo-senha/campo-senha';
 
 export const SettingsPage = () => {
   const dispatch = useAppDispatch();
@@ -168,8 +169,7 @@ export const SettingsPage = () => {
                 <strong>Esta ação é irreversível.</strong> Sua conta, seu histórico de jogo, conquistas e pontuações serão apagados. Digite
                 sua senha para confirmar:
               </p>
-              <input
-                type="password"
+              <CampoSenha
                 className="st-lgpd-senha"
                 placeholder="Sua senha atual"
                 value={senhaExclusao}

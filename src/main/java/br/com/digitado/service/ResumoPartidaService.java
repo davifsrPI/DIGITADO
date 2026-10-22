@@ -63,8 +63,43 @@ public class ResumoPartidaService {
         int semResposta,
         double mediaAcertosTurma,
         int totalParticipantes,
-        List<PalavraResumo> palavras
-    ) {}
+        List<PalavraResumo> palavras,
+        // XP que a partida rendeu ao aluno - só enquanto a partida está em memória;
+        // nulo no resumo de uma partida antiga, lido do snapshot
+        Long xpGanho
+    ) {
+        /** O mesmo resumo com o XP da partida anexado. */
+        public ResumoAluno comXp(Long xp) {
+            return new ResumoAluno(
+                login,
+                nome,
+                totalPalavras,
+                acertos,
+                erros,
+                semResposta,
+                mediaAcertosTurma,
+                totalParticipantes,
+                palavras,
+                xp
+            );
+        }
+
+        /** O mesmo resumo com outro nome no cabeçalho (o nome real, na visão do professor). */
+        public ResumoAluno comNome(String outroNome) {
+            return new ResumoAluno(
+                login,
+                outroNome,
+                totalPalavras,
+                acertos,
+                erros,
+                semResposta,
+                mediaAcertosTurma,
+                totalParticipantes,
+                palavras,
+                xpGanho
+            );
+        }
+    }
 
     /**
      * Resumo do aluno a partir do relatório da partida.
@@ -136,7 +171,7 @@ public class ResumoPartidaService {
         mediaTurma = Math.round(mediaTurma * 10) / 10.0;
 
         return Optional.of(
-            new ResumoAluno(login, nome, relatorio.size(), acertos, erros, semResposta, mediaTurma, participantes.size(), palavras)
+            new ResumoAluno(login, nome, relatorio.size(), acertos, erros, semResposta, mediaTurma, participantes.size(), palavras, null)
         );
     }
 }

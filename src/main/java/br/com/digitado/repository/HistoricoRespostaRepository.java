@@ -3,6 +3,8 @@ package br.com.digitado.repository;
 import br.com.digitado.domain.HistoricoResposta;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,6 +25,9 @@ import org.springframework.stereotype.Repository;
 @SuppressWarnings("unused")
 @Repository
 public interface HistoricoRespostaRepository extends JpaRepository<HistoricoResposta, Long> {
+    // Tela de consulta do admin (AdminTabelasResource): paginada, com busca pelo login
+    Page<HistoricoResposta> findByLoginContainingIgnoreCase(String login, Pageable pageable);
+
     /** [total, acertos, primeiraResposta, ultimaResposta] do titular. */
     @Query(
         value = "SELECT COUNT(*), SUM(CASE WHEN correta THEN 1 ELSE 0 END), MIN(data_resposta), MAX(data_resposta) " +
@@ -99,6 +104,35 @@ public interface HistoricoRespostaRepository extends JpaRepository<HistoricoResp
     )
     List<Object> ultimasRespostas(@Param("login") String login, @Param("limite") int limite);
 
+    /**
+     * A última resposta do titular a UMA palavra (1 = acertou, 0 = errou), vazia se
+     * ele nunca a respondeu. Consultada ANTES de gravar a resposta nova: é o que diz
+     * se um acerto agora é a recuperação de um erro ("Aprendendo com os Erros").
+     */
+    @Query(
+        value = "SELECT CASE WHEN correta THEN 1 ELSE 0 END FROM historico_resposta " +
+        "WHERE login = :login AND palavra_id = :palavraId ORDER BY data_resposta DESC, id DESC LIMIT 1",
+        nativeQuery = true
+    )
+    List<Object> ultimaRespostaNaPalavra(@Param("login") String login, @Param("palavraId") long palavraId);
+
+    /**
+     * [palavraId, tentativas, acertos, tempoMedioMs, similaridadeMedia] de cada
+     * palavra que o titular já respondeu - as quatro medidas da equação que escolhe
+     * a próxima palavra do modo individual (PartidaIndividualService).
+     *
+     * Similaridade nula (palavra do dia, respostas antigas) entra como 100 quando
+     * a resposta estava certa e fica fora da média quando estava errada: o acerto
+     * diz quanto ele acertou, o erro antigo não diz. Tempo nulo fica fora da média.
+     */
+    @Query(
+        value = "SELECT palavra_id, COUNT(*), SUM(CASE WHEN correta THEN 1 ELSE 0 END), AVG(tempo_ms), " +
+        "AVG(COALESCE(similaridade, CASE WHEN correta THEN 100 END)) " +
+        "FROM historico_resposta WHERE login = :login GROUP BY palavra_id",
+        nativeQuery = true
+    )
+    List<Object[]> estatisticaPorPalavraDoJogador(@Param("login") String login);
+
     // ===== Visão do administrador (agregada, só sobre os ALUNOS) =====
 
     /**
@@ -114,14 +148,62 @@ public interface HistoricoRespostaRepository extends JpaRepository<HistoricoResp
         " NOT EXISTS (SELECT 1 FROM jhi_user ju JOIN jhi_user_authority jua ON jua.user_id = ju.id " +
         "WHERE ju.login = h.login AND jua.authority_name = 'ROLE_ADMIN') ";
 
-    /** [total, acertos, alunosDistintos] de todos os alunos. */
+    /**
+     * [total, acertos, alunosDistintos, naoRespondidas] de todos os alunos.
+     * naoRespondidas: rodadas em que o tempo acabou sem resposta - contam como
+     * erro na taxa, mas o painel mostra à parte (não é o mesmo que errar a grafia).
+     */
     @Query(
-        value = "SELECT COUNT(*), SUM(CASE WHEN h.correta THEN 1 ELSE 0 END), COUNT(DISTINCT h.login) " +
+        value = "SELECT COUNT(*), SUM(CASE WHEN h.correta THEN 1 ELSE 0 END), COUNT(DISTINCT h.login), " +
+        "SUM(CASE WHEN h.tipo_erro = 'NAO_RESPONDEU' THEN 1 ELSE 0 END) " +
         "FROM historico_resposta h WHERE" +
         SO_ALUNOS,
         nativeQuery = true
     )
     List<Object[]> resumoGlobal();
+
+    // ===== Painel do admin filtrado por UM tipo de erro =====
+
+    /** Expressão do tipo de erro de uma linha (erro sem classificação conta como OUTRO). */
+    String TIPO_DA_LINHA = " COALESCE(h.tipo_erro, 'OUTRO') ";
+
+    /** [ocorrencias, alunosAfetados, palavrasAfetadas] de um tipo de erro. */
+    @Query(
+        value = "SELECT COUNT(*), COUNT(DISTINCT h.login), COUNT(DISTINCT h.palavra_id) FROM historico_resposta h " +
+        "WHERE h.correta = false AND" +
+        TIPO_DA_LINHA +
+        "= :tipo AND" +
+        SO_ALUNOS,
+        nativeQuery = true
+    )
+    List<Object[]> resumoTipoErro(@Param("tipo") String tipo);
+
+    /** [mes 'YYYY-MM', respostasNoMes, ocorrenciasDoTipo] dos últimos meses. */
+    @Query(
+        value = "SELECT DATE_FORMAT(h.data_resposta, '%Y-%m'), COUNT(*), " +
+        "SUM(CASE WHEN h.correta = false AND" +
+        TIPO_DA_LINHA +
+        "= :tipo THEN 1 ELSE 0 END) " +
+        "FROM historico_resposta h WHERE h.data_resposta >= :desde AND" +
+        SO_ALUNOS +
+        "GROUP BY DATE_FORMAT(h.data_resposta, '%Y-%m') ORDER BY 1",
+        nativeQuery = true
+    )
+    List<Object[]> evolucaoTipoErro(@Param("tipo") String tipo, @Param("desde") Instant desde);
+
+    /** [palavraId, texto, dificuldade, respostas, ocorrencias] - onde este erro mais acontece. */
+    @Query(
+        value = "SELECT h.palavra_id, p.texto, COALESCE(h.dificuldade, 'MEDIO'), COUNT(*), " +
+        "SUM(CASE WHEN h.correta = false AND" +
+        TIPO_DA_LINHA +
+        "= :tipo THEN 1 ELSE 0 END) AS ocorrencias " +
+        "FROM historico_resposta h JOIN palavra p ON p.id = h.palavra_id WHERE" +
+        SO_ALUNOS +
+        "GROUP BY h.palavra_id, p.texto, COALESCE(h.dificuldade, 'MEDIO') " +
+        "HAVING ocorrencias > 0 ORDER BY ocorrencias DESC, ocorrencias / COUNT(*) DESC, p.texto LIMIT :limite",
+        nativeQuery = true
+    )
+    List<Object[]> palavrasComTipoErro(@Param("tipo") String tipo, @Param("limite") int limite);
 
     /** [mes 'YYYY-MM', total, acertos, alunosDistintos] dos últimos meses. */
     @Query(

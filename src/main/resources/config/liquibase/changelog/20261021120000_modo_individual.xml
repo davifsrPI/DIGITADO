@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Quanto da palavra a pessoa acertou (0 a 100), em cada resposta do histórico.
+
+        É uma das quatro medidas da equação que escolhe a próxima palavra do modo
+        individual (tentativas, acertos, tempo e similaridade): errar "caza" por
+        "casa" não é o mesmo que não fazer ideia da palavra, e sem este número as
+        duas respostas pesariam igual. Nulo nas respostas anteriores a esta coluna
+        e na palavra do dia, que não confere letra a letra.
+    -->
+    <changeSet id="20261021120000-1" author="digitado">
+        <addColumn tableName="historico_resposta">
+            <column name="similaridade" type="int">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!--
+        Partidas do modo individual já encerradas: até onde cada um chegou.
+
+        A partida em andamento vive na memória do PartidaIndividualService, como as
+        salas; o que fica aqui é o resultado, para o recorde pessoal e a lista das
+        últimas partidas. Chaveada pelo LOGIN, como o histórico de respostas, e
+        apagada junto com a conta (TitularDadosService).
+    -->
+    <changeSet id="20261021120000-2" author="digitado">
+        <createTable tableName="partida_individual">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="login" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_inicio" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_fim" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Quantas palavras foram ditadas na partida, certas ou não -->
+            <column name="palavras" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="acertos" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="melhor_sequencia" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="xp_ganho" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <!-- SEM_VIDAS | DESISTIU | ABANDONOU -->
+            <column name="encerramento" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="partida_individual" indexName="ix_partida_individual__login_acertos">
+            <column name="login"/>
+            <column name="acertos"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

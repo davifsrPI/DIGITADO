@@ -72,7 +72,12 @@ export const Atividade = () => {
             <FontAwesomeIcon icon="sync" spin={loading} />{' '}
             <Translate contentKey="digitadoApp.atividade.home.refreshListLabel">Refresh List</Translate>
           </Button>
-          <Link to="/atividade/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+          <Link
+            to="/entidades/atividade/new"
+            className="btn btn-primary jh-create-entity"
+            id="jh-create-entity"
+            data-cy="entityCreateButton"
+          >
             <FontAwesomeIcon icon="plus" />
             &nbsp;
             <Translate contentKey="digitadoApp.atividade.home.createLabel">Create new Atividade</Translate>
@@ -124,7 +129,7 @@ export const Atividade = () => {
               {atividadeList.map((atividade, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
-                    <Button tag={Link} to={`/atividade/${atividade.id}`} color="link" size="sm">
+                    <Button tag={Link} to={`/entidades/atividade/${atividade.id}`} color="link" size="sm">
                       {atividade.id}
                     </Button>
                   </td>
@@ -138,24 +143,30 @@ export const Atividade = () => {
                   <td>
                     <Translate contentKey={`digitadoApp.StatusAtividade.${atividade.status}`} />
                   </td>
-                  <td>{atividade.sala ? <Link to={`/sala/${atividade.sala.codigo}`}>{atividade.sala.codigo}</Link> : ''}</td>
-                  <td>{atividade.lista ? <Link to={`/lista-palavras/${atividade.lista.id}`}>{atividade.lista.id}</Link> : ''}</td>
+                  <td>{atividade.sala ? <Link to={`/entidades/sala/${atividade.sala.codigo}`}>{atividade.sala.codigo}</Link> : ''}</td>
+                  <td>{atividade.lista ? <Link to={`/entidades/lista-palavras/${atividade.lista.id}`}>{atividade.lista.id}</Link> : ''}</td>
                   <td className="text-end">
                     <div className="btn-group flex-btn-group-container">
-                      <Button tag={Link} to={`/atividade/${atividade.id}`} color="info" size="sm" data-cy="entityDetailsButton">
+                      <Button tag={Link} to={`/entidades/atividade/${atividade.id}`} color="info" size="sm" data-cy="entityDetailsButton">
                         <FontAwesomeIcon icon="eye" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.view">View</Translate>
                         </span>
                       </Button>
-                      <Button tag={Link} to={`/atividade/${atividade.id}/edit`} color="primary" size="sm" data-cy="entityEditButton">
+                      <Button
+                        tag={Link}
+                        to={`/entidades/atividade/${atividade.id}/edit`}
+                        color="primary"
+                        size="sm"
+                        data-cy="entityEditButton"
+                      >
                         <FontAwesomeIcon icon="pencil-alt" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.edit">Edit</Translate>
                         </span>
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = `/atividade/${atividade.id}/delete`)}
+                        onClick={() => (window.location.href = `/entidades/atividade/${atividade.id}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"

@@ -160,4 +160,26 @@ class MinhasConquistasResourceIT {
         // Regra 1 de monitoramento: toda resposta devolve o X-Request-ID
         restMockMvc.perform(get("/api/conquistas/minhas")).andExpect(status().isOk()).andExpect(header().exists("X-Request-ID"));
     }
+
+    // A tela mostrava o progresso cru como porcentagem (3 de 10 = "3%"): o servidor
+    // agora manda a meta e a porcentagem de verdade
+    @Test
+    @WithMockUser(value = LOGIN_ALUNO, authorities = "ROLE_USER")
+    void progressoVemComAMetaEAPorcentagem() throws Exception {
+        Conquista aquecendo = conquistaRepository
+            .findFirstByNome("Aquecendo os Dedos")
+            .orElseGet(() ->
+                conquistaRepository.saveAndFlush(new Conquista().nome("Aquecendo os Dedos").descricao("10 palavras").xpRecompensa(50))
+            );
+        Usuario aluno = usuarioRepository.findByEmail(EMAIL_ALUNO).orElseThrow();
+        usuarioConquistaRepository.saveAndFlush(new UsuarioConquista().aluno(aluno).conquista(aquecendo).progresso(3).concluida(false));
+
+        restMockMvc
+            .perform(get("/api/conquistas/minhas"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.conquistas[?(@.nome == 'Aquecendo os Dedos')].meta").value(10))
+            .andExpect(jsonPath("$.conquistas[?(@.nome == 'Aquecendo os Dedos')].progresso").value(3))
+            .andExpect(jsonPath("$.conquistas[?(@.nome == 'Aquecendo os Dedos')].percentual").value(30))
+            .andExpect(jsonPath("$.conquistas[?(@.nome == 'Conquista IT Desbloqueada')].percentual").value(100));
+    }
 }

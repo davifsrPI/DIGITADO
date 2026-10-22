@@ -1,22 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
 import { Alert, Button } from 'reactstrap';
 import { toast } from 'react-toastify';
 import { Link as RouterLink } from 'react-router-dom';
-import axios from 'axios';
 import './register.scss';
 
 import PasswordStrengthBar from 'app/shared/layout/password/password-strength-bar';
 import { validarSenhaForte } from 'app/shared/util/senha-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { handleRegister, reset } from './register.reducer';
-
-type EmailCheck = { status: 'idle' | 'loading' | 'found' | 'notfound' };
+import { CampoSenhaValidado } from 'app/shared/components/campo-senha/campo-senha';
 
 export const RegisterPage = () => {
   const [password, setPassword] = useState('');
-  const [emailCheck, setEmailCheck] = useState<EmailCheck>({ status: 'idle' });
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
@@ -35,29 +31,10 @@ export const RegisterPage = () => {
 
   const updatePassword = event => setPassword(event.target.value);
 
-  const handleEmailChange = (value: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!value || !isEmail(value)) {
-      setEmailCheck({ status: 'idle' });
-      return;
-    }
-    setEmailCheck({ status: 'loading' });
-    debounceRef.current = setTimeout(async () => {
-      try {
-        // o backend só devolve true/false, o nome nunca sai; a mensagem aqui é genérica
-        const { data } = await axios.get<{ encontrado: boolean }>('/api/public/verificar-email', {
-          params: { email: value.trim().toLowerCase() },
-        });
-        setEmailCheck({ status: data.encontrado ? 'found' : 'notfound' });
-      } catch {
-        setEmailCheck({ status: 'idle' });
-      }
-    }, 600);
-  };
-
   const successMessage = useAppSelector(state => state.register.successMessage);
   const registrationFailure = useAppSelector(state => state.register.registrationFailure);
   const registrationBloqueada = useAppSelector(state => state.register.registrationBloqueada);
+  const registrationConflito = useAppSelector(state => state.register.registrationConflito);
 
   useEffect(() => {
     if (successMessage) {
@@ -86,14 +63,27 @@ export const RegisterPage = () => {
           {/* Antes a tela não mostrava nada quando o cadastro falhava: a pessoa
               clicava, não acontecia nada visível, e ia tentar entrar com uma conta
               que nunca chegou a existir. */}
+          {/* O aviso de e-mail ou usuário já cadastrado só aparece AQUI, depois de
+              tentar criar a conta. A tela consultava o e-mail a cada pausa na
+              digitação - um endpoint público que dizia a qualquer um se um e-mail
+              tinha conta no DIGITADO. */}
           {registrationBloqueada ? (
             <Alert color="warning" className="register-alert">
               Muitas tentativas seguidas. Espere um minuto e envie o cadastro de novo.
             </Alert>
+          ) : registrationConflito === 'EMAIL' ? (
+            <Alert color="danger" className="register-alert" data-cy="emailExistente">
+              Este e-mail já está cadastrado. <RouterLink to="/login">Entre com ele</RouterLink> ou{' '}
+              <RouterLink to="/account/reset/request">recupere a senha</RouterLink>.
+            </Alert>
+          ) : registrationConflito === 'LOGIN' ? (
+            <Alert color="danger" className="register-alert" data-cy="loginExistente">
+              Este nome de usuário já está em uso. Escolha outro.
+            </Alert>
           ) : (
             registrationFailure && (
               <Alert color="danger" className="register-alert">
-                Não foi possível criar a conta. Confira se o usuário e o e-mail já não estão cadastrados.
+                Não foi possível criar a conta agora. Tente de novo em instantes.
               </Alert>
             )
           )}
@@ -132,7 +122,6 @@ export const RegisterPage = () => {
               label={translate('global.form.email.label')}
               placeholder={translate('global.form.email.placeholder')}
               type="email"
-              onChange={e => handleEmailChange(e.target.value)}
               validate={{
                 required: { value: true, message: translate('global.messages.validate.email.required') },
                 minLength: { value: 5, message: translate('global.messages.validate.email.minlength') },
@@ -141,16 +130,7 @@ export const RegisterPage = () => {
               }}
               data-cy="email"
             />
-            {emailCheck.status === 'loading' && <p className="rg-email-check rg-email-check--loading">Verificando cadastro...</p>}
-            {emailCheck.status === 'found' && (
-              <p className="rg-email-check rg-email-check--found">
-                Este e-mail já possui cadastro, <RouterLink to="/login">entre aqui</RouterLink>.
-              </p>
-            )}
-            {emailCheck.status === 'notfound' && (
-              <p className="rg-email-check rg-email-check--notfound">Nenhum cadastro encontrado com este e-mail.</p>
-            )}
-            <ValidatedField
+            <CampoSenhaValidado
               name="firstPassword"
               label={translate('global.form.newpassword.label')}
               placeholder={translate('global.form.newpassword.placeholder')}
@@ -165,7 +145,7 @@ export const RegisterPage = () => {
               data-cy="firstPassword"
             />
             <PasswordStrengthBar password={password} />
-            <ValidatedField
+            <CampoSenhaValidado
               name="secondPassword"
               label={translate('global.form.confirmpassword.label')}
               placeholder={translate('global.form.confirmpassword.placeholder')}

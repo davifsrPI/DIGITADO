@@ -5,6 +5,7 @@ import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.Usuario;
 import br.com.digitado.domain.UsuarioConquista;
 import br.com.digitado.repository.ConquistaRepository;
+import br.com.digitado.repository.ParticipanteSalaRepository;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioConquistaRepository;
 import br.com.digitado.repository.UsuarioRepository;
@@ -37,9 +38,10 @@ import org.springframework.transaction.annotation.Transactional;
  * XP) que o desbloqueio de conquista também precisa atualizar. Os CHAMADORES
  * envolvem as chamadas em try/catch para falha de conquista não derrubar o jogo.
  *
- * Não implementadas por falta de dados persistidos (ficam bloqueadas):
- * "Aprendendo com os Erros"/"Superação" (histórico de erros por usuário),
- * "Explorador de Salas" (histórico de salas) e "Aluno Dedicado" (atividades).
+ * "Aprendendo com os Erros"/"Superação" leem o histórico de respostas (a última
+ * resposta da pessoa àquela palavra tinha sido um erro), "Explorador de Salas"
+ * conta as salas de turma em que ela se identificou e "Aluno Dedicado" conta as
+ * partidas de turma - a atividade de aula - que ela terminou.
  */
 @Service
 public class ConquistaEngineService {
@@ -85,8 +87,24 @@ public class ConquistaEngineService {
         Map.entry("Primeiro Duelo", 1),
         Map.entry("Duelista", 5),
         Map.entry("Lenda dos Duelos", 25),
-        Map.entry("Vença de um Desenvolvedor", 1)
+        Map.entry("Vença de um Desenvolvedor", 1),
+        Map.entry("Aprendendo com os Erros", 1),
+        Map.entry("Superação", 10),
+        Map.entry("Explorador de Salas", 5),
+        Map.entry("Aluno Dedicado", 10)
     );
+
+    /**
+     * Quanto falta para a conquista: a META dela (10 palavras, 5 vitórias...).
+     *
+     * A tela de conquistas usa para a porcentagem. Ela mostrava o progresso cru
+     * como se já fosse porcentagem - 3 de 10 vitórias aparecia como "3%", e 150
+     * de 1000 palavras como "100%" de uma conquista ainda bloqueada.
+     * null quando o nome não tem regra no motor.
+     */
+    public static Integer metaDe(String nome) {
+        return nome == null ? null : METAS.get(nome);
+    }
 
     private static final List<String> POR_PALAVRA_CORRETA = List.of(
         "Aquecendo os Dedos",
@@ -100,25 +118,29 @@ public class ConquistaEngineService {
     private static final List<String> POR_VITORIA = List.of("Primeira Vitória", "Campeão em Série", "Invencível");
     private static final List<String> POR_PARTIDA_PERFEITA = List.of("Sem Pressa e Sem Erro", "Perfeccionista", "Lenda da Ortografia");
     private static final List<String> POR_VITORIA_DUELO = List.of("Duelista", "Lenda dos Duelos");
+    private static final List<String> POR_PALAVRA_RECUPERADA = List.of("Aprendendo com os Erros", "Superação");
 
     private final ConquistaRepository conquistaRepository;
     private final UsuarioConquistaRepository usuarioConquistaRepository;
     private final UserRepository userRepository;
     private final UsuarioRepository usuarioRepository;
     private final XpService xpService;
+    private final ParticipanteSalaRepository participanteSalaRepository;
 
     public ConquistaEngineService(
         ConquistaRepository conquistaRepository,
         UsuarioConquistaRepository usuarioConquistaRepository,
         UserRepository userRepository,
         UsuarioRepository usuarioRepository,
-        XpService xpService
+        XpService xpService,
+        ParticipanteSalaRepository participanteSalaRepository
     ) {
         this.conquistaRepository = conquistaRepository;
         this.usuarioConquistaRepository = usuarioConquistaRepository;
         this.userRepository = userRepository;
         this.usuarioRepository = usuarioRepository;
         this.xpService = xpService;
+        this.participanteSalaRepository = participanteSalaRepository;
     }
 
     // Eventos do jogo
@@ -126,6 +148,23 @@ public class ConquistaEngineService {
     /** Resposta dada numa partida (correta ou não), com o tempo gasto e a sequência atual de acertos. */
     @Transactional
     public void aoResponderNaPartida(String login, Palavra palavra, boolean correta, long tempoRespostaMs, int sequenciaAtual) {
+        aoResponderNaPartida(login, palavra, correta, tempoRespostaMs, sequenciaAtual, false);
+    }
+
+    /**
+     * Mesma regra, sabendo se a pessoa tinha ERRADO esta palavra da última vez que
+     * a respondeu - é o que move "Aprendendo com os Erros" e "Superação". Quem
+     * responde é o chamador, consultando o histórico ANTES de gravar a resposta nova.
+     */
+    @Transactional
+    public void aoResponderNaPartida(
+        String login,
+        Palavra palavra,
+        boolean correta,
+        long tempoRespostaMs,
+        int sequenciaAtual,
+        boolean tinhaErradoAntes
+    ) {
         if (!correta) {
             return; // conquistas de resposta só olham acertos; o erro zera a sequência no EstadoJogo
         }
@@ -145,6 +184,9 @@ public class ConquistaEngineService {
         if (palavra.getTexto() != null && palavra.getTexto().toLowerCase().contains("ç")) {
             incrementar(usuario, "Caçador de Cedilhas", 1);
         }
+        if (tinhaErradoAntes) {
+            POR_PALAVRA_RECUPERADA.forEach(nome -> incrementar(usuario, nome, 1));
+        }
         // Sequências: dispara exatamente quando a marca é atingida (== evita refazer a cada acerto)
         if (sequenciaAtual == 10) marco(usuario, "Sequência de Ouro");
         if (sequenciaAtual == 25) marco(usuario, "Sequência de Diamante");
@@ -156,6 +198,15 @@ public class ConquistaEngineService {
     /** Fim de partida para um participante, com o resultado dele. */
     @Transactional
     public void aoConcluirPartida(String login, boolean venceu, boolean podio, boolean perfeita) {
+        aoConcluirPartida(login, venceu, podio, perfeita, false);
+    }
+
+    /**
+     * Fim de partida, sabendo se foi uma partida de TURMA - a atividade de aula,
+     * que é o que "Aluno Dedicado" conta. Duelo e modo individual não entram.
+     */
+    @Transactional
+    public void aoConcluirPartida(String login, boolean venceu, boolean podio, boolean perfeita, boolean turma) {
         Optional<Usuario> usuarioOpt = resolverUsuario(login);
         if (usuarioOpt.isEmpty()) {
             return;
@@ -172,6 +223,9 @@ public class ConquistaEngineService {
         }
         if (perfeita) {
             POR_PARTIDA_PERFEITA.forEach(nome -> incrementar(usuario, nome, 1));
+        }
+        if (turma) {
+            incrementar(usuario, "Aluno Dedicado", 1);
         }
         int hora = LocalTime.now(PalavraDoDiaService.FUSO).getHour();
         if (hora < 8) marco(usuario, "Madrugador");
@@ -215,10 +269,22 @@ public class ConquistaEngineService {
             .orElse(false);
     }
 
-    /** Primeira entrada em uma sala (chamado a cada conexão; idempotente após concluir). */
+    /**
+     * Entrada em uma sala (chamado a cada conexão; idempotente após concluir).
+     *
+     * "Explorador de Salas" conta as salas de turma DIFERENTES em que a pessoa se
+     * identificou - é a tabela de participantes, uma linha por sala e aluno, então
+     * voltar à mesma sala não conta duas vezes.
+     */
     @Transactional
     public void aoEntrarNaSala(String login) {
-        resolverUsuario(login).ifPresent(usuario -> marco(usuario, "Bem-vindo à Turma"));
+        resolverUsuario(login).ifPresent(usuario -> {
+            marco(usuario, "Bem-vindo à Turma");
+            long salas = participanteSalaRepository.countByLogin(login);
+            if (salas > 0) {
+                progressoAbsoluto(usuario, "Explorador de Salas", (int) Math.min(salas, Integer.MAX_VALUE));
+            }
+        });
     }
 
     /** Reavalia conquistas de XP acumulado e posição no ranking (ex.: após XP da palavra do dia). */

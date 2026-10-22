@@ -8,6 +8,7 @@ import PasswordStrengthBar from 'app/shared/layout/password/password-strength-ba
 import { validarSenhaForte } from 'app/shared/util/senha-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { handlePasswordResetFinish, reset } from '../password-reset.reducer';
+import { CampoSenhaValidado } from 'app/shared/components/campo-senha/campo-senha';
 
 export const PasswordResetFinishPage = () => {
   const dispatch = useAppDispatch();
@@ -31,7 +32,7 @@ export const PasswordResetFinishPage = () => {
   const getResetForm = () => {
     return (
       <ValidatedForm onSubmit={handleValidSubmit}>
-        <ValidatedField
+        <CampoSenhaValidado
           name="newPassword"
           label={translate('global.form.newpassword.label')}
           placeholder={translate('global.form.newpassword.placeholder')}
@@ -46,7 +47,7 @@ export const PasswordResetFinishPage = () => {
           data-cy="resetPassword"
         />
         <PasswordStrengthBar password={password} />
-        <ValidatedField
+        <CampoSenhaValidado
           name="confirmPassword"
           label={translate('global.form.confirmpassword.label')}
           placeholder={translate('global.form.confirmpassword.placeholder')}

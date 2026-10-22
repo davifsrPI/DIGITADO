@@ -78,7 +78,7 @@ export const Usuario = () => {
             <FontAwesomeIcon icon="sync" spin={loading} />{' '}
             <Translate contentKey="digitadoApp.usuario.home.refreshListLabel">Refresh List</Translate>
           </Button>
-          <Link to="/usuario/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+          <Link to="/entidades/usuario/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
             <FontAwesomeIcon icon="plus" />
             &nbsp;
             <Translate contentKey="digitadoApp.usuario.home.createLabel">Create new Usuario</Translate>
@@ -124,7 +124,7 @@ export const Usuario = () => {
               {usuarioList.map((usuario, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
-                    <Button tag={Link} to={`/usuario/${usuario.id}`} color="link" size="sm">
+                    <Button tag={Link} to={`/entidades/usuario/${usuario.id}`} color="link" size="sm">
                       {usuario.id}
                     </Button>
                   </td>
@@ -150,7 +150,7 @@ export const Usuario = () => {
                     {usuario.salasAlunos
                       ? usuario.salasAlunos.map((val, j) => (
                           <span key={j}>
-                            <Link to={`/sala/${val.codigo}`}>{val.codigo}</Link>
+                            <Link to={`/entidades/sala/${val.codigo}`}>{val.codigo}</Link>
                             {j === usuario.salasAlunos.length - 1 ? '' : ', '}
                           </span>
                         ))
@@ -158,20 +158,20 @@ export const Usuario = () => {
                   </td>
                   <td className="text-end">
                     <div className="btn-group flex-btn-group-container">
-                      <Button tag={Link} to={`/usuario/${usuario.id}`} color="info" size="sm" data-cy="entityDetailsButton">
+                      <Button tag={Link} to={`/entidades/usuario/${usuario.id}`} color="info" size="sm" data-cy="entityDetailsButton">
                         <FontAwesomeIcon icon="eye" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.view">View</Translate>
                         </span>
                       </Button>
-                      <Button tag={Link} to={`/usuario/${usuario.id}/edit`} color="primary" size="sm" data-cy="entityEditButton">
+                      <Button tag={Link} to={`/entidades/usuario/${usuario.id}/edit`} color="primary" size="sm" data-cy="entityEditButton">
                         <FontAwesomeIcon icon="pencil-alt" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.edit">Edit</Translate>
                         </span>
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = `/usuario/${usuario.id}/delete`)}
+                        onClick={() => (window.location.href = `/entidades/usuario/${usuario.id}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"

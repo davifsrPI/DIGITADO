@@ -23,7 +23,7 @@ export const RankingDeleteDialog = () => {
   const updateSuccess = useAppSelector(state => state.ranking.updateSuccess);
 
   const handleClose = () => {
-    navigate('/ranking');
+    navigate('/entidades/ranking');
   };
 
   useEffect(() => {

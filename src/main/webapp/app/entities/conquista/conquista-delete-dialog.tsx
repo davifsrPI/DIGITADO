@@ -23,7 +23,7 @@ export const ConquistaDeleteDialog = () => {
   const updateSuccess = useAppSelector(state => state.conquista.updateSuccess);
 
   const handleClose = () => {
-    navigate('/conquista');
+    navigate('/entidades/conquista');
   };
 
   useEffect(() => {

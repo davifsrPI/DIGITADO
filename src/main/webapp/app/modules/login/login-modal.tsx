@@ -3,6 +3,7 @@ import { Translate, ValidatedField, translate } from 'react-jhipster';
 import { Alert, Button, Col, Form, Modal, ModalBody, ModalFooter, ModalHeader, Row } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { type FieldError, useForm } from 'react-hook-form';
+import { CampoSenhaValidado } from 'app/shared/components/campo-senha/campo-senha';
 
 export interface ILoginModalProps {
   showModal: boolean;
@@ -65,7 +66,7 @@ const LoginModal = (props: ILoginModalProps) => {
                 isTouched={touchedFields.username}
               />
 
-              <ValidatedField
+              <CampoSenhaValidado
                 name="password"
                 type="password"
                 label={translate('login.form.password')}

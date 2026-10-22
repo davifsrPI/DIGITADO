@@ -72,7 +72,12 @@ export const Resposta = () => {
             <FontAwesomeIcon icon="sync" spin={loading} />{' '}
             <Translate contentKey="digitadoApp.resposta.home.refreshListLabel">Refresh List</Translate>
           </Button>
-          <Link to="/resposta/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+          <Link
+            to="/entidades/resposta/new"
+            className="btn btn-primary jh-create-entity"
+            id="jh-create-entity"
+            data-cy="entityCreateButton"
+          >
             <FontAwesomeIcon icon="plus" />
             &nbsp;
             <Translate contentKey="digitadoApp.resposta.home.createLabel">Create new Resposta</Translate>
@@ -123,7 +128,7 @@ export const Resposta = () => {
               {respostaList.map((resposta, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
-                    <Button tag={Link} to={`/resposta/${resposta.id}`} color="link" size="sm">
+                    <Button tag={Link} to={`/entidades/resposta/${resposta.id}`} color="link" size="sm">
                       {resposta.id}
                     </Button>
                   </td>
@@ -134,25 +139,33 @@ export const Resposta = () => {
                   <td>
                     {resposta.dataResposta ? <TextFormat type="date" value={resposta.dataResposta} format={APP_DATE_FORMAT} /> : null}
                   </td>
-                  <td>{resposta.atividade ? <Link to={`/atividade/${resposta.atividade.id}`}>{resposta.atividade.id}</Link> : ''}</td>
-                  <td>{resposta.aluno ? <Link to={`/usuario/${resposta.aluno.id}`}>{resposta.aluno.id}</Link> : ''}</td>
-                  <td>{resposta.palavra ? <Link to={`/palavra/${resposta.palavra.id}`}>{resposta.palavra.id}</Link> : ''}</td>
+                  <td>
+                    {resposta.atividade ? <Link to={`/entidades/atividade/${resposta.atividade.id}`}>{resposta.atividade.id}</Link> : ''}
+                  </td>
+                  <td>{resposta.aluno ? <Link to={`/entidades/usuario/${resposta.aluno.id}`}>{resposta.aluno.id}</Link> : ''}</td>
+                  <td>{resposta.palavra ? <Link to={`/entidades/palavra/${resposta.palavra.id}`}>{resposta.palavra.id}</Link> : ''}</td>
                   <td className="text-end">
                     <div className="btn-group flex-btn-group-container">
-                      <Button tag={Link} to={`/resposta/${resposta.id}`} color="info" size="sm" data-cy="entityDetailsButton">
+                      <Button tag={Link} to={`/entidades/resposta/${resposta.id}`} color="info" size="sm" data-cy="entityDetailsButton">
                         <FontAwesomeIcon icon="eye" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.view">View</Translate>
                         </span>
                       </Button>
-                      <Button tag={Link} to={`/resposta/${resposta.id}/edit`} color="primary" size="sm" data-cy="entityEditButton">
+                      <Button
+                        tag={Link}
+                        to={`/entidades/resposta/${resposta.id}/edit`}
+                        color="primary"
+                        size="sm"
+                        data-cy="entityEditButton"
+                      >
                         <FontAwesomeIcon icon="pencil-alt" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.edit">Edit</Translate>
                         </span>
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = `/resposta/${resposta.id}/delete`)}
+                        onClick={() => (window.location.href = `/entidades/resposta/${resposta.id}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"

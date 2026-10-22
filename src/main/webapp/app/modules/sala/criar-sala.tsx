@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useBodyClass } from 'app/shared/util/use-body-class';
 import { CORES_DIFICULDADE, LABELS_DIFICULDADE, DificuldadeKey } from 'app/shared/util/dificuldade-constants';
+import { useCopiar } from 'app/shared/util/copiar-texto';
 
 // Alias local: mantém o nome curto usado em todo o componente
 type Dificuldade = DificuldadeKey;
@@ -92,6 +93,8 @@ export const CriarSala = () => {
 
   // Adiciona classe ao body para aplicar estilos de fundo específicos desta página
   useBodyClass('criar-sala-page');
+
+  const { estado: estadoCopia, copiar } = useCopiar();
 
   // Pede ao servidor um código livre. Devolve o código para quem precisa dele na
   // hora (a retentativa do submit), além de deixá-lo na tela.
@@ -670,7 +673,26 @@ export const CriarSala = () => {
             <div className="cs-card">
               <span className="cs-step-label">Passo 4</span>
               <h2 className="cs-step-title">Código de acesso</h2>
-              <div className="cs-code-display">{codigo || '······'}</div>
+              {/* O próprio código é o botão de copiar: um clique e ele vai para a área
+                  de transferência, como no lobby da sala */}
+              <button
+                type="button"
+                className="cs-code-display"
+                onClick={() => void copiar(codigo)}
+                disabled={!codigo}
+                title="Clique para copiar o código"
+              >
+                {codigo || '······'}
+                {codigo && (
+                  <span className="cs-code-copiar">
+                    {estadoCopia === 'copiado'
+                      ? '✓ Copiado!'
+                      : estadoCopia === 'falhou'
+                        ? 'Não deu para copiar: anote o código'
+                        : 'clique para copiar'}
+                  </span>
+                )}
+              </button>
               <div className="cs-code-row">
                 {/* "Gerar novo" agora PEDE outro código ao servidor: é ele que sorteia
                     e que confere se o código está livre */}

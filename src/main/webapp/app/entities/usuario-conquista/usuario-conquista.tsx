@@ -72,7 +72,12 @@ export const UsuarioConquista = () => {
             <FontAwesomeIcon icon="sync" spin={loading} />{' '}
             <Translate contentKey="digitadoApp.usuarioConquista.home.refreshListLabel">Refresh List</Translate>
           </Button>
-          <Link to="/usuario-conquista/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+          <Link
+            to="/entidades/usuario-conquista/new"
+            className="btn btn-primary jh-create-entity"
+            id="jh-create-entity"
+            data-cy="entityCreateButton"
+          >
             <FontAwesomeIcon icon="plus" />
             &nbsp;
             <Translate contentKey="digitadoApp.usuarioConquista.home.createLabel">Create new Usuario Conquista</Translate>
@@ -113,7 +118,7 @@ export const UsuarioConquista = () => {
               {usuarioConquistaList.map((usuarioConquista, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
-                    <Button tag={Link} to={`/usuario-conquista/${usuarioConquista.id}`} color="link" size="sm">
+                    <Button tag={Link} to={`/entidades/usuario-conquista/${usuarioConquista.id}`} color="link" size="sm">
                       {usuarioConquista.id}
                     </Button>
                   </td>
@@ -125,11 +130,15 @@ export const UsuarioConquista = () => {
                   <td>{usuarioConquista.progresso}</td>
                   <td>{usuarioConquista.concluida ? 'true' : 'false'}</td>
                   <td>
-                    {usuarioConquista.aluno ? <Link to={`/usuario/${usuarioConquista.aluno.id}`}>{usuarioConquista.aluno.id}</Link> : ''}
+                    {usuarioConquista.aluno ? (
+                      <Link to={`/entidades/usuario/${usuarioConquista.aluno.id}`}>{usuarioConquista.aluno.id}</Link>
+                    ) : (
+                      ''
+                    )}
                   </td>
                   <td>
                     {usuarioConquista.conquista ? (
-                      <Link to={`/conquista/${usuarioConquista.conquista.id}`}>{usuarioConquista.conquista.id}</Link>
+                      <Link to={`/entidades/conquista/${usuarioConquista.conquista.id}`}>{usuarioConquista.conquista.id}</Link>
                     ) : (
                       ''
                     )}
@@ -138,7 +147,7 @@ export const UsuarioConquista = () => {
                     <div className="btn-group flex-btn-group-container">
                       <Button
                         tag={Link}
-                        to={`/usuario-conquista/${usuarioConquista.id}`}
+                        to={`/entidades/usuario-conquista/${usuarioConquista.id}`}
                         color="info"
                         size="sm"
                         data-cy="entityDetailsButton"
@@ -150,7 +159,7 @@ export const UsuarioConquista = () => {
                       </Button>
                       <Button
                         tag={Link}
-                        to={`/usuario-conquista/${usuarioConquista.id}/edit`}
+                        to={`/entidades/usuario-conquista/${usuarioConquista.id}/edit`}
                         color="primary"
                         size="sm"
                         data-cy="entityEditButton"
@@ -161,7 +170,7 @@ export const UsuarioConquista = () => {
                         </span>
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = `/usuario-conquista/${usuarioConquista.id}/delete`)}
+                        onClick={() => (window.location.href = `/entidades/usuario-conquista/${usuarioConquista.id}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"

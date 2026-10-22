@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.digitado.IntegrationTest;
 import br.com.digitado.domain.Sala;
+import br.com.digitado.domain.enumeration.TipoSala;
 import br.com.digitado.repository.SalaRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -443,5 +444,52 @@ class SalaResourceIT {
 
     protected void assertPersistedSalaToMatchUpdatableProperties(Sala expectedSala) {
         assertSalaAllUpdatablePropertiesEquals(expectedSala, getPersistedSala(expectedSala));
+    }
+
+    @Test
+    @Transactional
+    void duplicarSalaCopiaAConfiguracaoComCodigoNovo() throws Exception {
+        sala.setCodigo(randomCodigo().substring(0, 8));
+        sala.setTipo(TipoSala.TURMA);
+        sala.setConfiguracao("{\"qtdFacil\":3,\"palavrasIds\":[1,2,3]}");
+        insertedSala = salaRepository.saveAndFlush(sala);
+
+        String corpo = restSalaMockMvc
+            .perform(post(ENTITY_API_URL_CODIGO + "/duplicar", sala.getCodigo()))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.nome").value(DEFAULT_NOME + " (cópia)"))
+            .andExpect(jsonPath("$.tipo").value("TURMA"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        String codigoCopia = om.readTree(corpo).get("codigo").asText();
+
+        assertThat(codigoCopia).isNotEqualTo(sala.getCodigo());
+        Sala copia = salaRepository.findById(codigoCopia).orElseThrow();
+        // A configuração (com as palavras da partida) vai junto
+        assertThat(om.readTree(copia.getConfiguracao())).isEqualTo(om.readTree(sala.getConfiguracao()));
+        assertThat(copia.getAtivo()).isTrue();
+        salaRepository.delete(copia);
+    }
+
+    @Test
+    @Transactional
+    void duplicarSalaInexistenteEhRecusado() throws Exception {
+        restSalaMockMvc.perform(post(ENTITY_API_URL_CODIGO + "/duplicar", "NAOEXISTE")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Transactional
+    @WithMockUser(value = "intruso", authorities = "ROLE_USER")
+    void soODonoDuplicaASala() throws Exception {
+        sala.setCodigo(randomCodigo().substring(0, 8));
+        insertedSala = salaRepository.saveAndFlush(sala);
+        long antes = salaRepository.count();
+
+        restSalaMockMvc
+            .perform(post(ENTITY_API_URL_CODIGO + "/duplicar", sala.getCodigo()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("error.forbidden"));
+        assertThat(salaRepository.count()).isEqualTo(antes);
     }
 }

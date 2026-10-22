@@ -3182,3 +3182,16 @@ body.sala-jogo-page .view-container {
     animation: none;
   }
 }
+
+// XP que a partida rendeu, logo abaixo do título da tela final
+.sj-xp-ganho {
+  display: inline-block;
+  margin: 4px auto 14px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(250, 204, 21, 0.14);
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  color: #fde68a;
+  font-weight: 700;
+  font-size: 15px;
+}

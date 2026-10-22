@@ -22,7 +22,7 @@ export const ConquistaUpdate = () => {
   const updateSuccess = useAppSelector(state => state.conquista.updateSuccess);
 
   const handleClose = () => {
-    navigate('/conquista');
+    navigate('/entidades/conquista');
   };
 
   useEffect(() => {
@@ -115,7 +115,7 @@ export const ConquistaUpdate = () => {
                 data-cy="xpRecompensa"
                 type="text"
               />
-              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/conquista" replace color="info">
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/entidades/conquista" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">

@@ -27,7 +27,7 @@ export const PalavraUpdate = () => {
   const updateSuccess = useAppSelector(state => state.palavra.updateSuccess);
 
   const handleClose = () => {
-    navigate('/palavra');
+    navigate('/entidades/palavra');
   };
 
   useEffect(() => {
@@ -189,7 +189,7 @@ export const PalavraUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
-              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/palavra" replace color="info">
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/entidades/palavra" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">

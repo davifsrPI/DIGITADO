@@ -46,9 +46,10 @@ O sistema nasceu de um modelo de domínio em [JDL](DIGITADO.jdl) e foi gerado co
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Salas em tempo real** | O professor cria uma sala, compartilha o código, e os alunos entram e jogam juntos. Palavras avançam automaticamente com tempo por dificuldade; placar ao vivo. |
 | **Duelo 1v1**           | Desafio direto entre dois jogadores. Quem cria a sala também joga e comanda o avanço das rodadas.                                                               |
+| **Modo individual**     | O jogador sozinho, até onde conseguir chegar: 3 vidas, e a próxima palavra é escolhida por uma equação com o histórico dele (ver abaixo).                       |
 | **Palavra do Dia**      | Desafio público diário com uma chance por pessoa (controle no servidor por conta ou cookie). Acertar rende XP.                                                  |
-| **Ranking mundial**     | Os melhores jogadores por XP acumulado, com destaque para o top 5 na home.                                                                                      |
-| **Conquistas**          | Medalhas desbloqueadas conforme o desempenho, com recompensa de XP.                                                                                             |
+| **Ranking mundial**     | Os melhores jogadores por XP acumulado, com destaque para o top 5 na home. XP vem da palavra do dia, das conquistas e de cada modo de jogo (ver abaixo).        |
+| **Conquistas**          | Medalhas desbloqueadas conforme o desempenho, com recompensa de XP. A tela mostra o progresso contra a meta de cada uma (ex.: 3 de 10 · 30%).                   |
 | **Ditado por áudio**    | A palavra é falada via síntese de voz do navegador; o texto nunca aparece na tela do aluno.                                                                     |
 | **Campo anti-cola**     | O input bloqueia colar, arrastar, autocompletar e correção ortográfica. Só a digitação real (física ou teclado virtual) é aceita.                               |
 | **Correção detalhada**  | O erro é classificado (acentuação, fonético, letra trocada/extra/faltando) em vez de virar um simples "errou".                                                  |
@@ -56,6 +57,31 @@ O sistema nasceu de um modelo de domínio em [JDL](DIGITADO.jdl) e foi gerado co
 | **Banco de palavras**   | Palavras por dificuldade, categoria e dica, com sugestões enviadas pelos jogadores.                                                                             |
 | **LGPD**                | O titular pode exportar e excluir seus dados; há rotina de retenção automática.                                                                                 |
 | **Observabilidade**     | Métricas Prometheus, dashboards Grafana e alertas. Ver [MONITORING.md](MONITORING.md).                                                                          |
+
+### XP por modo de jogo
+
+| Modo           | Quando credita | Fórmula                                                                                                                                    |
+| -------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Sala**       | fim da partida | `round((10 × acertos + 2 × palavras jogadas) × multiplicador) + 5 × colegas superados`, multiplicador `1 + 0,05 × (jogadores − 1)`, até 2× |
+| **Duelo 1v1**  | fim do duelo   | `10 × acertos + 2 × palavras jogadas` + 50 na vitória ou 20 no empate (o bônus exige ao menos um acerto)                                   |
+| **Individual** | a cada acerto  | `5 + round(10 × dificuldade da palavra para o jogador)` (5 a 15) e +20 a cada 10 acertos na mesma partida                                  |
+
+Só ganha XP quem respondeu ao menos uma palavra; o professor da sala de turma comanda e não pontua. As regras e os números moram em [`XpService`](src/main/java/br/com/digitado/service/XpService.java).
+
+### Modo individual: a equação que escolhe a palavra
+
+Para cada palavra do acervo o servidor calcula a **dificuldade dela para aquele jogador**, com as quatro medidas do histórico dele naquela palavra - nº de tentativas `t`, nº de acertos `a`, tempo médio gasto `T` e similaridade média `S` com a palavra certa:
+
+```
+precisão  p = a / t
+rapidez   r = 1 - min(1, T / tempo da rodada)
+domínio   Dp = 0,5·p + 0,3·S + 0,2·r
+confiança c = t / (t + 3)                       (poucas tentativas dizem pouco)
+          D = c·Dp + (1 - c)·g                  (g = taxa de acerto de todos na palavra)
+dificuldade para o jogador  d = 1 - D
+```
+
+O alvo começa fácil e sobe a cada acerto (`alvo = min(0,85; 0,20 + 0,04·acertos)`), e vence a palavra com menor `|d - alvo|`, com prioridade de revisão para as que ele já errou. Detalhes em [`EquacaoPalavraIndividual`](src/main/java/br/com/digitado/service/EquacaoPalavraIndividual.java).
 
 ## Como funciona uma partida
 
@@ -130,8 +156,8 @@ O modelo completo, incluindo enums (`Dificuldade`, `TipoUsuario`, `StatusAtivida
 
 Autenticação por **JWT** (stateless), com autorização baseada em papéis: `ROLE_ADMIN`, `ROLE_USER` e `ROLE_ANONYMOUS`.
 
-- **Manipulação do banco restrita ao ADMIN.** As escritas (`POST`/`PUT`/`PATCH`/`DELETE`) das entidades administrativas (`atividades`, `palavras`, `conquistas`, `rankings`, `respostas`, `lista-palavras`, `erro-ortograficos`, `usuarios` e `usuario-conquistas`) exigem `ROLE_ADMIN`.
-- **Endpoints de jogo** permanecem acessíveis a qualquer usuário autenticado: `palavras/sugerir`, `usuarios/alterar-senha`, `salas/**`, `conquistas/minhas`.
+- **Tabelas do banco só para o ADMIN, leitura e escrita.** As entidades administrativas (`atividades`, `palavras`, `conquistas`, `rankings`, `respostas`, `lista-palavras`, `erro-ortograficos`, `usuarios`, `usuario-conquistas`, `users`, `authorities`) e as consultas de `/api/admin/**` (inclusive as tabelas do jogo em `/api/admin/tabelas`) exigem `ROLE_ADMIN` - o menu Entidades escondido não basta, a API também barra.
+- **Endpoints de jogo** permanecem acessíveis a qualquer usuário autenticado: `palavras/sugerir`, `palavras/buscar`, `palavras/sortear`, `usuarios/alterar-senha`, `salas/**`, `individual/**`, `conquistas/minhas`.
 - **Endpoints públicos:** `palavra-do-dia`, `ranking-mundial`, registro e recuperação de senha.
 - **Cadastro sem confirmação por e-mail.** A conta nasce ativa e o usuário já pode entrar; nenhum e-mail de ativação é enviado. O endpoint `GET /api/activate` continua existindo para contas antigas que tenham chave pendente.
 - **Defesa em profundidade:** rate limiting configurável, `Request-Id` para rastreabilidade, validação server-side do ditado e das chances diárias, e handshake WebSocket autenticado por JWT.
@@ -396,18 +422,19 @@ A validade do token é de 12h (43200s) e 7 dias com "lembrar de mim".
 
 Os recursos REST seguem o padrão do JHipster (`GET` lista/paginado, `GET /{id}`, `POST`, `PUT /{id}`, `PATCH /{id}`, `DELETE /{id}`):
 
-| Base                                                                                                                             | Conteúdo                                           | Acesso                             |
-| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
-| `/api/authenticate`                                                                                                              | Login, devolve o JWT                               | público                            |
-| `/api/register`, `/api/account`                                                                                                  | Registro, perfil, troca de senha                   | público / próprio                  |
-| `/api/public/palavra-do-dia`                                                                                                     | Desafio do dia e envio da tentativa                | público                            |
-| `/api/public/ranking-mundial`                                                                                                    | Ranking por XP acumulado                           | público                            |
-| `/api/salas`                                                                                                                     | Criar, listar, entrar, relatório da partida        | autenticado                        |
-| `/api/palavras`                                                                                                                  | Banco de palavras (`/sugerir` é aberto ao jogador) | leitura autenticada, escrita ADMIN |
-| `/api/conquistas`                                                                                                                | Catálogo (`/minhas` traz as do usuário)            | leitura autenticada, escrita ADMIN |
-| `/api/usuarios`                                                                                                                  | Perfis de jogador (`/alterar-senha` é do próprio)  | escrita ADMIN                      |
-| `/api/atividades`, `/api/respostas`, `/api/rankings`, `/api/lista-palavras`, `/api/erro-ortograficos`, `/api/usuario-conquistas` | CRUDs administrativos                              | escrita ADMIN                      |
-| `/api/admin/**`                                                                                                                  | Gestão de contas e authorities                     | ADMIN                              |
+| Base                                                                                                                             | Conteúdo                                                                                      | Acesso                          |
+| -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------- |
+| `/api/authenticate`                                                                                                              | Login, devolve o JWT                                                                          | público                         |
+| `/api/register`, `/api/account`                                                                                                  | Registro, perfil, troca de senha                                                              | público / próprio               |
+| `/api/public/palavra-do-dia`                                                                                                     | Desafio do dia e envio da tentativa                                                           | público                         |
+| `/api/public/ranking-mundial`                                                                                                    | Ranking por XP acumulado                                                                      | público                         |
+| `/api/salas`                                                                                                                     | Criar, listar, entrar, duplicar (`/{codigo}/duplicar`), relatório da partida                  | autenticado                     |
+| `/api/individual`                                                                                                                | Modo individual: `iniciar`, `responder`, `proxima`, `encerrar`, `estado`, `audio`, `recordes` | autenticado (a própria partida) |
+| `/api/palavras`                                                                                                                  | Banco de palavras (`/sugerir`, `/buscar` e `/sortear` são do jogo)                            | ADMIN, menos as rotas do jogo   |
+| `/api/conquistas`                                                                                                                | Catálogo (`/minhas` traz as do usuário, com meta e %)                                         | ADMIN, menos `/minhas`          |
+| `/api/usuarios`                                                                                                                  | Perfis de jogador (`/alterar-senha` é do próprio)                                             | ADMIN, menos `/alterar-senha`   |
+| `/api/atividades`, `/api/respostas`, `/api/rankings`, `/api/lista-palavras`, `/api/erro-ortograficos`, `/api/usuario-conquistas` | CRUDs administrativos                                                                         | ADMIN                           |
+| `/api/admin/**`                                                                                                                  | Contas, authorities, `desempenho?tipoErro=` e `tabelas` (consulta das tabelas do jogo)        | ADMIN                           |
 
 Durante a partida, o que trafega é STOMP sobre WebSocket (prefixo `/app`, autenticado por JWT no handshake):
 

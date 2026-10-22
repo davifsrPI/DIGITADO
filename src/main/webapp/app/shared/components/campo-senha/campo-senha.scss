@@ -1,0 +1,47 @@
+// Campo de senha com o "olhinho" (ver campo-senha.tsx)
+.campo-senha {
+  position: relative;
+
+  input {
+    width: 100%;
+    // Espaço para o botão não ficar por cima do texto digitado
+    padding-right: 2.75rem !important;
+    // Ícone de válido/inválido do Bootstrap fica à esquerda do olho, sem se sobrepor
+    background-position: right 2.6rem center !important;
+  }
+
+  // O Edge desenha o próprio botão de revelar senha: com o nosso, seriam dois olhos
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+}
+
+.campo-senha-olho {
+  position: absolute;
+  top: 0;
+  right: 0.35rem;
+  height: 100%;
+  max-height: 3.2rem;
+  min-width: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.35rem;
+  border: none;
+  background: transparent;
+  color: currentColor;
+  opacity: 0.6;
+  cursor: pointer;
+  border-radius: 6px;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 1px;
+  }
+}

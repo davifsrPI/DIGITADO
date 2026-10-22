@@ -71,7 +71,7 @@ export const Palavra = () => {
             <FontAwesomeIcon icon="sync" spin={loading} />{' '}
             <Translate contentKey="digitadoApp.palavra.home.refreshListLabel">Refresh List</Translate>
           </Button>
-          <Link to="/palavra/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+          <Link to="/entidades/palavra/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
             <FontAwesomeIcon icon="plus" />
             &nbsp;
             <Translate contentKey="digitadoApp.palavra.home.createLabel">Create new Palavra</Translate>
@@ -123,7 +123,7 @@ export const Palavra = () => {
               {palavraList.map((palavra, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
-                    <Button tag={Link} to={`/palavra/${palavra.id}`} color="link" size="sm">
+                    <Button tag={Link} to={`/entidades/palavra/${palavra.id}`} color="link" size="sm">
                       {palavra.id}
                     </Button>
                   </td>
@@ -135,12 +135,12 @@ export const Palavra = () => {
                   <td>{palavra.idioma}</td>
                   <td>{palavra.possuiAcento ? 'true' : 'false'}</td>
                   <td>{palavra.ativa ? 'true' : 'false'}</td>
-                  <td>{palavra.criador ? <Link to={`/usuario/${palavra.criador.id}`}>{palavra.criador.id}</Link> : ''}</td>
+                  <td>{palavra.criador ? <Link to={`/entidades/usuario/${palavra.criador.id}`}>{palavra.criador.id}</Link> : ''}</td>
                   <td>
                     {palavra.listas
                       ? palavra.listas.map((val, j) => (
                           <span key={j}>
-                            <Link to={`/lista-palavras/${val.id}`}>{val.id}</Link>
+                            <Link to={`/entidades/lista-palavras/${val.id}`}>{val.id}</Link>
                             {j === palavra.listas.length - 1 ? '' : ', '}
                           </span>
                         ))
@@ -148,20 +148,20 @@ export const Palavra = () => {
                   </td>
                   <td className="text-end">
                     <div className="btn-group flex-btn-group-container">
-                      <Button tag={Link} to={`/palavra/${palavra.id}`} color="info" size="sm" data-cy="entityDetailsButton">
+                      <Button tag={Link} to={`/entidades/palavra/${palavra.id}`} color="info" size="sm" data-cy="entityDetailsButton">
                         <FontAwesomeIcon icon="eye" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.view">View</Translate>
                         </span>
                       </Button>
-                      <Button tag={Link} to={`/palavra/${palavra.id}/edit`} color="primary" size="sm" data-cy="entityEditButton">
+                      <Button tag={Link} to={`/entidades/palavra/${palavra.id}/edit`} color="primary" size="sm" data-cy="entityEditButton">
                         <FontAwesomeIcon icon="pencil-alt" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.edit">Edit</Translate>
                         </span>
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = `/palavra/${palavra.id}/delete`)}
+                        onClick={() => (window.location.href = `/entidades/palavra/${palavra.id}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"

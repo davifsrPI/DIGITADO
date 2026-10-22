@@ -55,12 +55,26 @@ class RateLimitFilterTest {
         assertThat(bloqueada.getContentAsString()).contains("Too Many Requests");
     }
 
+    // Login que termina em 401 (senha errada), como o Spring Security responde
+    private MockHttpServletResponse loginComSenhaErrada(String ip) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/authenticate");
+        request.setRequestURI("/api/authenticate");
+        request.setRemoteAddr(ip);
+        request.setContentType("application/json");
+        request.setContent("{\"username\":\"aluno\",\"password\":\"errada\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(request, response, (req, res) -> ((jakarta.servlet.http.HttpServletResponse) res).setStatus(401));
+        return response;
+    }
+
     @Test
     void autenticacaoTemLimiteMaisRigido() throws Exception {
-        // Limite de autenticação = 2: a terceira tentativa de senha já é barrada
-        assertThat(chamar("/api/authenticate", "10.0.0.2").getStatus()).isEqualTo(200);
-        assertThat(chamar("/api/authenticate", "10.0.0.2").getStatus()).isEqualTo(200);
-        assertThat(chamar("/api/authenticate", "10.0.0.2").getStatus()).isEqualTo(429);
+        // Limite de autenticação = 2 senhas ERRADAS: a terceira tentativa já é barrada.
+        // (Desde que o login passou a contar só a senha errada, o acerto não gasta
+        // o limite - por isso as tentativas aqui terminam em 401.)
+        assertThat(loginComSenhaErrada("10.0.0.2").getStatus()).isEqualTo(401);
+        assertThat(loginComSenhaErrada("10.0.0.2").getStatus()).isEqualTo(401);
+        assertThat(loginComSenhaErrada("10.0.0.2").getStatus()).isEqualTo(429);
     }
 
     @Test

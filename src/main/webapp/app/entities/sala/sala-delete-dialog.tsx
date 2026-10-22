@@ -23,7 +23,7 @@ export const SalaDeleteDialog = () => {
   const updateSuccess = useAppSelector(state => state.sala.updateSuccess);
 
   const handleClose = () => {
-    navigate('/sala');
+    navigate('/entidades/sala');
   };
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import { useBodyClass } from 'app/shared/util/use-body-class';
 import { CORES_DIFICULDADE, LABELS_DIFICULDADE } from 'app/shared/util/dificuldade-constants';
 import { Acelerador, CORES_NIVEL, NivelDesempenho } from 'app/shared/components/desempenho/acelerador';
 import { GraficoEvolucao, PontoEvolucao } from 'app/shared/components/desempenho/grafico-evolucao';
+import { TIPOS_ERRO, rotuloTipoErro } from 'app/shared/util/tipos-erro';
 
 // Tela "Meu Desempenho": a linha da vida do jogador no DIGITADO, da primeira
 // resposta até hoje.
@@ -69,16 +70,6 @@ interface MeuDesempenho {
   maisAcertadas: PalavraDesempenho[];
   errosPorTipo: TipoErro[];
 }
-
-// Rótulos amigáveis dos tipos de erro (espelho do enum TipoErro do backend)
-const LABELS_ERRO: Record<string, string> = {
-  ACENTUACAO: 'Acentuação',
-  TROCA_LETRA: 'Troca de letra',
-  LETRA_FALTANDO: 'Letra faltando',
-  LETRA_EXTRA: 'Letra sobrando',
-  ERRO_FONETICO: 'Erro fonético',
-  OUTRO: 'Outro',
-};
 
 const formatarData = (iso: string | null): string => {
   if (!iso) return '-';
@@ -290,8 +281,13 @@ export const MeuDesempenho: React.FC = () => {
                   ) : (
                     <div className="dp-chips">
                       {dados.errosPorTipo.map(e => (
-                        <span key={e.tipo} className="dp-chip">
-                          {LABELS_ERRO[e.tipo] ?? e.tipo}: <strong>{e.total}</strong> ({e.percentual}%)
+                        // O que cada tipo quer dizer, com exemplo, no title do chip
+                        <span
+                          key={e.tipo}
+                          className="dp-chip"
+                          title={TIPOS_ERRO[e.tipo] ? `${TIPOS_ERRO[e.tipo].explicacao} Ex.: ${TIPOS_ERRO[e.tipo].exemplo}` : undefined}
+                        >
+                          {rotuloTipoErro(e.tipo)}: <strong>{e.total}</strong> ({e.percentual}%)
                         </span>
                       ))}
                     </div>

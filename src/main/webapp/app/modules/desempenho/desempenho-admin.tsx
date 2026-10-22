@@ -9,6 +9,7 @@ import { useBodyClass } from 'app/shared/util/use-body-class';
 import { CORES_DIFICULDADE, LABELS_DIFICULDADE } from 'app/shared/util/dificuldade-constants';
 import { CORES_NIVEL } from 'app/shared/components/desempenho/acelerador';
 import { GraficoEvolucao, PontoEvolucao } from 'app/shared/components/desempenho/grafico-evolucao';
+import { ORDEM_TIPOS_ERRO, TIPOS_ERRO, rotuloTipoErro } from 'app/shared/util/tipos-erro';
 
 // Painel de desempenho da turma, EXCLUSIVO DE ADMIN.
 //
@@ -69,10 +70,28 @@ interface RelatorioMensal {
   resumo: string;
 }
 
+// O painel recortado por UM tipo de erro (filtro "Tipos de erro da turma")
+interface FiltroTipoErro {
+  tipo: string;
+  ocorrencias: number;
+  percentualDosErros: number;
+  percentualDasRespostas: number;
+  alunosAfetados: number;
+  palavrasAfetadas: number;
+  taxaMesAtual: number;
+  taxaMesAnterior: number;
+  veredito: RelatorioMensal['veredito'];
+  resumo: string;
+  evolucao: { mes: string; respostas: number; ocorrencias: number; taxa: number }[];
+  palavras: { palavraId: number; texto: string; dificuldade: string | null; respostas: number; ocorrencias: number; percentual: number }[];
+}
+
 interface DesempenhoGeral {
   totalRespostas: number;
   totalAcertos: number;
   totalErros: number;
+  // Rodadas em que o tempo acabou sem resposta (já contadas em totalErros)
+  totalNaoRespondeu: number;
   taxaGeral: number;
   totalAlunos: number;
   alunosBons: number;
@@ -84,16 +103,8 @@ interface DesempenhoGeral {
   palavrasMaisAcertadas: PalavraDesempenho[];
   palavrasMaisErradas: PalavraDesempenho[];
   errosPorTipo: TipoErro[];
+  filtro: FiltroTipoErro | null;
 }
-
-const LABELS_ERRO: Record<string, string> = {
-  ACENTUACAO: 'Acentuação',
-  TROCA_LETRA: 'Troca de letra',
-  LETRA_FALTANDO: 'Letra faltando',
-  LETRA_EXTRA: 'Letra sobrando',
-  ERRO_FONETICO: 'Erro fonético',
-  OUTRO: 'Outro',
-};
 
 // Como pintar o cartão do comparativo entre meses
 const ESTILO_VEREDITO: Record<RelatorioMensal['veredito'], { cor: string; icone: string; titulo: string }> = {
@@ -128,6 +139,109 @@ const mesPorExtenso = (mes: string): string => {
 
 const corDificuldade = (dif: string | null): string => CORES_DIFICULDADE[dif ?? ''] ?? '#94a3b8';
 const labelDificuldade = (dif: string | null): string => LABELS_DIFICULDADE[dif ?? ''] ?? dif ?? '-';
+
+// Número com uma casa decimal, no padrão brasileiro (2,5%)
+const umaCasa = (n: number): string => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+// Num filtro por tipo de erro, MELHOROU quer dizer que a turma errou MENOS daquele jeito
+const ESTILO_VEREDITO_FILTRO: Record<RelatorioMensal['veredito'], { cor: string; icone: string; titulo: string }> = {
+  MELHOROU: { cor: CORES_NIVEL.BOM, icone: '📉', titulo: 'A turma está cometendo MENOS este erro' },
+  PIOROU: { cor: CORES_NIVEL.RUIM, icone: '📈', titulo: 'A turma está cometendo MAIS este erro' },
+  ESTAVEL: { cor: '#60a5fa', icone: '➖', titulo: 'Este erro está estável' },
+  SEM_DADOS: { cor: '#94a3b8', icone: '🗓️', titulo: 'Sem dados no período' },
+  SEM_COMPARATIVO: { cor: '#94a3b8', icone: '🆕', titulo: 'Primeiro mês com dados' },
+};
+
+/**
+ * O painel recortado por um tipo de erro: o que ele é (com exemplo), quanto pesa,
+ * como variou no mês, a linha do tempo e as palavras onde mais acontece.
+ */
+const PainelTipoErro: React.FC<{ filtro: FiltroTipoErro; onLimpar: () => void }> = ({ filtro, onLimpar }) => {
+  const tipo = TIPOS_ERRO[filtro.tipo];
+  const veredito = ESTILO_VEREDITO_FILTRO[filtro.veredito];
+  const pontos: PontoEvolucao[] = filtro.evolucao.map(p => ({ mes: p.mes, total: p.respostas, acertos: p.ocorrencias, taxa: p.taxa }));
+  return (
+    <>
+      <div className="da-relatorio" style={{ borderColor: `${veredito.cor}55`, background: `${veredito.cor}12` }}>
+        <div className="da-relatorio-icone">{veredito.icone}</div>
+        <div className="da-relatorio-texto">
+          <span className="da-relatorio-etiqueta">Filtrando por: {rotuloTipoErro(filtro.tipo)}</span>
+          <h2 className="da-relatorio-titulo" style={{ color: veredito.cor }}>
+            {veredito.titulo}
+          </h2>
+          {tipo && (
+            <p className="da-tipo-explicacao">
+              <strong>O que é:</strong> {tipo.explicacao} <em>Ex.: {tipo.exemplo}.</em>
+            </p>
+          )}
+          <p className="da-relatorio-resumo">{filtro.resumo}</p>
+          <button type="button" className="da-filtro-limpar" onClick={onLimpar}>
+            ✕ Ver o painel completo
+          </button>
+        </div>
+      </div>
+
+      <div className="dp-card">
+        <h2 className="dp-card-titulo">{rotuloTipoErro(filtro.tipo)} em números</h2>
+        <div className="dp-kpis">
+          <div className="dp-kpi">
+            <span className="dp-kpi-valor" style={{ color: tipo?.cor }}>
+              {filtro.ocorrencias}
+            </span>
+            <span className="dp-kpi-label">Ocorrências</span>
+          </div>
+          <div className="dp-kpi">
+            <span className="dp-kpi-valor">{filtro.percentualDosErros}%</span>
+            <span className="dp-kpi-label">dos erros da turma</span>
+          </div>
+          <div className="dp-kpi">
+            <span className="dp-kpi-valor">{umaCasa(filtro.percentualDasRespostas)}%</span>
+            <span className="dp-kpi-label">das palavras ditadas</span>
+          </div>
+          <div className="dp-kpi">
+            <span className="dp-kpi-valor">{filtro.alunosAfetados}</span>
+            <span className="dp-kpi-label">Alunos que cometeram</span>
+          </div>
+          <div className="dp-kpi">
+            <span className="dp-kpi-valor">{filtro.palavrasAfetadas}</span>
+            <span className="dp-kpi-label">Palavras envolvidas</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="dp-card">
+        <h2 className="dp-card-titulo">Histórico dos últimos 12 meses</h2>
+        <p className="dp-card-sub">Linha: % das palavras ditadas no mês que tiveram este erro. Barras: quantas palavras foram ditadas.</p>
+        <GraficoEvolucao pontos={pontos} cor={tipo?.cor ?? '#f472b6'} vazio="Ainda não há meses com respostas." />
+      </div>
+
+      <div className="dp-card">
+        <h2 className="dp-card-titulo">Onde este erro mais acontece</h2>
+        {filtro.palavras.length === 0 ? (
+          <p className="dp-vazio">Nenhuma palavra com este erro ainda.</p>
+        ) : (
+          <div className="dp-palavras">
+            {filtro.palavras.map((p, i) => (
+              <div key={p.palavraId ?? p.texto} className="dp-palavra">
+                <span className="dp-palavra-pos">{i + 1}º</span>
+                <span className="dp-palavra-texto">{p.texto}</span>
+                <span className="dp-palavra-dif" style={{ color: corDificuldade(p.dificuldade) }}>
+                  {labelDificuldade(p.dificuldade)}
+                </span>
+                <span className="dp-palavra-num">
+                  {p.ocorrencias} de {p.respostas}
+                </span>
+                <span className="dp-palavra-taxa" style={{ color: tipo?.cor ?? CORES_NIVEL.RUIM }}>
+                  {p.percentual}%
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
 
 // Ranking de palavras da turma, o mesmo bloco serve para as mais acertadas e as
 // mais erradas; muda o número em destaque e a cor
@@ -165,20 +279,25 @@ export const DesempenhoAdmin: React.FC = () => {
   const [dados, setDados] = useState<DesempenhoGeral | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
+  // Tipo de erro selecionado no filtro (null = painel completo)
+  const [tipoFiltro, setTipoFiltro] = useState<string | null>(null);
 
   useBodyClass('desempenho-admin-page');
 
   useEffect(() => {
     setCarregando(true);
     axios
-      .get<DesempenhoGeral>('/api/admin/desempenho')
+      .get<DesempenhoGeral>('/api/admin/desempenho', { params: { tipoErro: tipoFiltro ?? undefined } })
       .then(res => {
         setDados(res.data);
         setErro(false);
       })
       .catch(() => setErro(true))
       .finally(() => setCarregando(false));
-  }, []);
+  }, [tipoFiltro]);
+
+  // Quantas ocorrências de cada tipo, para os chips do filtro (0 quando o tipo não apareceu)
+  const ocorrenciasPorTipo = (tipo: string) => dados?.errosPorTipo.find(e => e.tipo === tipo)?.total ?? 0;
 
   const veredito = dados ? ESTILO_VEREDITO[dados.relatorioMensal.veredito] : null;
   const totalClassificados = dados ? dados.alunosBons + dados.alunosMedios + dados.alunosRuins : 0;
@@ -208,7 +327,37 @@ export const DesempenhoAdmin: React.FC = () => {
           </p>
         </div>
 
-        {carregando ? (
+        {/* Filtro por tipo de erro: o painel inteiro passa a contar a história
+            daquele erro. Os chips trazem a contagem, e o title explica o tipo. */}
+        {dados && dados.totalRespostas > 0 && (
+          <div className="da-filtro" role="group" aria-label="Filtrar por tipo de erro">
+            <span className="da-filtro-rotulo">Filtrar por tipo de erro:</span>
+            <button
+              type="button"
+              className={`da-filtro-chip${tipoFiltro === null ? ' da-filtro-chip--ativo' : ''}`}
+              onClick={() => setTipoFiltro(null)}
+              aria-pressed={tipoFiltro === null}
+            >
+              Todos
+            </button>
+            {ORDEM_TIPOS_ERRO.map(tipo => (
+              <button
+                key={tipo}
+                type="button"
+                className={`da-filtro-chip${tipoFiltro === tipo ? ' da-filtro-chip--ativo' : ''}`}
+                style={{ borderColor: `${TIPOS_ERRO[tipo].cor}88`, color: tipoFiltro === tipo ? '#0f172a' : TIPOS_ERRO[tipo].cor }}
+                onClick={() => setTipoFiltro(tipo)}
+                aria-pressed={tipoFiltro === tipo}
+                title={`${TIPOS_ERRO[tipo].explicacao} Ex.: ${TIPOS_ERRO[tipo].exemplo}`}
+                data-tipo={tipo}
+              >
+                {TIPOS_ERRO[tipo].rotulo} <strong>{ocorrenciasPorTipo(tipo)}</strong>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {carregando && !dados ? (
           <div className="da-loading">Carregando o relatório...</div>
         ) : erro ? (
           <div className="da-empty">
@@ -220,6 +369,8 @@ export const DesempenhoAdmin: React.FC = () => {
             <div className="da-empty-icon">🗂️</div>
             <p>Ainda não há respostas de alunos registradas. O relatório começa a se formar assim que eles jogarem.</p>
           </div>
+        ) : dados?.filtro ? (
+          <PainelTipoErro filtro={dados.filtro} onLimpar={() => setTipoFiltro(null)} />
         ) : (
           dados &&
           veredito && (
@@ -347,7 +498,7 @@ export const DesempenhoAdmin: React.FC = () => {
                 <div className="dp-kpis">
                   <div className="dp-kpi">
                     <span className="dp-kpi-valor">{dados.totalRespostas}</span>
-                    <span className="dp-kpi-label">Palavras respondidas</span>
+                    <span className="dp-kpi-label">Palavras ditadas</span>
                   </div>
                   <div className="dp-kpi">
                     <span className="dp-kpi-valor" style={{ color: CORES_NIVEL.BOM }}>
@@ -357,9 +508,24 @@ export const DesempenhoAdmin: React.FC = () => {
                   </div>
                   <div className="dp-kpi">
                     <span className="dp-kpi-valor" style={{ color: CORES_NIVEL.RUIM }}>
-                      {dados.totalErros}
+                      {dados.totalErros - dados.totalNaoRespondeu}
                     </span>
-                    <span className="dp-kpi-label">Erros</span>
+                    <span className="dp-kpi-label">Erros de grafia</span>
+                  </div>
+                  {/* O tempo acabou sem resposta: conta como erro na taxa de acerto,
+                      mas é outra história - pode ser o áudio, a pressa, a distração */}
+                  <div className="dp-kpi">
+                    <button
+                      type="button"
+                      className="da-kpi-botao"
+                      onClick={() => setTipoFiltro('NAO_RESPONDEU')}
+                      title="Ver só as rodadas sem resposta"
+                    >
+                      <span className="dp-kpi-valor" style={{ color: TIPOS_ERRO.NAO_RESPONDEU.cor }}>
+                        {dados.totalNaoRespondeu}
+                      </span>
+                      <span className="dp-kpi-label">Não respondeu</span>
+                    </button>
                   </div>
                   <div className="dp-kpi">
                     <span className="dp-kpi-valor">{dados.taxaGeral}%</span>
@@ -416,25 +582,35 @@ export const DesempenhoAdmin: React.FC = () => {
                 </div>
               </div>
 
-              {/* TIPOS DE ERRO */}
+              {/* TIPOS DE ERRO: cada tipo explicado, com exemplo, e clicável para
+                  filtrar o painel inteiro por ele */}
               <div className="dp-card">
                 <h2 className="dp-card-titulo">Tipos de erro da turma</h2>
+                <p className="dp-card-sub">Clique num tipo para ver o painel só dele.</p>
                 {dados.errosPorTipo.length === 0 ? (
                   <p className="dp-vazio">Nenhum erro registrado ainda.</p>
                 ) : (
                   <div className="dp-barras">
                     {dados.errosPorTipo.map(e => (
-                      <div key={e.tipo} className="dp-barra-linha">
+                      <button key={e.tipo} type="button" className="dp-barra-linha da-barra-botao" onClick={() => setTipoFiltro(e.tipo)}>
                         <div className="dp-barra-topo">
-                          <span className="dp-barra-nome">{LABELS_ERRO[e.tipo] ?? e.tipo}</span>
+                          <span className="dp-barra-nome">{rotuloTipoErro(e.tipo)}</span>
                           <span className="dp-barra-valor">
                             {e.total} · {e.percentual}%
                           </span>
                         </div>
                         <div className="dp-barra-trilho">
-                          <div className="dp-barra-preenchida" style={{ width: `${e.percentual}%`, background: '#f472b6' }} />
+                          <div
+                            className="dp-barra-preenchida"
+                            style={{ width: `${e.percentual}%`, background: TIPOS_ERRO[e.tipo]?.cor ?? '#f472b6' }}
+                          />
                         </div>
-                      </div>
+                        {TIPOS_ERRO[e.tipo] && (
+                          <span className="da-tipo-explicacao">
+                            {TIPOS_ERRO[e.tipo].explicacao} <em>Ex.: {TIPOS_ERRO[e.tipo].exemplo}.</em>
+                          </span>
+                        )}
+                      </button>
                     ))}
                   </div>
                 )}

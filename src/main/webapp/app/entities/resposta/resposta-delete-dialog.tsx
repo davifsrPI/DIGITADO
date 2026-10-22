@@ -23,7 +23,7 @@ export const RespostaDeleteDialog = () => {
   const updateSuccess = useAppSelector(state => state.resposta.updateSuccess);
 
   const handleClose = () => {
-    navigate('/resposta');
+    navigate('/entidades/resposta');
   };
 
   useEffect(() => {

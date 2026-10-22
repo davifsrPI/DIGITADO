@@ -252,6 +252,41 @@ body.minhas-salas-page .view-container {
   border-radius: 10px;
   padding: 8px 12px;
   text-align: center;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: background 0.2s;
+}
+
+.ms-card-codigo:hover {
+  background: rgba(99, 102, 241, 0.16);
+}
+
+.ms-card-codigo-copiar {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #c7d2fe;
+  opacity: 0.85;
+}
+
+.ms-erro {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fecaca;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.ms-estatisticas-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .ms-entrar-btn {

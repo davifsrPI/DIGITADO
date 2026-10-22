@@ -23,7 +23,7 @@ export const UsuarioDeleteDialog = () => {
   const updateSuccess = useAppSelector(state => state.usuario.updateSuccess);
 
   const handleClose = () => {
-    navigate('/usuario');
+    navigate('/entidades/usuario');
   };
 
   useEffect(() => {

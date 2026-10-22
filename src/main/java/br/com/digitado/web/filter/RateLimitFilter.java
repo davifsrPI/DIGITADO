@@ -91,18 +91,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String identidade;
 
         if (grupo != null) {
-            // Cada endpoint sensível tem o SEU contador. Antes todos dividiam uma
-            // chave só por IP, e o efeito era absurdo: a tela de cadastro consulta
-            // /api/public/verificar-email a cada pausa na digitação do e-mail, o que
-            // gastava o orçamento inteiro antes de a pessoa clicar em "Criar conta" -
-            // e o cadastro morria com 429 sem nunca criar a conta.
+            // Cada endpoint sensível tem o SEU contador: cadastro e reset de senha
+            // não dividem orçamento, um não derruba o outro.
             //
             // Contam por IP porque quem se cadastra ou pede reset ainda não tem login,
             // e contam TODA requisição, inclusive a bem-sucedida: aqui o abuso é fazer
             // a coisa dar certo muitas vezes (criar contas em massa, varrer e-mails).
-            limite = "email".equals(grupo)
-                ? applicationProperties.getRateLimit().getVerificacaoEmailPorMinuto()
-                : applicationProperties.getRateLimit().getAutenticacaoPorMinuto();
+            limite = applicationProperties.getRateLimit().getAutenticacaoPorMinuto();
             identidade = grupo + ":" + ipDoCliente(request);
         } else {
             limite = applicationProperties.getRateLimit().getRequisicoesPorMinuto();
@@ -208,13 +203,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     /**
      * Grupo de contagem dos endpoints não autenticados que são alvo típico de abuso:
-     * registro em massa de contas, disparo de e-mails de reset e a checagem de e-mail
-     * do cadastro (enumeração de contas). O login tem tratamento próprio, em isLogin.
+     * registro em massa de contas e disparo de e-mails de reset. O login tem
+     * tratamento próprio, em isLogin.
      *
      * Devolver um grupo por endpoint, e não um rótulo único, é o que dá a cada um o
-     * SEU orçamento. Enquanto dividiam a mesma chave, a checagem de e-mail - que a
-     * tela dispara a cada pausa na digitação - derrubava o cadastro e o login logo
-     * em seguida, e a pessoa via só "usuário ou senha incorretos".
+     * SEU orçamento.
+     *
+     * A checagem pública "este e-mail já existe?" do cadastro saiu: o aviso agora só
+     * aparece quando a pessoa tenta criar a conta, e um endpoint aberto que confirma
+     * se um e-mail tem conta era uma porta para enumerar cadastros.
      */
     private String grupoSensivel(String uri) {
         if (uri.startsWith("/api/register")) {
@@ -222,9 +219,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
         if (uri.startsWith("/api/account/reset-password")) {
             return "reset";
-        }
-        if (uri.startsWith("/api/public/verificar-email")) {
-            return "email";
         }
         return null;
     }

@@ -23,7 +23,7 @@ export const PalavraDeleteDialog = () => {
   const updateSuccess = useAppSelector(state => state.palavra.updateSuccess);
 
   const handleClose = () => {
-    navigate('/palavra');
+    navigate('/entidades/palavra');
   };
 
   useEffect(() => {

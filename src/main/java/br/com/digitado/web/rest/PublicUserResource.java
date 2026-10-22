@@ -1,6 +1,5 @@
 package br.com.digitado.web.rest;
 
-import br.com.digitado.repository.UsuarioRepository;
 import br.com.digitado.service.UserService;
 import br.com.digitado.service.dto.UserDTO;
 import java.util.*;
@@ -27,23 +26,9 @@ public class PublicUserResource {
     private static final Logger LOG = LoggerFactory.getLogger(PublicUserResource.class);
 
     private final UserService userService;
-    private final UsuarioRepository usuarioRepository;
 
-    public PublicUserResource(UserService userService, UsuarioRepository usuarioRepository) {
+    public PublicUserResource(UserService userService) {
         this.userService = userService;
-        this.usuarioRepository = usuarioRepository;
-    }
-
-    /**
-     * Usado na tela de registro pra avisar "este e-mail já tem cadastro".
-     * Responde só um booleano, nunca o nome ou outro dado, porque o endpoint é
-     * público e senão daria pra colher dados a partir de uma lista de e-mails.
-     * Também está no RateLimitFilter pra frear enumeração em massa.
-     */
-    @GetMapping("/public/verificar-email")
-    public ResponseEntity<Map<String, Object>> verificarEmail(@RequestParam String email) {
-        boolean encontrado = usuarioRepository.findByEmail(email.trim().toLowerCase()).isPresent();
-        return ResponseEntity.ok(Map.of("encontrado", encontrado));
     }
 
     /**

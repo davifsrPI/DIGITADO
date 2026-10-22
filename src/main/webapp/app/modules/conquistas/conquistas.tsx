@@ -13,6 +13,11 @@ interface ConquistaUsuario {
   xpRecompensa?: number;
   desbloqueada: boolean;
   progresso?: number;
+  // Quanto o progresso precisa chegar (10 palavras, 5 vitórias...); nulo quando a
+  // conquista não tem regra de progresso
+  meta?: number | null;
+  // progresso / meta em %, calculado no servidor (100 quando desbloqueada)
+  percentual?: number | null;
   dataConquista?: string;
 }
 
@@ -28,6 +33,17 @@ interface MinhasConquistas {
 // apenas visual (nenhum dado é guardado ou calculado no front)
 const ICONES = ['🏆', '⭐', '🚀', '🔥', '⚡', '🎯', '🧠', '📚', '⌨️', '💎', '🥇', '🎖️'];
 const iconeDaConquista = (id: number) => ICONES[Math.abs(id) % ICONES.length];
+
+/**
+ * Quanto falta, em texto e em %. A tela mostrava o progresso CRU como se já fosse
+ * porcentagem: 3 de 10 vitórias aparecia como "3%", e 150 de 1000 palavras como uma
+ * barra cheia de 100% numa conquista ainda bloqueada.
+ */
+export const textoProgresso = (c: Pick<ConquistaUsuario, 'progresso' | 'meta' | 'percentual'>): string | null => {
+  if (c.meta == null || c.meta <= 0 || c.percentual == null) return null;
+  const atual = Math.min(c.progresso ?? 0, c.meta);
+  return `${atual} de ${c.meta} · ${c.percentual}%`;
+};
 
 const formatarData = (iso?: string) => {
   if (!iso) return '';
@@ -109,12 +125,20 @@ export const Conquistas = () => {
                   <div className="cq-item-info">
                     <div className="cq-item-nome">{c.nome}</div>
                     {c.descricao && <div className="cq-item-desc">{c.descricao}</div>}
-                    {!c.desbloqueada && c.progresso != null && c.progresso > 0 && (
+                    {/* Bloqueada com meta conhecida: a barra mostra o caminho até ela,
+                        inclusive no zero - "0 de 10" diz o que fazer, a barra vazia não */}
+                    {!c.desbloqueada && textoProgresso(c) && (
                       <div className="cq-item-progress">
-                        <div className="cq-item-progress-track">
-                          <div className="cq-item-progress-fill" style={{ width: `${Math.min(c.progresso, 100)}%` }} />
+                        <div
+                          className="cq-item-progress-track"
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={c.percentual ?? 0}
+                        >
+                          <div className="cq-item-progress-fill" style={{ width: `${c.percentual ?? 0}%` }} />
                         </div>
-                        <span className="cq-item-progress-label">{Math.min(c.progresso, 100)}%</span>
+                        <span className="cq-item-progress-label">{textoProgresso(c)}</span>
                       </div>
                     )}
                   </div>

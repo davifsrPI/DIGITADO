@@ -57,5 +57,6 @@
     <include file="config/liquibase/changelog/20260925130000_salas_nunca_fecham.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20260926120000_sala_configuracao.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20260926130000_seed_palavras_tecnologia.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20261021120000_modo_individual.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
 </databaseChangeLog>

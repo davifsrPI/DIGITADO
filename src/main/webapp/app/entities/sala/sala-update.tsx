@@ -9,6 +9,7 @@ import { useAppDispatch, useAppSelector } from 'app/config/store';
 
 import { getEntities as getUsuarios } from 'app/entities/usuario/usuario.reducer';
 import { createEntity, getEntity, reset, updateEntity } from './sala.reducer';
+import { textoDescricaoSala } from 'app/shared/model/sala.model';
 
 export const SalaUpdate = () => {
   const dispatch = useAppDispatch();
@@ -25,7 +26,7 @@ export const SalaUpdate = () => {
   const updateSuccess = useAppSelector(state => state.sala.updateSuccess);
 
   const handleClose = () => {
-    navigate('/sala');
+    navigate('/entidades/sala');
   };
 
   useEffect(() => {
@@ -64,6 +65,8 @@ export const SalaUpdate = () => {
       ? {}
       : {
           ...salaEntity,
+          // O campo edita o texto; o servidor remonta o JSON com o modo da sala
+          descricao: textoDescricaoSala(salaEntity?.descricao),
           professor: salaEntity?.professor?.id,
           alunos: salaEntity?.alunos?.map(e => e.id.toString()),
         };
@@ -153,7 +156,7 @@ export const SalaUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
-              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/sala" replace color="info">
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/entidades/sala" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">

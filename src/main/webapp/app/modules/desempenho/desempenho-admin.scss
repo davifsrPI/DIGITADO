@@ -360,3 +360,102 @@ body.desempenho-admin-page {
     align-items: flex-start;
   }
 }
+
+// Filtro por tipo de erro (chips no topo do painel)
+.da-filtro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.da-filtro-rotulo {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-right: 4px;
+}
+
+.da-filtro-chip {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e2e8f0;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+
+  &:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  strong {
+    margin-left: 4px;
+  }
+}
+
+.da-filtro-chip--ativo {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.da-filtro-limpar {
+  margin-top: 10px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+// O que cada tipo de erro quer dizer, com exemplo
+.da-tipo-explicacao {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: left;
+
+  em {
+    color: rgba(255, 255, 255, 0.75);
+  }
+}
+
+// As barras de tipo de erro viraram botões (filtram o painel)
+.da-barra-botao {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.da-kpi-botao {
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  cursor: pointer;
+  width: 100%;
+}

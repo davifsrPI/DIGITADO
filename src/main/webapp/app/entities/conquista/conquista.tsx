@@ -71,7 +71,12 @@ export const Conquista = () => {
             <FontAwesomeIcon icon="sync" spin={loading} />{' '}
             <Translate contentKey="digitadoApp.conquista.home.refreshListLabel">Refresh List</Translate>
           </Button>
-          <Link to="/conquista/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+          <Link
+            to="/entidades/conquista/new"
+            className="btn btn-primary jh-create-entity"
+            id="jh-create-entity"
+            data-cy="entityCreateButton"
+          >
             <FontAwesomeIcon icon="plus" />
             &nbsp;
             <Translate contentKey="digitadoApp.conquista.home.createLabel">Create new Conquista</Translate>
@@ -105,7 +110,7 @@ export const Conquista = () => {
               {conquistaList.map((conquista, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
-                    <Button tag={Link} to={`/conquista/${conquista.id}`} color="link" size="sm">
+                    <Button tag={Link} to={`/entidades/conquista/${conquista.id}`} color="link" size="sm">
                       {conquista.id}
                     </Button>
                   </td>
@@ -114,20 +119,26 @@ export const Conquista = () => {
                   <td>{conquista.xpRecompensa}</td>
                   <td className="text-end">
                     <div className="btn-group flex-btn-group-container">
-                      <Button tag={Link} to={`/conquista/${conquista.id}`} color="info" size="sm" data-cy="entityDetailsButton">
+                      <Button tag={Link} to={`/entidades/conquista/${conquista.id}`} color="info" size="sm" data-cy="entityDetailsButton">
                         <FontAwesomeIcon icon="eye" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.view">View</Translate>
                         </span>
                       </Button>
-                      <Button tag={Link} to={`/conquista/${conquista.id}/edit`} color="primary" size="sm" data-cy="entityEditButton">
+                      <Button
+                        tag={Link}
+                        to={`/entidades/conquista/${conquista.id}/edit`}
+                        color="primary"
+                        size="sm"
+                        data-cy="entityEditButton"
+                      >
                         <FontAwesomeIcon icon="pencil-alt" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.edit">Edit</Translate>
                         </span>
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = `/conquista/${conquista.id}/delete`)}
+                        onClick={() => (window.location.href = `/entidades/conquista/${conquista.id}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"

@@ -26,7 +26,7 @@ export const ErroOrtograficoUpdate = () => {
   const tipoErroValues = Object.keys(TipoErro);
 
   const handleClose = () => {
-    navigate('/erro-ortografico');
+    navigate('/entidades/erro-ortografico');
   };
 
   useEffect(() => {
@@ -133,7 +133,7 @@ export const ErroOrtograficoUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
-              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/erro-ortografico" replace color="info">
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/entidades/erro-ortografico" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">

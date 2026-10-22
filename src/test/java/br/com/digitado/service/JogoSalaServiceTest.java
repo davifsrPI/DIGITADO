@@ -2,13 +2,20 @@ package br.com.digitado.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.digitado.domain.HistoricoResposta;
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.enumeration.Dificuldade;
 import br.com.digitado.repository.PalavraRepository;
@@ -61,6 +68,9 @@ class JogoSalaServiceTest {
     @Mock
     private HistoricoRespostaService historicoRespostaService;
 
+    @Mock
+    private XpService xpService;
+
     private JogoSalaService service;
 
     @BeforeEach
@@ -71,7 +81,8 @@ class JogoSalaServiceTest {
             palavraAudioService,
             conquistaEngine,
             estatisticaPartidaService,
-            historicoRespostaService
+            historicoRespostaService,
+            xpService
         );
     }
 
@@ -693,7 +704,8 @@ class JogoSalaServiceTest {
                 palavraAudioService,
                 conquistaEngine,
                 estatisticaPartidaService,
-                historicoRespostaService
+                historicoRespostaService,
+                xpService
             );
             serv2.registrarNoDuelo("DUELO1", "ana", "Ana", "d1");
             serv2.registrarNoDuelo("DUELO1", "bruno", "Bruno", "d2");
@@ -707,6 +719,124 @@ class JogoSalaServiceTest {
         @Test
         void oProfessorEhOdestinoDoAvisoLeve() {
             assertThat(service.loginProfessorDaSala(SALA)).isEqualTo(PROFESSOR);
+        }
+    }
+
+    @Nested
+    @DisplayName("fim da partida: XP, duelo e quem nao respondeu")
+    class FimDaPartida {
+
+        private final Palavra casa = palavra(1L, "casa");
+
+        @BeforeEach
+        void umaPalavraSo() {
+            // Uma palavra de verdade na partida: o mock responde so a faixa FACIL
+            when(palavraRepository.findRandomByDificuldadeExcluindo(eq("FACIL"), anyInt(), anyList())).thenReturn(List.of(casa));
+            when(palavraRepository.findRandomByDificuldadeExcluindo(eq("MEDIO"), anyInt(), anyList())).thenReturn(List.of());
+            when(palavraRepository.findRandomByDificuldadeExcluindo(eq("DIFICIL"), anyInt(), anyList())).thenReturn(List.of());
+            when(palavraRepository.findRandomAtivasExcluindo(anyList(), anyInt())).thenReturn(List.of());
+            // O XP creditado e o pedido (o login tem Usuario)
+            when(xpService.creditarPorLogin(anyString(), anyLong(), anyString())).thenAnswer(i -> i.getArgument(1));
+        }
+
+        @Test
+        void salaCreditaXpPelaFormulaEPremiaQuemTemMaisPontos() {
+            service.registrarProfessor(SALA, PROFESSOR, "Prof", "sp");
+            service.registrarAluno(SALA, "ana", "Ana", "s1");
+            service.registrarAluno(SALA, "bruno", "Bruno", "s2");
+            iniciarPartida(30);
+            service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
+            service.responder(SALA, NOME_SALA, "bruno", "Bruno", "kasa", 0);
+
+            service.encerrar(SALA, NOME_SALA, PROFESSOR);
+
+            // ana: round((10*1 + 2*1) * 1,05) + 5*1 superado = 13 + 5
+            verify(xpService).creditarPorLogin(eq("ana"), eq(18L), anyString());
+            // bruno: round((0 + 2*1) * 1,05) = 2
+            verify(xpService).creditarPorLogin(eq("bruno"), eq(2L), anyString());
+            // o professor comanda, nao joga: nem XP nem conquista
+            verify(xpService, never()).creditarPorLogin(eq(PROFESSOR), anyLong(), anyString());
+            verify(conquistaEngine).aoConcluirPartida("ana", true, true, true, true);
+            verify(conquistaEngine).aoConcluirPartida("bruno", false, true, false, true);
+            assertThat(service.xpDaPartida(SALA, "ana")).contains(18L);
+        }
+
+        @Test
+        void empateNaoTemVencedorPorSorteio() {
+            service.registrarAluno(SALA, "ana", "Ana", "s1");
+            service.registrarAluno(SALA, "bruno", "Bruno", "s2");
+            iniciarPartida(30);
+            service.responder(SALA, NOME_SALA, "ana", "Ana", "kasa", 0);
+            service.responder(SALA, NOME_SALA, "bruno", "Bruno", "caza", 0);
+
+            service.encerrar(SALA, NOME_SALA, PROFESSOR);
+
+            verify(conquistaEngine, never()).aoConcluirPartida(anyString(), eq(true), anyBoolean(), anyBoolean(), anyBoolean());
+        }
+
+        // O bug da conquista "Venca de um Desenvolvedor": com o oponente parado (sem
+        // responder nada), o duelo ficava com um participante so e nada era premiado
+        @Test
+        void dueloContraOponenteParadoPremiaOVencedor() {
+            service.registrarNoDuelo("D1", "aluno", "Aluno", "d1");
+            service.registrarNoDuelo("D1", "admin", "Admin", "d2");
+            service.iniciar("D1", "Duelo", new IniciarPayload(30, 30, 30, 1, 0, 0, List.of(), List.of()), "admin");
+            service.responder("D1", "Duelo", "aluno", "Aluno", "casa", 0);
+
+            service.encerrar("D1", "Duelo", "admin");
+
+            verify(conquistaEngine).aoConcluirDuelo("aluno", true, "admin");
+            verify(conquistaEngine).aoConcluirDuelo("admin", false, "aluno");
+            // XP do duelo: 10*1 + 2*1 + 50 de vitoria; quem nao respondeu nao ganha
+            verify(xpService).creditarPorLogin(eq("aluno"), eq(62L), anyString());
+            verify(xpService, never()).creditarPorLogin(eq("admin"), anyLong(), anyString());
+        }
+
+        @Test
+        void dueloEmpatadoNaoDaVitoriaANinguem() {
+            service.registrarNoDuelo("D2", "ana", "Ana", "d1");
+            service.registrarNoDuelo("D2", "bruno", "Bruno", "d2");
+            service.iniciar("D2", "Duelo", new IniciarPayload(30, 30, 30, 1, 0, 0, List.of(), List.of()), "ana");
+            service.responder("D2", "Duelo", "ana", "Ana", "kasa", 0);
+            service.responder("D2", "Duelo", "bruno", "Bruno", "caza", 0);
+
+            service.encerrar("D2", "Duelo", "ana");
+
+            verify(conquistaEngine).aoConcluirDuelo("ana", false, "bruno");
+            verify(conquistaEngine).aoConcluirDuelo("bruno", false, "ana");
+        }
+
+        @Test
+        void quemDeixaOTempoAcabarEntraNoHistoricoComoNaoRespondeu() {
+            service.registrarProfessor(SALA, PROFESSOR, "Prof", "sp");
+            service.registrarAluno(SALA, "ana", "Ana", "s1");
+            service.registrarAluno(SALA, "bruno", "Bruno", "s2");
+            // Rodada de 0s: quando a palavra vira, o tempo dela ja acabou
+            iniciarPartida(0);
+            service.responder(SALA, NOME_SALA, "ana", "Ana", "casa", 0);
+
+            service.proximaPalavra(SALA, NOME_SALA, PROFESSOR);
+
+            verify(historicoRespostaService).registrar(
+                eq("bruno"),
+                eq(casa),
+                eq(false),
+                eq(ComparadorPalavras.NAO_RESPONDEU),
+                isNull(),
+                eq(0),
+                eq(HistoricoResposta.Origem.PARTIDA)
+            );
+            // nem quem respondeu nem o professor viram "nao respondeu"
+            verify(historicoRespostaService, never()).registrar(
+                eq("ana"),
+                any(),
+                anyBoolean(),
+                eq(ComparadorPalavras.NAO_RESPONDEU),
+                any(),
+                any(),
+                any()
+            );
+            verify(historicoRespostaService, never()).registrar(eq(PROFESSOR), any(), anyBoolean(), any(), any(), any(), any());
         }
     }
 }

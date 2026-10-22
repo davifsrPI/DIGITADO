@@ -9,8 +9,10 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +77,9 @@ public class HistoricoRespostaService {
      */
     private static final int MIN_RESPOSTAS_PALAVRA_GLOBAL = 5;
 
+    // Números nos textos do painel no padrão brasileiro (14,3%), como nos cartões da tela
+    private static final Locale PT_BR = Locale.forLanguageTag("pt-BR");
+
     private final HistoricoRespostaRepository historicoRepository;
 
     public HistoricoRespostaService(HistoricoRespostaRepository historicoRepository) {
@@ -99,6 +104,23 @@ public class HistoricoRespostaService {
         Integer tempoMs,
         HistoricoResposta.Origem origem
     ) {
+        registrar(login, palavra, correta, tipoErro, tempoMs, null, origem);
+    }
+
+    /**
+     * Mesma gravação, com o quanto da palavra a pessoa acertou (0 a 100). É o que
+     * a equação do modo individual usa para separar o "quase" do "nem perto".
+     */
+    @Transactional
+    public void registrar(
+        String login,
+        Palavra palavra,
+        boolean correta,
+        String tipoErro,
+        Integer tempoMs,
+        Integer similaridade,
+        HistoricoResposta.Origem origem
+    ) {
         if (login == null || login.isBlank() || palavra == null || palavra.getId() == null) {
             return;
         }
@@ -112,11 +134,57 @@ public class HistoricoRespostaService {
             registro.setOrigem(origem);
             registro.setTipoErro(correta ? null : tipoErro);
             registro.setTempoMs(tempoMs);
+            registro.setSimilaridade(similaridade);
             registro.setDataResposta(Instant.now());
             historicoRepository.save(registro);
         } catch (Exception e) {
             LOG.error("Falha ao registrar histórico de resposta de {}: {}", login, e.getMessage(), e);
         }
+    }
+
+    // ===== Consultas usadas pelo jogo =====
+
+    /**
+     * A última vez que o titular respondeu esta palavra, ele errou? Chamado ANTES
+     * de gravar a resposta nova: um acerto agora, depois de um erro, é o que move
+     * "Aprendendo com os Erros" e "Superação". Nunca derruba quem chama.
+     */
+    @Transactional(readOnly = true)
+    public boolean tinhaErrado(String login, Long palavraId) {
+        if (login == null || palavraId == null) {
+            return false;
+        }
+        try {
+            List<Object> ultima = historicoRepository.ultimaRespostaNaPalavra(login, palavraId);
+            return !ultima.isEmpty() && !acertou(ultima.get(0));
+        } catch (Exception e) {
+            LOG.warn("Não foi possível ler a última resposta de {} à palavra {}: {}", login, palavraId, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * O que o titular já fez em cada palavra: tentativas, acertos, tempo médio e
+     * similaridade média. São as entradas da equação do modo individual.
+     */
+    public record EstatisticaPalavraJogador(long tentativas, long acertos, Double tempoMedioMs, Double similaridadeMedia) {}
+
+    @Transactional(readOnly = true)
+    public Map<Long, EstatisticaPalavraJogador> estatisticasPorPalavra(String login) {
+        Map<Long, EstatisticaPalavraJogador> porPalavra = new HashMap<>();
+        if (login == null) {
+            return porPalavra;
+        }
+        for (Object[] l : historicoRepository.estatisticaPorPalavraDoJogador(login)) {
+            Long palavraId = id(l, 0);
+            if (palavraId != null) {
+                porPalavra.put(
+                    palavraId,
+                    new EstatisticaPalavraJogador(numero(l, 1), numero(l, 2), decimalOuNulo(l, 3), decimalOuNulo(l, 4))
+                );
+            }
+        }
+        return porPalavra;
     }
 
     // ===== Painel do titular =====
@@ -252,10 +320,21 @@ public class HistoricoRespostaService {
      */
     @Transactional(readOnly = true)
     public DesempenhoGeralVM desempenhoGeral() {
+        return desempenhoGeral(null);
+    }
+
+    /**
+     * O mesmo painel, com o recorte de UM tipo de erro quando tipoErro vem
+     * preenchido (o filtro "Tipos de erro da turma"). O retrato geral continua
+     * vindo junto: é ele que dá a escala do recorte.
+     */
+    @Transactional(readOnly = true)
+    public DesempenhoGeralVM desempenhoGeral(String tipoErro) {
         Object[] resumo = primeiraLinha(historicoRepository.resumoGlobal());
         long total = numero(resumo, 0);
         long acertos = numero(resumo, 1);
         long alunos = numero(resumo, 2);
+        long naoRespondeu = numero(resumo, 3);
         long totalErros = total - acertos;
 
         Instant desde = YearMonth.now(ZoneId.systemDefault())
@@ -310,10 +389,13 @@ public class HistoricoRespostaService {
         long medios = contarNaFaixa(porAluno, Nivel.MEDIO);
         long ruins = contarNaFaixa(porAluno, Nivel.RUIM);
 
+        FiltroTipoErroVM filtro = tipoErro == null || tipoErro.isBlank() ? null : montarFiltro(tipoErro.trim(), total, totalErros, desde);
+
         return new DesempenhoGeralVM(
             total,
             acertos,
             totalErros,
+            naoRespondeu,
             percentual(acertos, total),
             alunos,
             bons,
@@ -324,7 +406,100 @@ public class HistoricoRespostaService {
             evolucao,
             palavrasMaisAcertadas,
             palavrasMaisErradas,
-            errosPorTipo
+            errosPorTipo,
+            filtro
+        );
+    }
+
+    /**
+     * Recorte do painel por um tipo de erro: quanto ele pesa, quantos alunos e
+     * palavras ele atinge, como variou mês a mês e em que palavras mais acontece.
+     */
+    private FiltroTipoErroVM montarFiltro(String tipo, long totalRespostas, long totalErros, Instant desde) {
+        Object[] resumo = primeiraLinha(historicoRepository.resumoTipoErro(tipo));
+        long ocorrencias = numero(resumo, 0);
+
+        List<PontoTipoErroVM> evolucao = historicoRepository
+            .evolucaoTipoErro(tipo, desde)
+            .stream()
+            .map(l -> new PontoTipoErroVM(texto(l, 0), numero(l, 1), numero(l, 2), taxaDecimal(numero(l, 2), numero(l, 1))))
+            .toList();
+
+        List<PalavraTipoErroVM> palavras = historicoRepository
+            .palavrasComTipoErro(tipo, TOP_PALAVRAS)
+            .stream()
+            .map(l ->
+                new PalavraTipoErroVM(
+                    id(l, 0),
+                    texto(l, 1),
+                    texto(l, 2),
+                    numero(l, 3),
+                    numero(l, 4),
+                    percentual(numero(l, 4), numero(l, 3))
+                )
+            )
+            .toList();
+
+        Map<String, PontoTipoErroVM> porMes = new HashMap<>();
+        evolucao.forEach(p -> porMes.put(p.mes(), p));
+        YearMonth atual = YearMonth.now(ZoneId.systemDefault());
+        String chaveAnterior = atual.minusMonths(1).toString();
+        PontoTipoErroVM mesAtual = porMes.getOrDefault(atual.toString(), new PontoTipoErroVM(atual.toString(), 0, 0, 0));
+        PontoTipoErroVM mesAnterior = porMes.getOrDefault(chaveAnterior, new PontoTipoErroVM(chaveAnterior, 0, 0, 0));
+
+        // Um tipo de erro raramente passa de poucos por cento das respostas: aqui um
+        // ponto percentual já é movimento, e não ruído como no comparativo geral
+        String veredito;
+        String resumoTexto;
+        if (mesAtual.respostas() == 0 && mesAnterior.respostas() == 0) {
+            veredito = "SEM_DADOS";
+            resumoTexto = "Nenhuma resposta registrada neste mês nem no anterior.";
+        } else if (mesAnterior.respostas() == 0) {
+            veredito = "SEM_COMPARATIVO";
+            resumoTexto = String.format(
+                PT_BR,
+                "Neste mês %.1f%% das respostas tiveram este erro. O comparativo aparece no mês que vem.",
+                mesAtual.taxa()
+            );
+        } else if (mesAtual.taxa() <= mesAnterior.taxa() - 1) {
+            veredito = "MELHOROU";
+            resumoTexto = String.format(
+                PT_BR,
+                "A turma cometeu MENOS este erro: %.1f%% das respostas neste mês contra %.1f%% no mês passado.",
+                mesAtual.taxa(),
+                mesAnterior.taxa()
+            );
+        } else if (mesAtual.taxa() >= mesAnterior.taxa() + 1) {
+            veredito = "PIOROU";
+            resumoTexto = String.format(
+                PT_BR,
+                "A turma cometeu MAIS este erro: %.1f%% das respostas neste mês contra %.1f%% no mês passado.",
+                mesAtual.taxa(),
+                mesAnterior.taxa()
+            );
+        } else {
+            veredito = "ESTAVEL";
+            resumoTexto = String.format(
+                PT_BR,
+                "Estável: %.1f%% das respostas neste mês contra %.1f%% no mês passado.",
+                mesAtual.taxa(),
+                mesAnterior.taxa()
+            );
+        }
+
+        return new FiltroTipoErroVM(
+            tipo,
+            ocorrencias,
+            percentual(ocorrencias, totalErros),
+            taxaDecimal(ocorrencias, totalRespostas),
+            numero(resumo, 1),
+            numero(resumo, 2),
+            mesAtual.taxa(),
+            mesAnterior.taxa(),
+            veredito,
+            resumoTexto,
+            evolucao,
+            palavras
         );
     }
 
@@ -609,6 +784,18 @@ public class HistoricoRespostaService {
 
     private static int percentual(long parte, long total) {
         return total <= 0 ? 0 : (int) Math.round((parte * 100.0) / total);
+    }
+
+    // Percentual com uma casa decimal (12,3) - para fatias pequenas, como um tipo de erro
+    private static double taxaDecimal(long parte, long total) {
+        return total <= 0 ? 0 : Math.round((parte * 1000.0) / total) / 10.0;
+    }
+
+    private static Double decimalOuNulo(Object[] linha, int indice) {
+        if (linha == null || indice >= linha.length || linha[indice] == null) {
+            return null;
+        }
+        return ((Number) linha[indice]).doubleValue();
     }
 
     // Ordem de exibição das faixas (fácil -> difícil), qualquer outro valor no fim

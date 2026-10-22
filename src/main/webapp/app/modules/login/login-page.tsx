@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Alert } from 'reactstrap';
 import './login-page.scss';
 import { useBodyClass } from 'app/shared/util/use-body-class';
+import { CampoSenha } from 'app/shared/components/campo-senha/campo-senha';
 
 interface ILoginPageProps {
   handleLogin: (username: string, password: string, rememberMe: boolean) => void;
@@ -66,12 +67,12 @@ const LoginPage = ({ handleLogin, loginError, loginBloqueado }: ILoginPageProps)
             </div>
             <div className="lp-field">
               <label htmlFor="lp-password">Senha</label>
-              <input
+              <CampoSenha
                 id="lp-password"
-                type="password"
                 placeholder="Digite sua senha"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
                 required
               />
             </div>

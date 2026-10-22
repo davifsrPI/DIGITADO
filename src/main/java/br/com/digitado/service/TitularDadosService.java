@@ -164,6 +164,39 @@ public class TitularDadosService {
                 .toList()
         );
 
+        // Partidas do modo individual: até onde o titular chegou em cada uma
+        dados.put(
+            "partidasIndividuais",
+            em
+                .createQuery(
+                    "select pi.dataInicio, pi.dataFim, pi.palavras, pi.acertos, pi.melhorSequencia, pi.xpGanho, pi.encerramento " +
+                    "from PartidaIndividual pi where pi.login = :login order by pi.dataInicio",
+                    Object[].class
+                )
+                .setParameter("login", login)
+                .getResultList()
+                .stream()
+                .map(l ->
+                    Map.of(
+                        "inicio",
+                        String.valueOf(l[0]),
+                        "fim",
+                        String.valueOf(l[1]),
+                        "palavras",
+                        String.valueOf(l[2]),
+                        "acertos",
+                        String.valueOf(l[3]),
+                        "melhorSequencia",
+                        String.valueOf(l[4]),
+                        "xpGanho",
+                        String.valueOf(l[5]),
+                        "encerramento",
+                        String.valueOf(l[6])
+                    )
+                )
+                .toList()
+        );
+
         return dados;
     }
 
@@ -205,6 +238,7 @@ public class TitularDadosService {
         //    bloco acima de propósito - existem mesmo para conta sem perfil no domínio.
         em.createQuery("delete from PalavraDoDiaTentativa t where t.login = :login").setParameter("login", login).executeUpdate();
         em.createQuery("delete from HistoricoResposta h where h.login = :login").setParameter("login", login).executeUpdate();
+        em.createQuery("delete from PartidaIndividual pi where pi.login = :login").setParameter("login", login).executeUpdate();
         userRepository.findOneByLogin(login).ifPresent(userRepository::delete);
 
         // Log SEM dados além do login - trilha de auditoria da exclusão (art. 37)

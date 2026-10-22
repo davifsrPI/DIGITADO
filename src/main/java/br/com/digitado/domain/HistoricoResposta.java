@@ -32,6 +32,7 @@ public class HistoricoResposta implements Serializable {
         PARTIDA,
         DUELO,
         PALAVRA_DO_DIA,
+        INDIVIDUAL,
     }
 
     @Id
@@ -70,6 +71,11 @@ public class HistoricoResposta implements Serializable {
     // Quanto tempo levou para responder, em milissegundos (nulo na palavra do dia)
     @Column(name = "tempo_ms")
     private Integer tempoMs;
+
+    // Quanto da palavra a pessoa acertou, de 0 a 100 (nulo na palavra do dia e nas
+    // respostas gravadas antes de a coluna existir). Ver ComparadorPalavras.similaridade
+    @Column(name = "similaridade")
+    private Integer similaridade;
 
     @NotNull
     @Column(name = "data_resposta", nullable = false)
@@ -137,6 +143,14 @@ public class HistoricoResposta implements Serializable {
 
     public void setTempoMs(Integer tempoMs) {
         this.tempoMs = tempoMs;
+    }
+
+    public Integer getSimilaridade() {
+        return similaridade;
+    }
+
+    public void setSimilaridade(Integer similaridade) {
+        this.similaridade = similaridade;
     }
 
     public Instant getDataResposta() {

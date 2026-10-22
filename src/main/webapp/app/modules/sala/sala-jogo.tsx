@@ -1,6 +1,6 @@
 import './sala-jogo-styles.scss';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
@@ -133,10 +133,18 @@ export const SalaJogo: React.FC = () => {
   const [erroWS, setErroWS] = useState<ErroWS | null>(null);
 
   // Callbacks para o hook de WebSocket
-  // Quando chega um novo estado do jogo, atualiza e limpa o feedback da palavra anterior
+  // Quando chega um novo estado do jogo, atualiza e limpa o feedback da palavra
+  // ANTERIOR - só quando a palavra muda. No duelo 1v1 o estado completo chega a cada
+  // resposta (inclusive logo depois da sua): limpar a cada estado apagava o feedback
+  // que tinha acabado de chegar, e a tela de correção ficava sem a palavra certa.
+  const palavraDoFeedback = useRef<number | null>(null);
   const handleEstado = useCallback((e: EstadoJogo) => {
     setEstado(e);
-    if (e.tipo === 'NOVA_PALAVRA') setFeedback(null);
+    const palavraId = e.palavraAtual?.id ?? null;
+    if ((e.tipo === 'NOVA_PALAVRA' || e.tipo === 'INICIADA') && palavraId !== palavraDoFeedback.current) {
+      palavraDoFeedback.current = palavraId;
+      setFeedback(null);
+    }
   }, []);
 
   const handleFeedback = useCallback((f: FeedbackAluno) => {

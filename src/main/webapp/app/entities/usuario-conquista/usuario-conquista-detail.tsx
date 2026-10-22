@@ -63,14 +63,14 @@ export const UsuarioConquistaDetail = () => {
           </dt>
           <dd>{usuarioConquistaEntity.conquista ? usuarioConquistaEntity.conquista.id : ''}</dd>
         </dl>
-        <Button tag={Link} to="/usuario-conquista" replace color="info" data-cy="entityDetailsBackButton">
+        <Button tag={Link} to="/entidades/usuario-conquista" replace color="info" data-cy="entityDetailsBackButton">
           <FontAwesomeIcon icon="arrow-left" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.back">Back</Translate>
           </span>
         </Button>
         &nbsp;
-        <Button tag={Link} to={`/usuario-conquista/${usuarioConquistaEntity.id}/edit`} replace color="primary">
+        <Button tag={Link} to={`/entidades/usuario-conquista/${usuarioConquistaEntity.id}/edit`} replace color="primary">
           <FontAwesomeIcon icon="pencil-alt" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.edit">Edit</Translate>

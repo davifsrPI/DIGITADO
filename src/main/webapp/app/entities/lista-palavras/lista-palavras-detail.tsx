@@ -67,14 +67,14 @@ export const ListaPalavrasDetail = () => {
           </dt>
           <dd>{listaPalavrasEntity.professor ? listaPalavrasEntity.professor.id : ''}</dd>
         </dl>
-        <Button tag={Link} to="/lista-palavras" replace color="info" data-cy="entityDetailsBackButton">
+        <Button tag={Link} to="/entidades/lista-palavras" replace color="info" data-cy="entityDetailsBackButton">
           <FontAwesomeIcon icon="arrow-left" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.back">Back</Translate>
           </span>
         </Button>
         &nbsp;
-        <Button tag={Link} to={`/lista-palavras/${listaPalavrasEntity.id}/edit`} replace color="primary">
+        <Button tag={Link} to={`/entidades/lista-palavras/${listaPalavrasEntity.id}/edit`} replace color="primary">
           <FontAwesomeIcon icon="pencil-alt" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.edit">Edit</Translate>

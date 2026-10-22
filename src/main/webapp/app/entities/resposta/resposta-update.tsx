@@ -29,7 +29,7 @@ export const RespostaUpdate = () => {
   const updateSuccess = useAppSelector(state => state.resposta.updateSuccess);
 
   const handleClose = () => {
-    navigate('/resposta');
+    navigate('/entidades/resposta');
   };
 
   useEffect(() => {
@@ -200,7 +200,7 @@ export const RespostaUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
-              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/resposta" replace color="info">
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/entidades/resposta" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">

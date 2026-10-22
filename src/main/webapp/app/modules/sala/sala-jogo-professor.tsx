@@ -11,6 +11,7 @@ import { PosicaoRanking, RankingPartida, RelatorioPalavra, RelatorioPorPalavra }
 import { MetricasPorAluno } from './metricas-aluno';
 import { useNomesParticipantes } from './hooks/useNomesParticipantes';
 import { CORES_DIFICULDADE, LABELS_DIFICULDADE } from 'app/shared/util/dificuldade-constants';
+import { useCopiar } from 'app/shared/util/copiar-texto';
 
 // Configuração do jogo escolhida pelo professor: quantidade de palavras e
 // TEMPO por dificuldade (fácil/médio/difícil)
@@ -380,7 +381,7 @@ export const SalaJogoProfessor: React.FC<Props> = ({
 
   const [falando, setFalando] = useState(false);
   const [tempoRestante, setTempoRestante] = useState(0);
-  const [copied, setCopied] = useState(false);
+  const { estado: estadoCopia, copiar } = useCopiar();
 
   const [showRanking, setShowRanking] = useState(false);
   const [rankingTimer, setRankingTimer] = useState(0);
@@ -512,13 +513,9 @@ export const SalaJogoProfessor: React.FC<Props> = ({
   // Incrementa/decrementa a quantidade de palavras de uma dificuldade, entre 0 e 30
   const adj = (campo: keyof Cfg, delta: number) => setCfg(prev => ({ ...prev, [campo]: Math.max(0, Math.min(30, prev[campo] + delta)) }));
 
-  // Copia o código da sala para a área de transferência e mostra confirmação por 2s
-  const copiarCodigo = () => {
-    navigator.clipboard.writeText(codigoSala).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+  // Copia o código da sala e mostra a confirmação por 2s (funciona também na rede
+  // da escola, aberta por http://IP - ver copiarTexto)
+  const copiarCodigo = () => void copiar(codigoSala);
 
   // Reproduz a palavra atual via síntese de voz e controla o estado visual do botão
   // (a pausa de 1s e a escolha da melhor voz pt-BR ficam no módulo falar-palavra)
@@ -616,7 +613,13 @@ export const SalaJogoProfessor: React.FC<Props> = ({
         <button className="sj-codigo-block" onClick={copiarCodigo} title="Clique para copiar">
           <span className="sj-codigo-label">CÓDIGO DA SALA</span>
           <span className="sj-codigo-val">{codigoSala}</span>
-          <span className="sj-codigo-copy">{copied ? '✓ Copiado!' : 'clique para copiar'}</span>
+          <span className="sj-codigo-copy">
+            {estadoCopia === 'copiado'
+              ? '✓ Copiado!'
+              : estadoCopia === 'falhou'
+                ? 'Não deu para copiar: anote o código'
+                : 'clique para copiar'}
+          </span>
         </button>
 
         {/* Partida anterior desta sala (snapshot no banco): a sala reaberta não

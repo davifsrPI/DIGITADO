@@ -63,14 +63,14 @@ export const RankingDetail = () => {
           </dt>
           <dd>{rankingEntity.aluno ? rankingEntity.aluno.id : ''}</dd>
         </dl>
-        <Button tag={Link} to="/ranking" replace color="info" data-cy="entityDetailsBackButton">
+        <Button tag={Link} to="/entidades/ranking" replace color="info" data-cy="entityDetailsBackButton">
           <FontAwesomeIcon icon="arrow-left" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.back">Back</Translate>
           </span>
         </Button>
         &nbsp;
-        <Button tag={Link} to={`/ranking/${rankingEntity.id}/edit`} replace color="primary">
+        <Button tag={Link} to={`/entidades/ranking/${rankingEntity.id}/edit`} replace color="primary">
           <FontAwesomeIcon icon="pencil-alt" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.edit">Edit</Translate>

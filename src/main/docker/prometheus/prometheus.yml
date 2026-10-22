@@ -18,7 +18,8 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-            - localhost:9093
+            # Nome do serviço no monitoring.yml (rede do compose)
+            - alertmanager:9093
 
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
@@ -36,7 +37,16 @@ scrape_configs:
     # username: admin
     # password: admin
     metrics_path: /management/prometheus
+    # Sem JWT: o DIGITADO libera as métricas para a própria máquina (127.0.0.1) e,
+    # quando configurado, para quem mandar o token de métricas. Para usar o token
+    # (DIGITADO em container, Prometheus no Linux ou noutro servidor), grave o mesmo
+    # valor de APPLICATION_MONITORAMENTO_TOKEN_METRICAS no arquivo
+    # src/main/docker/prometheus/token-metricas (fora do git) e descomente:
+    # http_headers:
+    #   X-Token-Metricas:
+    #     files: ['/etc/prometheus/token-metricas']
     static_configs:
       - targets:
-          # On MacOS, replace localhost by host.docker.internal
-          - localhost:8080
+          # A máquina onde o DIGITADO roda, vista de dentro do container
+          # (ver monitoring.yml). Para Prometheus instalado direto na máquina, use localhost:8080
+          - host.docker.internal:8080

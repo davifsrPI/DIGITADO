@@ -23,7 +23,7 @@ export const UsuarioConquistaDeleteDialog = () => {
   const updateSuccess = useAppSelector(state => state.usuarioConquista.updateSuccess);
 
   const handleClose = () => {
-    navigate('/usuario-conquista');
+    navigate('/entidades/usuario-conquista');
   };
 
   useEffect(() => {

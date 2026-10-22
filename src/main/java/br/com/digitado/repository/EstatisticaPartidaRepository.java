@@ -4,6 +4,8 @@ import br.com.digitado.domain.EstatisticaPartida;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,4 +22,7 @@ public interface EstatisticaPartidaRepository extends JpaRepository<EstatisticaP
     // (em vez de um exists por card)
     @Query("SELECT e.salaCodigo FROM EstatisticaPartida e WHERE e.salaCodigo IN :codigos")
     List<String> findSalaCodigosIn(@Param("codigos") Collection<String> codigos);
+
+    // Tela de consulta do admin (AdminTabelasResource): paginada, com busca pelo código da sala
+    Page<EstatisticaPartida> findBySalaCodigoContainingIgnoreCase(String salaCodigo, Pageable pageable);
 }

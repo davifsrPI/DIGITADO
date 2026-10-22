@@ -2,15 +2,19 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.security.AuthoritiesConstants;
 import br.com.digitado.security.SecurityUtils;
+import br.com.digitado.service.ComparadorPalavras;
 import br.com.digitado.service.HistoricoRespostaService;
+import br.com.digitado.web.rest.errors.BadRequestAlertException;
 import br.com.digitado.web.rest.vm.DesempenhoVM.DesempenhoGeralVM;
 import br.com.digitado.web.rest.vm.DesempenhoVM.MeuDesempenhoVM;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -66,8 +70,24 @@ public class DesempenhoResource {
      */
     @Secured(AuthoritiesConstants.ADMIN)
     @GetMapping("/admin/desempenho")
-    public DesempenhoGeralVM getDesempenhoGeral() {
-        LOG.debug("REST request to get desempenho geral (admin)");
-        return historicoRespostaService.desempenhoGeral();
+    public DesempenhoGeralVM getDesempenhoGeral(@RequestParam(name = "tipoErro", required = false) String tipoErro) {
+        LOG.debug("REST request to get desempenho geral (admin), tipoErro={}", tipoErro);
+        // O filtro vai para SQL como parâmetro, nunca concatenado - mas um tipo fora
+        // da lista é erro de quem chamou, e não um recorte vazio que pareça verdade
+        if (tipoErro != null && !tipoErro.isBlank() && !TIPOS_DE_ERRO.contains(tipoErro.trim())) {
+            throw new BadRequestAlertException("Tipo de erro desconhecido: " + tipoErro, "desempenho", "tipoerroinvalido");
+        }
+        return historicoRespostaService.desempenhoGeral(tipoErro);
     }
+
+    /** Os tipos que o histórico grava (ComparadorPalavras), mais a rodada sem resposta. */
+    private static final Set<String> TIPOS_DE_ERRO = Set.of(
+        "ACENTUACAO",
+        "TROCA_LETRA",
+        "LETRA_FALTANDO",
+        "LETRA_EXTRA",
+        "ERRO_FONETICO",
+        "OUTRO",
+        ComparadorPalavras.NAO_RESPONDEU
+    );
 }

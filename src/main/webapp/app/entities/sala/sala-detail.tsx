@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
 import { getEntity } from './sala.reducer';
+import { textoDescricaoSala } from 'app/shared/model/sala.model';
 
 export const SalaDetail = () => {
   const dispatch = useAppDispatch();
@@ -42,7 +43,7 @@ export const SalaDetail = () => {
               <Translate contentKey="digitadoApp.sala.descricao">Descricao</Translate>
             </span>
           </dt>
-          <dd>{salaEntity.descricao}</dd>
+          <dd>{textoDescricaoSala(salaEntity.descricao)}</dd>
           <dt>
             <span id="ativo">
               <Translate contentKey="digitadoApp.sala.ativo">Ativo</Translate>
@@ -67,14 +68,14 @@ export const SalaDetail = () => {
               : null}
           </dd>
         </dl>
-        <Button tag={Link} to="/sala" replace color="info" data-cy="entityDetailsBackButton">
+        <Button tag={Link} to="/entidades/sala" replace color="info" data-cy="entityDetailsBackButton">
           <FontAwesomeIcon icon="arrow-left" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.back">Back</Translate>
           </span>
         </Button>
         &nbsp;
-        <Button tag={Link} to={`/sala/${salaEntity.codigo}/edit`} replace color="primary">
+        <Button tag={Link} to={`/entidades/sala/${salaEntity.codigo}/edit`} replace color="primary">
           <FontAwesomeIcon icon="pencil-alt" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.edit">Edit</Translate>

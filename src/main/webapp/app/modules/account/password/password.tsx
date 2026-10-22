@@ -10,6 +10,7 @@ import PasswordStrengthBar from 'app/shared/layout/password/password-strength-ba
 import { validarSenhaForte } from 'app/shared/util/senha-utils';
 import { reset, savePassword } from './password.reducer';
 import { useBodyClass } from 'app/shared/util/use-body-class';
+import { CampoSenhaValidado } from 'app/shared/components/campo-senha/campo-senha';
 
 // Tela de troca de senha, mesmo tema escuro e mesma estrutura visual das
 // Configurações da conta (reusa as classes st-* de settings.scss)
@@ -67,7 +68,7 @@ export const PasswordPage = () => {
 
         <div className="st-card">
           <ValidatedForm id="password-form" onSubmit={handleValidSubmit}>
-            <ValidatedField
+            <CampoSenhaValidado
               className="st-field"
               name="currentPassword"
               label={translate('global.form.currentpassword.label')}
@@ -78,7 +79,7 @@ export const PasswordPage = () => {
               }}
               data-cy="currentPassword"
             />
-            <ValidatedField
+            <CampoSenhaValidado
               className="st-field"
               name="newPassword"
               label={translate('global.form.newpassword.label')}
@@ -94,7 +95,7 @@ export const PasswordPage = () => {
               data-cy="newPassword"
             />
             <PasswordStrengthBar password={password} />
-            <ValidatedField
+            <CampoSenhaValidado
               className="st-field"
               name="confirmPassword"
               label={translate('global.form.confirmpassword.label')}

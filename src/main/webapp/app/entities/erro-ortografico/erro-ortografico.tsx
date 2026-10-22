@@ -71,7 +71,12 @@ export const ErroOrtografico = () => {
             <FontAwesomeIcon icon="sync" spin={loading} />{' '}
             <Translate contentKey="digitadoApp.erroOrtografico.home.refreshListLabel">Refresh List</Translate>
           </Button>
-          <Link to="/erro-ortografico/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+          <Link
+            to="/entidades/erro-ortografico/new"
+            className="btn btn-primary jh-create-entity"
+            id="jh-create-entity"
+            data-cy="entityCreateButton"
+          >
             <FontAwesomeIcon icon="plus" />
             &nbsp;
             <Translate contentKey="digitadoApp.erroOrtografico.home.createLabel">Create new Erro Ortografico</Translate>
@@ -105,7 +110,7 @@ export const ErroOrtografico = () => {
               {erroOrtograficoList.map((erroOrtografico, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
-                    <Button tag={Link} to={`/erro-ortografico/${erroOrtografico.id}`} color="link" size="sm">
+                    <Button tag={Link} to={`/entidades/erro-ortografico/${erroOrtografico.id}`} color="link" size="sm">
                       {erroOrtografico.id}
                     </Button>
                   </td>
@@ -115,7 +120,7 @@ export const ErroOrtografico = () => {
                   <td>{erroOrtografico.descricao}</td>
                   <td>
                     {erroOrtografico.resposta ? (
-                      <Link to={`/resposta/${erroOrtografico.resposta.id}`}>{erroOrtografico.resposta.id}</Link>
+                      <Link to={`/entidades/resposta/${erroOrtografico.resposta.id}`}>{erroOrtografico.resposta.id}</Link>
                     ) : (
                       ''
                     )}
@@ -124,7 +129,7 @@ export const ErroOrtografico = () => {
                     <div className="btn-group flex-btn-group-container">
                       <Button
                         tag={Link}
-                        to={`/erro-ortografico/${erroOrtografico.id}`}
+                        to={`/entidades/erro-ortografico/${erroOrtografico.id}`}
                         color="info"
                         size="sm"
                         data-cy="entityDetailsButton"
@@ -136,7 +141,7 @@ export const ErroOrtografico = () => {
                       </Button>
                       <Button
                         tag={Link}
-                        to={`/erro-ortografico/${erroOrtografico.id}/edit`}
+                        to={`/entidades/erro-ortografico/${erroOrtografico.id}/edit`}
                         color="primary"
                         size="sm"
                         data-cy="entityEditButton"
@@ -147,7 +152,7 @@ export const ErroOrtografico = () => {
                         </span>
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = `/erro-ortografico/${erroOrtografico.id}/delete`)}
+                        onClick={() => (window.location.href = `/entidades/erro-ortografico/${erroOrtografico.id}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"

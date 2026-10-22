@@ -23,7 +23,7 @@ export const ErroOrtograficoDeleteDialog = () => {
   const updateSuccess = useAppSelector(state => state.erroOrtografico.updateSuccess);
 
   const handleClose = () => {
-    navigate('/erro-ortografico');
+    navigate('/entidades/erro-ortografico');
   };
 
   useEffect(() => {

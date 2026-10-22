@@ -23,7 +23,7 @@ export const AtividadeDeleteDialog = () => {
   const updateSuccess = useAppSelector(state => state.atividade.updateSuccess);
 
   const handleClose = () => {
-    navigate('/atividade');
+    navigate('/entidades/atividade');
   };
 
   useEffect(() => {

@@ -27,7 +27,7 @@ export const UsuarioConquistaUpdate = () => {
   const updateSuccess = useAppSelector(state => state.usuarioConquista.updateSuccess);
 
   const handleClose = () => {
-    navigate('/usuario-conquista');
+    navigate('/entidades/usuario-conquista');
   };
 
   useEffect(() => {
@@ -162,7 +162,7 @@ export const UsuarioConquistaUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
-              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/usuario-conquista" replace color="info">
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/entidades/usuario-conquista" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">

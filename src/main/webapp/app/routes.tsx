@@ -13,6 +13,7 @@ import Logout from 'app/modules/login/logout';
 import Home from 'app/modules/home/home';
 import Lobby from 'app/modules/lobby/lobby';
 import Duelo from 'app/modules/duelo/duelo';
+import Individual from 'app/modules/individual/individual';
 import CriarSala from 'app/modules/sala/criar-sala';
 import SalaJogo from 'app/modules/sala/sala-jogo';
 import MinhasSalas from 'app/modules/sala/minhas-salas';
@@ -55,6 +56,15 @@ const AppRoutes = () => {
           element={
             <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <Duelo />
+            </PrivateRoute>
+          }
+        />
+        {/* Modo individual: o jogador sozinho, até onde conseguir chegar */}
+        <Route
+          path="individual"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+              <Individual />
             </PrivateRoute>
           }
         />
@@ -155,9 +165,13 @@ const AppRoutes = () => {
           }
         />
         {/* Telas CRUD de entidades (JHipster), restritas ao admin; usuários comuns
-            usam apenas as telas do jogo (lobby, salas, ranking, conquistas) */}
+            usam apenas as telas do jogo (lobby, salas, ranking, conquistas).
+
+            Sob /entidades/ de propósito: na raiz, /ranking abria o ranking público
+            no lugar da tabela de rankings e /sala/{codigo} abria a PARTIDA no lugar
+            do detalhe da sala - essas tabelas o admin simplesmente não acessava. */}
         <Route
-          path="*"
+          path="entidades/*"
           element={
             <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
               <EntitiesRoutes />

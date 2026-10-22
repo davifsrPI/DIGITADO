@@ -31,6 +31,8 @@ export interface ResumoAluno {
   mediaAcertosTurma: number;
   totalParticipantes: number;
   palavras: PalavraResumo[];
+  // XP que a partida rendeu (só logo depois dela; nulo nas partidas antigas)
+  xpGanho?: number | null;
 }
 
 const COR_DIFICULDADE: Record<string, string> = CORES_DIFICULDADE;

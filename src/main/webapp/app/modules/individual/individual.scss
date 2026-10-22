@@ -1,0 +1,287 @@
+// Modo individual - por cima do visual da partida (sala-jogo-styles.scss)
+
+.ind-container {
+  max-width: 820px;
+}
+
+.ind-intro,
+.ind-fim {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  color: #e2e8f0;
+}
+
+.ind-titulo {
+  font-size: 30px;
+  font-weight: 800;
+  color: #fff;
+  margin: 4px 0 0;
+}
+
+.ind-sub {
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 560px;
+  margin: 0;
+}
+
+.ind-regras {
+  list-style: none;
+  padding: 16px 20px;
+  margin: 6px 0;
+  max-width: 600px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+
+  strong {
+    color: #fff;
+  }
+}
+
+.ind-recorde {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(250, 204, 21, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.4);
+  color: #fde68a;
+  font-weight: 600;
+}
+
+.ind-recorde--novo {
+  font-size: 18px;
+  animation: ind-pulso 1.2s ease-in-out 2;
+}
+
+@keyframes ind-pulso {
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.ind-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+
+  .sj-iniciar-btn {
+    width: auto;
+    min-width: 220px;
+  }
+}
+
+.ind-btn-secundario {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.ind-erro {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fecaca;
+  font-size: 14px;
+}
+
+.ind-ultimas {
+  width: 100%;
+  max-width: 600px;
+  text-align: left;
+
+  h3 {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 10px 0 8px;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: 110px 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+  }
+}
+
+.ind-ultimas-xp {
+  color: #fde68a;
+  font-weight: 600;
+}
+
+.ind-ultimas-fim {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+}
+
+// Barra do topo durante a partida: vidas, placar e o botão de encerrar
+.ind-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.ind-vidas {
+  display: flex;
+  gap: 4px;
+  font-size: 22px;
+}
+
+.ind-vida--perdida {
+  opacity: 0.45;
+}
+
+.ind-placar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 14px;
+
+  strong {
+    color: #fff;
+  }
+}
+
+.ind-xp {
+  color: #fde68a;
+  font-weight: 700;
+}
+
+.ind-encerrar {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.ind-correcao {
+  align-items: center;
+  gap: 18px;
+}
+
+// O tipo do erro, explicado (o mesmo texto do painel de desempenho)
+.ind-tipo-erro {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 3px solid;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  text-align: left;
+}
+
+.ind-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 700px;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  strong {
+    font-size: 24px;
+    color: #fff;
+  }
+
+  span {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+  }
+}
+
+.ind-ok {
+  color: #4ade80 !important;
+}
+
+.ind-err {
+  color: #f87171 !important;
+}
+
+.ind-lista {
+  width: 100%;
+  max-width: 700px;
+  text-align: left;
+  padding-left: 28px;
+  margin: 4px 0;
+  max-height: 320px;
+  overflow-y: auto;
+
+  li {
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 14px;
+  }
+}
+
+.ind-lista-palavra {
+  font-weight: 700;
+  color: #fff;
+  margin-right: 10px;
+}
+
+.ind-lista-ok .ind-lista-detalhe {
+  color: #4ade80;
+}
+
+.ind-lista-err .ind-lista-detalhe {
+  color: #fca5a5;
+}
+
+@media (max-width: 600px) {
+  .ind-ultimas li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .ind-titulo {
+    font-size: 24px;
+  }
+}

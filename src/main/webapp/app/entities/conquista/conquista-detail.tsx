@@ -50,14 +50,14 @@ export const ConquistaDetail = () => {
           </dt>
           <dd>{conquistaEntity.xpRecompensa}</dd>
         </dl>
-        <Button tag={Link} to="/conquista" replace color="info" data-cy="entityDetailsBackButton">
+        <Button tag={Link} to="/entidades/conquista" replace color="info" data-cy="entityDetailsBackButton">
           <FontAwesomeIcon icon="arrow-left" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.back">Back</Translate>
           </span>
         </Button>
         &nbsp;
-        <Button tag={Link} to={`/conquista/${conquistaEntity.id}/edit`} replace color="primary">
+        <Button tag={Link} to={`/entidades/conquista/${conquistaEntity.id}/edit`} replace color="primary">
           <FontAwesomeIcon icon="pencil-alt" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.edit">Edit</Translate>
