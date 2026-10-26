@@ -661,10 +661,12 @@ public class JogoSalaService {
             );
         }
 
-        // Classifica o tipo de erro para dar feedback mais detalhado ao aluno.
-        // Recebe o texto canônico, ainda COM acento e cedilha: a classificação
-        // precisa deles (ver classificarErro) e tira o que não interessa por dentro.
-        String tipoErro = correta ? null : ComparadorPalavras.classificarErro(dLower, cLower);
+        // Classifica o erro para dar feedback mais detalhado ao aluno - e, com subtipo
+        // e trecho trocado, para o painel do admin. Recebe o texto canônico, ainda COM
+        // acento e cedilha: a classificação precisa deles (ver analisarErro) e tira o
+        // que não interessa por dentro.
+        ComparadorPalavras.AnaliseErro erro = correta ? null : ComparadorPalavras.analisarErro(dLower, cLower);
+        String tipoErro = erro == null ? null : erro.tipo();
         int similaridade = ComparadorPalavras.similaridade(dLower, cLower);
 
         // só conta a estatística da palavra em duelo 1v1; sala de professor fica de
@@ -686,6 +688,8 @@ public class JogoSalaService {
             jogo.getPalavraAtual(),
             correta,
             tipoErro,
+            erro == null ? null : erro.subtipo(),
+            erro == null ? null : erro.detalhe(),
             (int) decorrido,
             similaridade,
             jogo.isModo1v1() ? HistoricoResposta.Origem.DUELO : HistoricoResposta.Origem.PARTIDA

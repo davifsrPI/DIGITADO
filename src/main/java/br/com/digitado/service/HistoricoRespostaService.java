@@ -4,6 +4,7 @@ import br.com.digitado.domain.HistoricoResposta;
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.repository.HistoricoRespostaRepository;
 import br.com.digitado.web.rest.vm.DesempenhoVM.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -57,9 +58,13 @@ public class HistoricoRespostaService {
     /** Quantas respostas antes de o acelerador valer alguma coisa. */
     private static final int MINIMO_PARA_NIVEL = 10;
 
-    /** Quantas palavras cada ranking mostra: 10 no painel pessoal, 5 no do admin. */
+    /** Quantas palavras cada ranking mostra: 10 no painel pessoal e no do admin. */
     private static final int TOP_PALAVRAS = 10;
-    private static final int TOP_PALAVRAS_ADMIN = 5;
+    private static final int TOP_PALAVRAS_ADMIN = 10;
+
+    /** Quantos trechos trocados ("é→e") o painel do admin lista: no geral e dentro de um tipo. */
+    private static final int TOP_CONFUSOES = 20;
+    private static final int TOP_CONFUSOES_TIPO = 12;
 
     private static final int MESES_EVOLUCAO_ADMIN = 12;
 
@@ -121,6 +126,26 @@ public class HistoricoRespostaService {
         Integer similaridade,
         HistoricoResposta.Origem origem
     ) {
+        registrar(login, palavra, correta, tipoErro, null, null, tempoMs, similaridade, origem);
+    }
+
+    /**
+     * Gravação completa, com o erro destrinchado: subtipo ("ACENTO_FALTANDO") e o
+     * trecho trocado ("é→e"), que alimentam o painel do admin. Ver
+     * ComparadorPalavras.analisarErro.
+     */
+    @Transactional
+    public void registrar(
+        String login,
+        Palavra palavra,
+        boolean correta,
+        String tipoErro,
+        String subtipoErro,
+        String detalheErro,
+        Integer tempoMs,
+        Integer similaridade,
+        HistoricoResposta.Origem origem
+    ) {
         if (login == null || login.isBlank() || palavra == null || palavra.getId() == null) {
             return;
         }
@@ -133,6 +158,8 @@ public class HistoricoRespostaService {
             registro.setDificuldade(palavra.getDificuldade() != null ? palavra.getDificuldade().name() : null);
             registro.setOrigem(origem);
             registro.setTipoErro(correta ? null : tipoErro);
+            registro.setSubtipoErro(correta ? null : subtipoErro);
+            registro.setDetalheErro(correta ? null : detalheErro);
             registro.setTempoMs(tempoMs);
             registro.setSimilaridade(similaridade);
             registro.setDataResposta(Instant.now());
@@ -391,6 +418,13 @@ public class HistoricoRespostaService {
 
         FiltroTipoErroVM filtro = tipoErro == null || tipoErro.isBlank() ? null : montarFiltro(tipoErro.trim(), total, totalErros, desde);
 
+        List<SubtipoErroVM> subtiposErro = subtipos(null);
+        List<ConfusaoVM> confusoes = confusoes(null, TOP_CONFUSOES, totalErros);
+        Map<Long, ErroComumVM> erroMaisComum = erroMaisComumPorPalavra(
+            palavrasMaisErradas.stream().map(PalavraDesempenhoVM::palavraId).toList(),
+            null
+        );
+
         return new DesempenhoGeralVM(
             total,
             acertos,
@@ -407,8 +441,77 @@ public class HistoricoRespostaService {
             palavrasMaisAcertadas,
             palavrasMaisErradas,
             errosPorTipo,
+            subtiposErro,
+            confusoes,
+            erroMaisComum,
             filtro
         );
+    }
+
+    // ===== Erros destrinchados =====
+
+    /** Os subtipos de todos os tipos (tipo nulo) ou de um só, com a fatia de cada um dentro do seu tipo. */
+    private List<SubtipoErroVM> subtipos(String tipo) {
+        List<Object[]> linhas = historicoRepository.errosPorSubtipo(tipo);
+        Map<String, Long> totalDoTipo = new HashMap<>();
+        linhas.forEach(l -> totalDoTipo.merge(texto(l, 0), numero(l, 2), Long::sum));
+        return linhas
+            .stream()
+            .map(l -> new SubtipoErroVM(texto(l, 0), texto(l, 1), numero(l, 2), percentual(numero(l, 2), totalDoTipo.get(texto(l, 0)))))
+            .toList();
+    }
+
+    /** Os trechos mais trocados, com a fatia de cada um no total de erros (de todos ou do tipo). */
+    private List<ConfusaoVM> confusoes(String tipo, int limite, long totalErros) {
+        return historicoRepository
+            .confusoesMaisComuns(tipo, limite)
+            .stream()
+            .map(l -> {
+                String exemplos = texto(l, 6);
+                return new ConfusaoVM(
+                    texto(l, 0),
+                    texto(l, 1),
+                    texto(l, 2),
+                    numero(l, 3),
+                    numero(l, 4),
+                    numero(l, 5),
+                    percentual(numero(l, 3), totalErros),
+                    exemplos == null || exemplos.isEmpty() ? List.of() : List.of(exemplos.split("\\|"))
+                );
+            })
+            .toList();
+    }
+
+    /**
+     * O erro mais comum em cada palavra pedida. A consulta já vem ordenada do mais
+     * comum para o menos comum dentro de cada palavra: a primeira linha de cada uma
+     * é a que vale, e a soma das linhas dá o total de erros dela.
+     */
+    private Map<Long, ErroComumVM> erroMaisComumPorPalavra(List<Long> palavras, String tipo) {
+        Map<Long, ErroComumVM> porPalavra = new LinkedHashMap<>();
+        if (palavras.isEmpty()) {
+            return porPalavra;
+        }
+        List<Object[]> linhas = historicoRepository.errosPorPalavra(palavras, tipo);
+        Map<Long, Long> errosDaPalavra = new HashMap<>();
+        linhas.forEach(l -> errosDaPalavra.merge(id(l, 0), numero(l, 4), Long::sum));
+        for (Object[] l : linhas) {
+            Long palavraId = id(l, 0);
+            if (palavraId != null && !porPalavra.containsKey(palavraId)) {
+                long ocorrencias = numero(l, 4);
+                porPalavra.put(
+                    palavraId,
+                    new ErroComumVM(
+                        texto(l, 1),
+                        texto(l, 2),
+                        texto(l, 3),
+                        ocorrencias,
+                        percentual(ocorrencias, errosDaPalavra.get(palavraId))
+                    )
+                );
+            }
+        }
+        return porPalavra;
     }
 
     /**
@@ -499,7 +602,10 @@ public class HistoricoRespostaService {
             veredito,
             resumoTexto,
             evolucao,
-            palavras
+            palavras,
+            subtipos(tipo),
+            confusoes(tipo, TOP_CONFUSOES_TIPO, ocorrencias),
+            erroMaisComumPorPalavra(palavras.stream().map(PalavraTipoErroVM::palavraId).toList(), tipo)
         );
     }
 
@@ -839,6 +945,10 @@ public class HistoricoRespostaService {
     private static String texto(Object[] linha, int indice) {
         if (linha == null || indice >= linha.length || linha[indice] == null) {
             return null;
+        }
+        // GROUP_CONCAT pode chegar como bytes, conforme o tamanho e a collation
+        if (linha[indice] instanceof byte[] bytes) {
+            return new String(bytes, StandardCharsets.UTF_8);
         }
         return String.valueOf(linha[indice]);
     }

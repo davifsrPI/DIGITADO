@@ -1,5 +1,16 @@
-// Classificação dos tipos de erro que o aluno pode cometer ao digitar uma palavra
-export type TipoErro = 'ACENTUACAO' | 'TROCA_LETRA' | 'LETRA_FALTANDO' | 'LETRA_EXTRA' | 'ERRO_FONETICO' | 'OUTRO';
+// Classificação dos tipos de erro que o aluno pode cometer ao digitar uma palavra.
+// Os mesmos tipos do servidor (ComparadorPalavras), na ordem em que são testados.
+export type TipoErro =
+  | 'ACENTUACAO'
+  | 'ESPACO_HIFEN'
+  | 'ERRO_FONETICO'
+  | 'LETRAS_INVERTIDAS'
+  | 'TROCA_LETRA'
+  | 'LETRA_FALTANDO'
+  | 'LETRA_EXTRA'
+  | 'VARIOS_ERROS'
+  | 'OUTRA_PALAVRA'
+  | 'NAO_RESPONDEU';
 
 // Resultado da validação local (feita no frontend antes de receber o feedback do servidor)
 export interface ResultadoValidacao {
@@ -28,9 +39,35 @@ function levenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 
+// Levenshtein que conta a inversão de duas letras vizinhas como UMA edição (Damerau
+// restrita): "pdera" por "pedra" é um deslize só. Só a classificação usa; a
+// similaridade continua com o Levenshtein comum, como no servidor.
+function distanciaComInversao(a: string, b: string): number {
+  const m = a.length,
+    n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const custo = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j - 1] + custo, dp[i - 1][j] + 1, dp[i][j - 1] + 1);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + 1);
+      }
+    }
+  }
+  return dp[m][n];
+}
+
 // Tabela de equivalências fonéticas do português: mapeia grafias diferentes que soam igual.
-// Ex: "ç" e "ss" soam como "s"; "ch" e "x" soam igual em muitas regiões.
+// Ex: "ç" e "ss" soam como "s"; "ch" e "x" soam igual em muitas regiões. A MESMA tabela
+// do servidor (ComparadorPalavras.REGRAS_FONETICAS), na mesma ordem: "sc" e "xc" viram
+// "s" antes do "c" solto, e "ch"/"lh"/"nh" saem antes do "h" mudo do começo.
 const FONETICO: [RegExp, string][] = [
+  [/sc(?=[eiéêí])/g, 's'], // nascer / naser
+  [/sç/g, 's'], // desça / dessa
+  [/xc(?=[eiéêí])/g, 's'], // exceção / esseção
+  [/x(?=[ptc])/g, 's'], // texto / testo
   [/ç/g, 's'],
   [/ss/g, 's'],
   [/rr/g, 'r'],
@@ -38,11 +75,31 @@ const FONETICO: [RegExp, string][] = [
   [/ch/g, 'x'],
   [/lh/g, 'l'],
   [/nh/g, 'n'],
+  [/(^|\s)h/g, '$1'], // hora / ora
+  [/g(?=[eiéêí])/g, 'j'], // gente / jente
+  [/n(?=[pb])/g, 'm'], // campo / canpo
+  [/m(?=[^pbaeiouáéíóúâêôãõàü]|$)/g, 'n'], // homem / homen
+  [/l(?=[^aeiouáéíóúâêôãõàü]|$)/g, 'u'], // Brasil / Brasiu
   [/[qk]/g, 'c'],
   [/y/g, 'i'],
   [/w/g, 'v'],
   [/[sz]/g, 'z'],
 ];
+
+const semSeparador = (s: string): string => s.replace(/[\s-]/g, '');
+
+// Abaixo disso a resposta é outra palavra, e não a certa com vários erros (mesmo limite do servidor)
+const SIMILARIDADE_MINIMA_VARIOS_ERROS = 50;
+
+// Exatamente uma letra fora do lugar (texto sem acento): faltou, sobrou, inverteu ou trocou
+function tipoDeUmaLetra(dSem: string, cSem: string): TipoErro {
+  if (dSem.length < cSem.length) return 'LETRA_FALTANDO';
+  if (dSem.length > cSem.length) return 'LETRA_EXTRA';
+  let i = 0;
+  while (i < cSem.length && dSem[i] === cSem[i]) i++;
+  const invertidas = i + 1 < cSem.length && dSem[i] === cSem[i + 1] && dSem[i + 1] === cSem[i] && dSem.slice(i + 2) === cSem.slice(i + 2);
+  return invertidas ? 'LETRAS_INVERTIDAS' : 'TROCA_LETRA';
+}
 
 // Reduz a palavra ao "som" dela: duas grafias que soam igual caem no mesmo texto
 // ("caça" e "cassa" viram "caza"; "chave" e "xave" viram "xave").
@@ -61,9 +118,10 @@ function som(s: string): string {
 // Valida a resposta do aluno comparando com a palavra correta em várias camadas:
 // 1. Exata → correta
 // 2. Igual sem acentos → erro de acentuação
-// 3. Igual foneticamente → erro fonético (ex: "chave" vs "xave")
-// 4. Levenshtein = 1 → identifica letra trocada, extra ou faltando
-// 5. Qualquer outro → erro genérico com percentual de similaridade
+// 3. Igual sem espaços e hífens → espaço ou hífen
+// 4. Igual foneticamente → erro fonético (ex: "chave" vs "xave")
+// 5. Uma edição (contando inversão de vizinhas) → letra invertida, trocada, extra ou faltando
+// 6. Mais que isso → vários erros (metade ou mais certa) ou outra palavra
 // Forma canônica da comparação, a MESMA regra do servidor (JogoSalaService.canonico):
 // NFC junta "a + til" no mesmo "ã" que o teclado produz, e o espaço fixo (NBSP) de uma
 // palavra colada de documento vira espaço normal antes de aparar as pontas. Sem isso a
@@ -81,27 +139,27 @@ export function validarResposta(digitado: string, correto: string): ResultadoVal
   const c = canonico(correto);
 
   if (d === c) return { correta: true, similaridade: 1 };
+  if (d === '') return { correta: false, tipoErro: 'NAO_RESPONDEU', similaridade: 0 };
 
   const dSem = removerAcentos(d);
   const cSem = removerAcentos(c);
 
   if (dSem === cSem) return { correta: false, tipoErro: 'ACENTUACAO', similaridade: 0.95 };
 
-  // Som certo com grafia errada: comparado sobre o texto AINDA acentuado, por causa
-  // da cedilha (ver som)
-  if (som(d) === som(c)) return { correta: false, tipoErro: 'ERRO_FONETICO', similaridade: 0.85 };
-
   const dist = levenshtein(dSem, cSem);
   const maxLen = Math.max(d.length, c.length);
   const similaridade = parseFloat((1 - dist / maxLen).toFixed(2));
 
-  if (dist === 1) {
-    if (dSem.length < cSem.length) return { correta: false, tipoErro: 'LETRA_FALTANDO', similaridade };
-    if (dSem.length > cSem.length) return { correta: false, tipoErro: 'LETRA_EXTRA', similaridade };
-    return { correta: false, tipoErro: 'TROCA_LETRA', similaridade };
-  }
+  if (semSeparador(dSem) === semSeparador(cSem)) return { correta: false, tipoErro: 'ESPACO_HIFEN', similaridade };
 
-  return { correta: false, tipoErro: 'OUTRO', similaridade };
+  // Som certo com grafia errada: comparado sobre o texto AINDA acentuado, por causa
+  // da cedilha (ver som)
+  if (som(d) === som(c)) return { correta: false, tipoErro: 'ERRO_FONETICO', similaridade: 0.85 };
+
+  if (distanciaComInversao(dSem, cSem) === 1) return { correta: false, tipoErro: tipoDeUmaLetra(dSem, cSem), similaridade };
+
+  const tipoErro = Math.round((1 - dist / maxLen) * 100) >= SIMILARIDADE_MINIMA_VARIOS_ERROS ? 'VARIOS_ERROS' : 'OUTRA_PALAVRA';
+  return { correta: false, tipoErro, similaridade };
 }
 
 // Uma letra na comparação visual: o caractere e se ele bate com a palavra correta
@@ -163,9 +221,13 @@ export function compararLetras(digitado: string, correto: string): { digitado: L
 // Mensagens amigáveis exibidas ao aluno para cada tipo de erro detectado
 export const MENSAGEM_ERRO: Record<TipoErro, string> = {
   ACENTUACAO: 'Atenção com os acentos!',
+  ESPACO_HIFEN: 'Confira o espaço ou o hífen',
+  ERRO_FONETICO: 'Erro fonético (som certo, escrita diferente)',
+  LETRAS_INVERTIDAS: 'Duas letras trocadas de lugar',
   TROCA_LETRA: 'Uma letra trocada',
   LETRA_FALTANDO: 'Faltou uma letra',
   LETRA_EXTRA: 'Uma letra a mais',
-  ERRO_FONETICO: 'Erro fonético (som certo, escrita diferente)',
-  OUTRO: 'Resposta incorreta',
+  VARIOS_ERROS: 'Quase! Mais de uma letra errada',
+  OUTRA_PALAVRA: 'Resposta incorreta',
+  NAO_RESPONDEU: 'Sem resposta',
 };

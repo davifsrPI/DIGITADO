@@ -31,6 +31,8 @@ management:
       exposure:
         include:
           - configprops
+          - desempenho
+          - requisicoes
           - env
           - health
           - info

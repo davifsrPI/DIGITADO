@@ -2,6 +2,7 @@ package br.com.digitado.web.rest.vm;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ViewModels dos painéis de desempenho - o do titular ("Meu Desempenho") e o
@@ -36,6 +37,31 @@ public final class DesempenhoVM {
 
     /** Contagem de erros por tipo (acentuação, troca de letra, ...). */
     public record TipoErroVM(String tipo, long total, int percentual) {}
+
+    /**
+     * Um jeito específico de errar dentro de um tipo ("Faltou o acento" dentro de
+     * "Acentuação"). subtipo nulo = respostas gravadas antes da classificação
+     * detalhada, que só guardaram o tipo.
+     */
+    public record SubtipoErroVM(String tipo, String subtipo, long total, int percentualDoTipo) {}
+
+    /**
+     * Um trecho que a turma troca, no formato "certo→digitado" ("é→e", "ç→ss"):
+     * quantas vezes, quantos alunos, em quantas palavras e algumas delas de exemplo.
+     */
+    public record ConfusaoVM(
+        String tipo,
+        String subtipo,
+        String detalhe,
+        long ocorrencias,
+        long alunos,
+        long palavras,
+        int percentualDosErros,
+        List<String> exemplos
+    ) {}
+
+    /** O erro mais comum numa palavra, com a fatia que ele tem dos erros dela. */
+    public record ErroComumVM(String tipo, String subtipo, String detalhe, long ocorrencias, int percentualDosErros) {}
 
     /**
      * Painel completo do titular - servido por GET /api/meu-desempenho, montado a
@@ -138,6 +164,12 @@ public final class DesempenhoVM {
         List<PalavraDesempenhoVM> palavrasMaisAcertadas,
         List<PalavraDesempenhoVM> palavrasMaisErradas,
         List<TipoErroVM> errosPorTipo,
+        /** Cada tipo aberto nos seus subtipos. */
+        List<SubtipoErroVM> subtiposErro,
+        /** Os trechos que a turma mais troca, de todos os tipos. */
+        List<ConfusaoVM> confusoes,
+        /** palavraId -> o erro mais comum, para as palavras de palavrasMaisErradas. */
+        Map<Long, ErroComumVM> erroMaisComumPorPalavra,
         FiltroTipoErroVM filtro
     ) {}
 
@@ -167,6 +199,12 @@ public final class DesempenhoVM {
         String veredito,
         String resumo,
         List<PontoTipoErroVM> evolucao,
-        List<PalavraTipoErroVM> palavras
+        List<PalavraTipoErroVM> palavras,
+        /** O tipo aberto nos seus subtipos. */
+        List<SubtipoErroVM> subtipos,
+        /** Os trechos mais trocados dentro deste tipo. */
+        List<ConfusaoVM> confusoes,
+        /** palavraId -> o jeito mais comum deste erro, para as palavras de "palavras". */
+        Map<Long, ErroComumVM> erroMaisComumPorPalavra
     ) {}
 }

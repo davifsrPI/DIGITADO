@@ -98,18 +98,30 @@ public class PalavraDoDiaService {
     }
 
     // Valida a resposta, grava a tentativa e atualiza as estatísticas - tudo no backend.
-    // Mesma regra de comparação das partidas: ignora maiúsculas, acentos contam.
+    // Mesma régua das partidas (ComparadorPalavras): ignora maiúsculas, acentos contam,
+    // e o erro é classificado do mesmo jeito - antes a palavra do dia gravava todo erro
+    // sem tipo, e no painel ele virava "Outro".
     @Transactional
     public boolean tentar(Palavra palavra, String login, String resposta) {
-        boolean acertou = resposta != null && resposta.trim().toLowerCase().equals(palavra.getTexto().trim().toLowerCase());
+        ComparadorPalavras.Conferencia conferencia = ComparadorPalavras.conferir(resposta, palavra.getTexto());
+        boolean acertou = conferencia.correta();
 
         tentativaRepository.save(new PalavraDoDiaTentativa().data(hoje()).login(login).acertou(acertou).palavraId(palavra.getId()));
         estatisticaService.registrarTentativa(palavra.getId(), acertou);
         // Entra também no histórico pessoal do jogador (painel "Meu Desempenho").
         // Visitante anônimo tem login nulo e o registro é ignorado lá dentro.
-        // Sem tipo de erro nem tempo: a palavra do dia não classifica o erro e
-        // não cronometra a digitação.
-        historicoRespostaService.registrar(login, palavra, acertou, null, null, HistoricoResposta.Origem.PALAVRA_DO_DIA);
+        // Sem tempo: a palavra do dia não cronometra a digitação.
+        historicoRespostaService.registrar(
+            login,
+            palavra,
+            acertou,
+            conferencia.tipoErro(),
+            conferencia.subtipoErro(),
+            conferencia.detalheErro(),
+            null,
+            conferencia.similaridade(),
+            HistoricoResposta.Origem.PALAVRA_DO_DIA
+        );
         // Acerto de usuário logado vale XP no Ranking Mundial (anônimo não tem conta para creditar)
         if (acertou && login != null) {
             xpService.premiarAcertoPalavraDoDia(login);

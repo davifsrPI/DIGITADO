@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Classificação detalhada do erro no histórico de respostas: além do tipo
+        (tipo_erro), o jeito específico (subtipo_erro, ex.: ACENTO_FALTANDO) e o trecho
+        trocado (detalhe_erro, "certo→digitado", ex.: "é→e").
+
+        Colunas opcionais: as respostas gravadas antes desta versão não guardam o que
+        foi digitado, então ficam só com o tipo. O índice atende o painel do admin,
+        que agrupa os erros por tipo, subtipo e trecho.
+    -->
+    <changeSet id="20261023120000-1" author="digitado">
+        <addColumn tableName="historico_resposta">
+            <column name="subtipo_erro" type="varchar(40)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="detalhe_erro" type="varchar(60)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <createIndex tableName="historico_resposta" indexName="ix_historico_resposta_erro_detalhe">
+            <column name="tipo_erro"/>
+            <column name="subtipo_erro"/>
+            <column name="detalhe_erro"/>
+        </createIndex>
+    </changeSet>
+
+    <!--
+        O trecho trocado precisa de comparação BINÁRIA: a collation padrão do MySQL 8
+        ignora acento e maiúscula, e o GROUP BY do painel juntaria "é→e" com "e→é" e
+        "ç→ss" com "c→ss" - justamente as confusões que a coluna existe para separar.
+    -->
+    <changeSet id="20261023120000-2" author="digitado" dbms="mysql,mariadb">
+        <sql>ALTER TABLE historico_resposta MODIFY detalhe_erro VARCHAR(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL</sql>
+    </changeSet>
+</databaseChangeLog>

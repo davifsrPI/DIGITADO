@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Button, Col, Row } from 'reactstrap';
+import React, { useEffect, useState } from 'react';
+import { Button, Col, Nav, NavItem, NavLink, Row } from 'reactstrap';
 import {
   CacheMetrics,
   DatasourceMetrics,
@@ -16,12 +16,19 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { APP_TIMESTAMP_FORMAT, APP_TWO_DIGITS_AFTER_POINT_NUMBER_FORMAT, APP_WHOLE_NUMBER_FORMAT } from 'app/config/constants';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { getSystemMetrics, getSystemThreadDump } from '../administration.reducer';
+import PainelDesempenho from './desempenho/painel-desempenho';
+
+// Duas abas, como o Gerenciador de Tarefas: "Desempenho" com os gráficos ao vivo
+// (CPU, memória, JVM, coletor de lixo, threads, HTTP) e "Detalhes" com as tabelas
+// completas do JHipster (requisições por rota, cache, datasource, thread dump).
+type Aba = 'desempenho' | 'detalhes';
 
 export const MetricsPage = () => {
   const dispatch = useAppDispatch();
   const metrics = useAppSelector(state => state.administration.metrics);
   const isFetching = useAppSelector(state => state.administration.loading);
   const threadDump = useAppSelector(state => state.administration.threadDump);
+  const [aba, setAba] = useState<Aba>('desempenho');
 
   useEffect(() => {
     dispatch(getSystemMetrics());
@@ -40,79 +47,101 @@ export const MetricsPage = () => {
       <h2 id="metrics-page-heading" data-cy="metricsPageHeading">
         <Translate contentKey="metrics.title">Application Metrics</Translate>
       </h2>
-      <p>
-        <Button onClick={getMetrics} color={isFetching ? 'btn btn-danger' : 'btn btn-primary'} disabled={isFetching}>
-          <FontAwesomeIcon icon="sync" />
-          &nbsp;
-          <Translate component="span" contentKey="health.refresh.button">
-            Refresh
-          </Translate>
-        </Button>
-      </p>
-      <hr />
+      <Nav tabs className="mb-3">
+        {(
+          [
+            ['desempenho', 'Desempenho'],
+            ['detalhes', 'Detalhes'],
+          ] as [Aba, string][]
+        ).map(([id, titulo]) => (
+          <NavItem key={id}>
+            <NavLink tag="button" type="button" active={aba === id} onClick={() => setAba(id)}>
+              {titulo}
+            </NavLink>
+          </NavItem>
+        ))}
+      </Nav>
 
-      <Row>
-        <Col sm="12">
-          <h3>
-            <Translate contentKey="metrics.jvm.title">JVM Metrics</Translate>
-          </h3>
+      {aba === 'desempenho' ? <PainelDesempenho /> : null}
+
+      <div hidden={aba !== 'detalhes'}>
+        <p>
+          <Button onClick={getMetrics} color={isFetching ? 'btn btn-danger' : 'btn btn-primary'} disabled={isFetching}>
+            <FontAwesomeIcon icon="sync" />
+            &nbsp;
+            <Translate component="span" contentKey="health.refresh.button">
+              Refresh
+            </Translate>
+          </Button>
+        </p>
+        <hr />
+
+        <Row>
+          <Col sm="12">
+            <h3>
+              <Translate contentKey="metrics.jvm.title">JVM Metrics</Translate>
+            </h3>
+            <Row>
+              <Col md="4">{metrics?.jvm ? <JvmMemory jvmMetrics={metrics.jvm} wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT} /> : ''}</Col>
+              <Col md="4">{threadDump ? <JvmThreads jvmThreads={threadDump} wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT} /> : ''}</Col>
+              <Col md="4">
+                {metrics?.processMetrics ? (
+                  <SystemMetrics
+                    systemMetrics={metrics.processMetrics}
+                    wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT}
+                    timestampFormat={APP_TIMESTAMP_FORMAT}
+                  />
+                ) : (
+                  ''
+                )}
+              </Col>
+            </Row>
+          </Col>
+        </Row>
+
+        {metrics?.garbageCollector ? (
+          <GarbageCollectorMetrics garbageCollectorMetrics={metrics.garbageCollector} wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT} />
+        ) : (
+          ''
+        )}
+        {metrics && metrics['http.server.requests'] ? (
+          <HttpRequestMetrics
+            requestMetrics={metrics['http.server.requests']}
+            twoDigitAfterPointFormat={APP_TWO_DIGITS_AFTER_POINT_NUMBER_FORMAT}
+            wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT}
+          />
+        ) : (
+          ''
+        )}
+        {metrics?.services ? (
+          <EndpointsRequestsMetrics endpointsRequestsMetrics={metrics.services} wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT} />
+        ) : (
+          ''
+        )}
+
+        {metrics?.cache ? (
           <Row>
-            <Col md="4">{metrics?.jvm ? <JvmMemory jvmMetrics={metrics.jvm} wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT} /> : ''}</Col>
-            <Col md="4">{threadDump ? <JvmThreads jvmThreads={threadDump} wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT} /> : ''}</Col>
-            <Col md="4">
-              {metrics?.processMetrics ? (
-                <SystemMetrics
-                  systemMetrics={metrics.processMetrics}
-                  wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT}
-                  timestampFormat={APP_TIMESTAMP_FORMAT}
-                />
-              ) : (
-                ''
-              )}
+            <Col sm="12">
+              <CacheMetrics cacheMetrics={metrics.cache} twoDigitAfterPointFormat={APP_TWO_DIGITS_AFTER_POINT_NUMBER_FORMAT} />
             </Col>
           </Row>
-        </Col>
-      </Row>
+        ) : (
+          ''
+        )}
 
-      {metrics?.garbageCollector ? (
-        <GarbageCollectorMetrics garbageCollectorMetrics={metrics.garbageCollector} wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT} />
-      ) : (
-        ''
-      )}
-      {metrics && metrics['http.server.requests'] ? (
-        <HttpRequestMetrics
-          requestMetrics={metrics['http.server.requests']}
-          twoDigitAfterPointFormat={APP_TWO_DIGITS_AFTER_POINT_NUMBER_FORMAT}
-          wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT}
-        />
-      ) : (
-        ''
-      )}
-      {metrics?.services ? (
-        <EndpointsRequestsMetrics endpointsRequestsMetrics={metrics.services} wholeNumberFormat={APP_WHOLE_NUMBER_FORMAT} />
-      ) : (
-        ''
-      )}
-
-      {metrics?.cache ? (
-        <Row>
-          <Col sm="12">
-            <CacheMetrics cacheMetrics={metrics.cache} twoDigitAfterPointFormat={APP_TWO_DIGITS_AFTER_POINT_NUMBER_FORMAT} />
-          </Col>
-        </Row>
-      ) : (
-        ''
-      )}
-
-      {metrics?.databases && JSON.stringify(metrics.databases) !== '{}' ? (
-        <Row>
-          <Col sm="12">
-            <DatasourceMetrics datasourceMetrics={metrics.databases} twoDigitAfterPointFormat={APP_TWO_DIGITS_AFTER_POINT_NUMBER_FORMAT} />
-          </Col>
-        </Row>
-      ) : (
-        ''
-      )}
+        {metrics?.databases && JSON.stringify(metrics.databases) !== '{}' ? (
+          <Row>
+            <Col sm="12">
+              <DatasourceMetrics
+                datasourceMetrics={metrics.databases}
+                twoDigitAfterPointFormat={APP_TWO_DIGITS_AFTER_POINT_NUMBER_FORMAT}
+              />
+            </Col>
+          </Row>
+        ) : (
+          ''
+        )}
+      </div>
     </div>
   );
 };

@@ -139,6 +139,8 @@ class PartidaIndividualServiceTest {
             any(Palavra.class),
             eq(true),
             isNull(),
+            isNull(),
+            isNull(),
             any(),
             eq(100),
             eq(HistoricoResposta.Origem.INDIVIDUAL)
@@ -183,6 +185,8 @@ class PartidaIndividualServiceTest {
             any(Palavra.class),
             eq(false),
             eq(ComparadorPalavras.NAO_RESPONDEU),
+            isNull(),
+            isNull(),
             isNull(),
             eq(0),
             eq(HistoricoResposta.Origem.INDIVIDUAL)

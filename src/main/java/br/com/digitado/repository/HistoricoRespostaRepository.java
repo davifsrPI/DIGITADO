@@ -2,6 +2,7 @@ package br.com.digitado.repository;
 
 import br.com.digitado.domain.HistoricoResposta;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -264,6 +265,66 @@ public interface HistoricoRespostaRepository extends JpaRepository<HistoricoResp
         nativeQuery = true
     )
     List<Object[]> evolucaoPorAluno(@Param("minRespostas") int minRespostas);
+
+    // ===== Erros destrinchados (subtipo e trecho trocado) =====
+
+    /**
+     * [tipo, subtipo, total] dos erros da turma, de todos os tipos ou de um só.
+     * Subtipo nulo: resposta gravada antes da classificação detalhada.
+     */
+    @Query(
+        value = "SELECT" +
+        TIPO_DA_LINHA +
+        ", h.subtipo_erro, COUNT(*) FROM historico_resposta h " +
+        "WHERE h.correta = false AND (:tipo IS NULL OR" +
+        TIPO_DA_LINHA +
+        "= :tipo) AND" +
+        SO_ALUNOS +
+        "GROUP BY" +
+        TIPO_DA_LINHA +
+        ", h.subtipo_erro ORDER BY 3 DESC",
+        nativeQuery = true
+    )
+    List<Object[]> errosPorSubtipo(@Param("tipo") String tipo);
+
+    /**
+     * [tipo, subtipo, detalhe, ocorrencias, alunos, palavras, exemplos 'a|b|c|d'] -
+     * os trechos que a turma mais troca ("ç→ss", "é→e"), de todos os tipos ou de um só.
+     * Os exemplos são as palavras onde aconteceu, em ordem alfabética.
+     */
+    @Query(
+        value = "SELECT h.tipo_erro, h.subtipo_erro, h.detalhe_erro, COUNT(*), COUNT(DISTINCT h.login), " +
+        "COUNT(DISTINCT h.palavra_id), SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT p.texto ORDER BY p.texto SEPARATOR '|'), '|', 4) " +
+        "FROM historico_resposta h JOIN palavra p ON p.id = h.palavra_id " +
+        "WHERE h.correta = false AND h.detalhe_erro IS NOT NULL AND (:tipo IS NULL OR h.tipo_erro = :tipo) AND" +
+        SO_ALUNOS +
+        "GROUP BY h.tipo_erro, h.subtipo_erro, h.detalhe_erro ORDER BY 4 DESC, 5 DESC, h.detalhe_erro LIMIT :limite",
+        nativeQuery = true
+    )
+    List<Object[]> confusoesMaisComuns(@Param("tipo") String tipo, @Param("limite") int limite);
+
+    /**
+     * [palavraId, tipo, subtipo, detalhe, ocorrencias] dos erros nas palavras pedidas,
+     * do mais comum ao menos comum em cada uma. Sem filtro de tipo, a rodada sem
+     * resposta fica de fora: a pergunta é "como a turma ERRA esta palavra".
+     */
+    @Query(
+        value = "SELECT h.palavra_id," +
+        TIPO_DA_LINHA +
+        ", h.subtipo_erro, h.detalhe_erro, COUNT(*) FROM historico_resposta h " +
+        "WHERE h.correta = false AND h.palavra_id IN (:palavras) AND " +
+        "(:tipo IS NULL OR" +
+        TIPO_DA_LINHA +
+        "= :tipo) AND (:tipo IS NOT NULL OR" +
+        TIPO_DA_LINHA +
+        "<> 'NAO_RESPONDEU') AND" +
+        SO_ALUNOS +
+        "GROUP BY h.palavra_id," +
+        TIPO_DA_LINHA +
+        ", h.subtipo_erro, h.detalhe_erro ORDER BY h.palavra_id, 5 DESC",
+        nativeQuery = true
+    )
+    List<Object[]> errosPorPalavra(@Param("palavras") Collection<Long> palavras, @Param("tipo") String tipo);
 
     /** [tipoErro, total] da turma - onde os alunos mais tropeçam. */
     @Query(

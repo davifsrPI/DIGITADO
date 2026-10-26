@@ -403,6 +403,11 @@ body.desempenho-admin-page {
   color: #0f172a !important;
 }
 
+// Tipo que ainda não aconteceu: continua lá (dá para abrir e ver o que é), mas apagado
+.da-filtro-chip--zero:not(.da-filtro-chip--ativo) {
+  opacity: 0.55;
+}
+
 .da-filtro-limpar {
   margin-top: 10px;
   background: transparent;
@@ -458,4 +463,254 @@ body.desempenho-admin-page {
   align-items: inherit;
   cursor: pointer;
   width: 100%;
+}
+
+// ===== Erros destrinchados: subtipos, trecho trocado e "o que a turma mais troca" =====
+
+.da-tipo-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// Os subtipos de um tipo, em barras finas logo abaixo da barra dele
+.da-subtipos {
+  list-style: none;
+  margin: 0 0 0 18px;
+  padding: 0 0 0 12px;
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.da-subtipo {
+  display: grid;
+  grid-template-columns: minmax(120px, 210px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: help;
+}
+
+.da-subtipo--antigo {
+  color: rgba(255, 255, 255, 0.45);
+  font-style: italic;
+}
+
+// O catálogo mostra tudo o que pode ser registrado: o que ainda não aconteceu fica
+// apagado, para o que aconteceu saltar aos olhos
+.da-subtipo--zero,
+.da-subtipo--zero .da-subtipo-valor {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.da-tipo-bloco--zero .dp-barra-nome,
+.da-tipo-bloco--zero .dp-barra-valor {
+  opacity: 0.55;
+}
+
+.da-subtipo-trilho {
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.da-subtipo-barra {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+}
+
+.da-subtipo-valor {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+
+// O trecho trocado: o certo em verde, o digitado em vermelho
+.da-trecho {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: 'Consolas', 'SFMono-Regular', ui-monospace, monospace;
+  font-size: 13px;
+}
+
+.da-trecho-par {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  white-space: pre;
+}
+
+.da-trecho-certo {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.da-trecho-digitado {
+  color: #f87171;
+  font-weight: 700;
+}
+
+.da-trecho-seta {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.da-trecho--grande {
+  font-size: 17px;
+  min-width: 96px;
+}
+
+// "O que a turma mais troca"
+.da-confusoes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.da-confusao {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: inherit;
+  text-align: left;
+}
+
+.da-confusao--botao {
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.da-confusao-texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.da-confusao-tipo {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.da-confusao-exemplos {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  overflow-wrap: anywhere;
+}
+
+.da-confusao-num {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+
+  strong {
+    font-size: 15px;
+    color: #fff;
+  }
+
+  small {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+// Palavra do ranking com a linha "erro mais comum" embaixo
+.da-palavra-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.da-palavra-erro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 0 14px 4px 48px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.da-palavra-erro-rotulo {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.da-palavra-erro-pct {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.da-subtitulo {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.da-nota {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 640px) {
+  .da-subtipos {
+    margin-left: 4px;
+  }
+
+  .da-subtipo {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    .da-subtipo-trilho {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+
+  // No celular: número e trecho em cima, o texto inteiro embaixo
+  .da-confusao {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  .da-trecho--grande {
+    min-width: 0;
+  }
+
+  .da-confusao-texto {
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  .da-confusao-num {
+    margin-left: auto;
+    align-items: flex-end;
+  }
+
+  .da-palavra-erro {
+    padding-left: 14px;
+  }
 }

@@ -80,14 +80,6 @@ public class DesempenhoResource {
         return historicoRespostaService.desempenhoGeral(tipoErro);
     }
 
-    /** Os tipos que o histórico grava (ComparadorPalavras), mais a rodada sem resposta. */
-    private static final Set<String> TIPOS_DE_ERRO = Set.of(
-        "ACENTUACAO",
-        "TROCA_LETRA",
-        "LETRA_FALTANDO",
-        "LETRA_EXTRA",
-        "ERRO_FONETICO",
-        "OUTRO",
-        ComparadorPalavras.NAO_RESPONDEU
-    );
+    /** Os tipos que o histórico grava (ComparadorPalavras), inclusive o OUTRO dos registros antigos. */
+    private static final Set<String> TIPOS_DE_ERRO = Set.copyOf(ComparadorPalavras.TIPOS);
 }

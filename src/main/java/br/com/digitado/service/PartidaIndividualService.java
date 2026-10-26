@@ -188,6 +188,8 @@ public class PartidaIndividualService {
                 palavra,
                 correta,
                 conferencia.tipoErro(),
+                conferencia.subtipoErro(),
+                conferencia.detalheErro(),
                 naoRespondeu ? null : (int) decorrido,
                 conferencia.similaridade(),
                 HistoricoResposta.Origem.INDIVIDUAL

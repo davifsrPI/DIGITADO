@@ -422,7 +422,9 @@ class JogoSalaServiceTest {
             assertThat(feedbackDe("casa", "cas").tipoErro()).isEqualTo("LETRA_FALTANDO");
             assertThat(feedbackDe("casa", "casaa").tipoErro()).isEqualTo("LETRA_EXTRA");
             assertThat(feedbackDe("casa", "cada").tipoErro()).isEqualTo("TROCA_LETRA");
-            assertThat(feedbackDe("paralelepipedo", "prlpp").tipoErro()).isEqualTo("OUTRO");
+            assertThat(feedbackDe("paralelepipedo", "prlpp").tipoErro()).isEqualTo("OUTRA_PALAVRA");
+            // duas letras trocadas de lugar são um deslize só, e não "outro erro"
+            assertThat(feedbackDe("pedra", "pdera").tipoErro()).isEqualTo("LETRAS_INVERTIDAS");
         }
     }
 

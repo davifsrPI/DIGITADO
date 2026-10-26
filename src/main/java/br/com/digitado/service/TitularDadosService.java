@@ -137,7 +137,7 @@ public class TitularDadosService {
             "historicoRespostas",
             em
                 .createQuery(
-                    "select h.dataResposta, p.texto, h.correta, h.dificuldade, h.origem, h.tipoErro " +
+                    "select h.dataResposta, p.texto, h.correta, h.dificuldade, h.origem, h.tipoErro, h.subtipoErro, h.detalheErro " +
                     "from HistoricoResposta h, Palavra p " +
                     "where p.id = h.palavraId and h.login = :login order by h.dataResposta",
                     Object[].class
@@ -158,7 +158,12 @@ public class TitularDadosService {
                         "origem",
                         String.valueOf(l[4]),
                         "tipoErro",
-                        String.valueOf(l[5])
+                        String.valueOf(l[5]),
+                        // o trecho trocado sai do que o titular digitou: é dado dele também
+                        "subtipoErro",
+                        String.valueOf(l[6]),
+                        "detalheErro",
+                        String.valueOf(l[7])
                     )
                 )
                 .toList()

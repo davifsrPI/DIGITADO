@@ -68,6 +68,16 @@ public class HistoricoResposta implements Serializable {
     @Column(name = "tipo_erro", length = 30)
     private String tipoErro;
 
+    // O jeito específico do erro (ACENTO_FALTANDO, TECLA_VIZINHA...) e o trecho
+    // trocado, "certo→digitado" ("é→e"). Nulos nos acertos, na rodada sem resposta
+    // e nas respostas gravadas antes da classificação detalhada. Ver
+    // ComparadorPalavras.analisarErro
+    @Column(name = "subtipo_erro", length = 40)
+    private String subtipoErro;
+
+    @Column(name = "detalhe_erro", length = 60)
+    private String detalheErro;
+
     // Quanto tempo levou para responder, em milissegundos (nulo na palavra do dia)
     @Column(name = "tempo_ms")
     private Integer tempoMs;
@@ -135,6 +145,22 @@ public class HistoricoResposta implements Serializable {
 
     public void setTipoErro(String tipoErro) {
         this.tipoErro = tipoErro;
+    }
+
+    public String getSubtipoErro() {
+        return subtipoErro;
+    }
+
+    public void setSubtipoErro(String subtipoErro) {
+        this.subtipoErro = subtipoErro;
+    }
+
+    public String getDetalheErro() {
+        return detalheErro;
+    }
+
+    public void setDetalheErro(String detalheErro) {
+        this.detalheErro = detalheErro;
     }
 
     public Integer getTempoMs() {
