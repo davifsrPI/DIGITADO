@@ -98,7 +98,7 @@ class PartidaIndividualResourceIT {
                 assertThat(h.getTipoErro()).isEqualTo("NAO_RESPONDEU");
                 assertThat(h.getSimilaridade()).isZero();
             });
-        assertThat(partidaIndividualRepository.findFirstByLoginOrderByAcertosDescDataFimAsc(LOGIN)).isPresent();
+        assertThat(partidaIndividualRepository.findFirstByLoginAndIdiomaOrderByAcertosDescDataFimAsc(LOGIN, "PT")).isPresent();
     }
 
     @Test

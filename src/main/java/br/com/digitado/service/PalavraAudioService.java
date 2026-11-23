@@ -1,6 +1,7 @@
 package br.com.digitado.service;
 
 import br.com.digitado.domain.Palavra;
+import br.com.digitado.domain.enumeration.Idioma;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -88,12 +89,49 @@ public class PalavraAudioService {
         }
     );
 
+    /**
+     * Comando PRÓPRIO de um idioma, opcional (digitado.audio-palavra.comando-en,
+     * comando-es). Vence o comando geral para as palavras daquele idioma.
+     *
+     * Existe para o treino de idiomas: o Windows só fala espanhol com a voz de
+     * espanhol instalada, e um sintetizador portátil (Piper, por exemplo) precisa de
+     * um arquivo de voz por idioma. Mesmos marcadores e mesma execução sem shell do
+     * comando geral.
+     */
+    private final Map<Idioma, List<String>> comandosPorIdioma = new java.util.EnumMap<>(Idioma.class);
+
+    /**
+     * Pasta do Piper (ver VozPiper e InstaladorVozPiper). Quando o Piper e a voz de
+     * um idioma estão nela, é ele que fala as palavras daquele idioma - instalado
+     * sozinho na primeira subida, sem depender das vozes do Windows.
+     */
+    private final Path pastaPiper;
+
+    // Culturas que o sintetizador GERAL fala (null = qualquer uma, ex.: espeak-ng).
+    // Só a SAPI do Windows tem lista fechada: as vozes instaladas na máquina.
+    private volatile java.util.Set<String> culturasDoGeral;
+
+    public PalavraAudioService(String comandoConfigurado, boolean habilitado) {
+        this(comandoConfigurado, habilitado, "", "", null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
     public PalavraAudioService(
         @Value("${digitado.audio-palavra.comando:}") String comandoConfigurado,
-        @Value("${digitado.audio-palavra.habilitado:true}") boolean habilitado
+        @Value("${digitado.audio-palavra.habilitado:true}") boolean habilitado,
+        @Value("${digitado.audio-palavra.comando-en:}") String comandoIngles,
+        @Value("${digitado.audio-palavra.comando-es:}") String comandoEspanhol,
+        @Value("${digitado.audio-palavra.piper.pasta:${user.home}/.digitado/piper}") String pastaPiper
     ) {
         this.comandoConfigurado = comandoConfigurado;
         this.habilitado = habilitado;
+        this.pastaPiper = pastaPiper == null || pastaPiper.isBlank() ? null : Path.of(pastaPiper).toAbsolutePath().normalize();
+        if (comandoIngles != null && !comandoIngles.isBlank()) {
+            comandosPorIdioma.put(Idioma.EN, List.of(comandoIngles.trim().split("\\s+")));
+        }
+        if (comandoEspanhol != null && !comandoEspanhol.isBlank()) {
+            comandosPorIdioma.put(Idioma.ES, List.of(comandoEspanhol.trim().split("\\s+")));
+        }
     }
 
     /**
@@ -126,12 +164,13 @@ public class PalavraAudioService {
         if (cache.containsKey(palavra.getId())) {
             return;
         }
-        List<String> cmd = resolverComando();
+        Idioma idioma = Idioma.daPalavra(palavra.getIdioma());
+        List<String> cmd = comandoPara(idioma);
         if (cmd == null) {
             return;
         }
         try {
-            byte[] audio = sintetizar(cmd, palavra.getTexto());
+            byte[] audio = sintetizar(cmd, palavra.getTexto(), idioma);
             if (audio != null && audio.length > 0) {
                 cache.put(palavra.getId(), audio);
             }
@@ -147,19 +186,83 @@ public class PalavraAudioService {
         return habilitado && resolverComando() != null;
     }
 
+    /**
+     * O servidor tem voz para este idioma? O treino de idiomas só começa com ela:
+     * ali o texto da palavra NUNCA vai para o aparelho do aluno, só o som.
+     */
+    public boolean vozDisponivel(Idioma idioma) {
+        if (!habilitado || idioma == null) {
+            return false;
+        }
+        if (comandosPorIdioma.containsKey(idioma) || piperPronto(idioma)) {
+            return true;
+        }
+        if (resolverComando() == null) {
+            return false;
+        }
+        java.util.Set<String> culturas = culturasDoGeral;
+        return culturas == null || culturas.contains(idioma.getTag().toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * Quem fala as palavras deste idioma: o comando próprio do idioma, se
+     * configurado; o Piper, se ele e a voz do idioma estão instalados; e, por fim,
+     * o sintetizador geral (espeak-ng ou a voz do Windows).
+     */
+    List<String> comandoPara(Idioma idioma) {
+        if (comandosPorIdioma.containsKey(idioma)) {
+            return comandosPorIdioma.get(idioma);
+        }
+        if (piperPronto(idioma)) {
+            // Sem {arquivoTexto}: o Piper lê a palavra da entrada padrão (ver sintetizar)
+            return List.of(
+                VozPiper.executavel(pastaPiper).toString(),
+                "--model",
+                VozPiper.modelo(pastaPiper, idioma).orElseThrow().toString(),
+                "--output_file",
+                "{arquivoAudio}",
+                "-q"
+            );
+        }
+        return resolverComando();
+    }
+
+    private boolean piperPronto(Idioma idioma) {
+        return pastaPiper != null && VozPiper.pronto(pastaPiper, idioma);
+    }
+
     // ── síntese ──
 
-    private byte[] sintetizar(List<String> modelo, String texto) throws IOException, InterruptedException {
+    /**
+     * Marcadores substituídos no comando: além dos arquivos, a voz do idioma da
+     * palavra ({voz}: pt-br, en-us, es - nomes do espeak-ng) e a cultura ({cultura}:
+     * pt-BR, en-US, es-ES - o que a SAPI do Windows usa). Os valores vêm do enum
+     * Idioma, nunca do pedido de quem joga.
+     */
+    private byte[] sintetizar(List<String> modelo, String texto, Idioma idioma) throws IOException, InterruptedException {
         Path arquivoTexto = Files.createTempFile("digitado-palavra-", ".txt");
         Path arquivoAudio = Files.createTempFile("digitado-palavra-", ".wav");
         try {
             Files.writeString(arquivoTexto, texto, StandardCharsets.UTF_8);
             List<String> cmd = modelo
                 .stream()
-                .map(parte -> parte.replace("{arquivoTexto}", arquivoTexto.toString()).replace("{arquivoAudio}", arquivoAudio.toString()))
+                .map(parte ->
+                    parte
+                        .replace("{arquivoTexto}", arquivoTexto.toString())
+                        .replace("{arquivoAudio}", arquivoAudio.toString())
+                        .replace("{voz}", idioma.getVozEspeak())
+                        .replace("{cultura}", idioma.getTag())
+                )
                 .toList();
-            // ProcessBuilder com LISTA de argumentos: sem shell, nada é reinterpretado
-            Process processo = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            // ProcessBuilder com LISTA de argumentos: sem shell, nada é reinterpretado.
+            // A saída do programa é descartada (não fica um buffer cheio travando ele).
+            ProcessBuilder construtor = new ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD);
+            // Comando que não lê o arquivo de texto (Piper) recebe a palavra pela
+            // entrada padrão - do mesmo arquivo, sem passar por linha de comando
+            if (modelo.stream().noneMatch(parte -> parte.contains("{arquivoTexto}"))) {
+                construtor.redirectInput(arquivoTexto.toFile());
+            }
+            Process processo = construtor.start();
             if (!processo.waitFor(TIMEOUT_SEGUNDOS, TimeUnit.SECONDS)) {
                 processo.destroyForcibly();
                 throw new IOException("sintetizador não respondeu em " + TIMEOUT_SEGUNDOS + "s");
@@ -212,7 +315,7 @@ public class PalavraAudioService {
             return List.of(comandoConfigurado.trim().split("\\s+"));
         }
         // espeak-ng: é o que o Dockerfile instala, então é o caminho de produção
-        List<String> espeak = List.of("espeak-ng", "-v", "pt-br", "-s", "130", "-f", "{arquivoTexto}", "-w", "{arquivoAudio}");
+        List<String> espeak = List.of("espeak-ng", "-v", "{voz}", "-s", "130", "-f", "{arquivoTexto}", "-w", "{arquivoAudio}");
         if (executavelExiste(espeak.get(0), "--version")) {
             return espeak;
         }
@@ -226,17 +329,53 @@ public class PalavraAudioService {
                 "-Command",
                 "Add-Type -AssemblyName System.Speech; " +
                 "$f = New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
-                "try { $f.SelectVoiceByHints('Female', 'Adult', 0, [System.Globalization.CultureInfo]'pt-BR') } catch {}; " +
+                // Voz instalada da cultura da palavra. Sem nenhuma (Windows sem o pacote de
+                // inglês, por exemplo), sai com erro: melhor a voz do navegador do aluno do
+                // que uma palavra em inglês lida com pronúncia de português
+                "$v = $f.GetInstalledVoices() | Where-Object { $_.Enabled -and $_.VoiceInfo.Culture.Name -eq '{cultura}' } | Select-Object -First 1; " +
+                "if (-not $v) { exit 3 }; " +
+                "$f.SelectVoice($v.VoiceInfo.Name); " +
                 "$f.Rate = -1; " +
                 "$f.SetOutputToWaveFile('{arquivoAudio}'); " +
                 "$f.Speak([IO.File]::ReadAllText('{arquivoTexto}', [Text.Encoding]::UTF8)); " +
                 "$f.Dispose()"
             );
             if (executavelExiste("powershell", "-NoProfile", "-Command", "$PSVersionTable.PSVersion.Major")) {
+                culturasDoGeral = culturasSapi();
                 return sapi;
             }
         }
         return null;
+    }
+
+    // As culturas das vozes do Windows instaladas (ex.: pt-br, en-us), em minúsculas
+    private java.util.Set<String> culturasSapi() {
+        try {
+            Process p = new ProcessBuilder(
+                "powershell",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).GetInstalledVoices() | " +
+                "Where-Object { $_.Enabled } | ForEach-Object { $_.VoiceInfo.Culture.Name }"
+            )
+                .redirectErrorStream(true)
+                .start();
+            String saida = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            p.waitFor(TIMEOUT_SEGUNDOS, TimeUnit.SECONDS);
+            java.util.Set<String> culturas = new java.util.HashSet<>();
+            for (String linha : saida.split("\\R")) {
+                if (!linha.isBlank()) {
+                    culturas.add(linha.trim().toLowerCase(Locale.ROOT));
+                }
+            }
+            return culturas;
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            return java.util.Set.of();
+        }
     }
 
     private boolean executavelExiste(String... comandoTeste) {

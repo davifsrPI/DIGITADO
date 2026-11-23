@@ -12,7 +12,12 @@ import axios from 'axios';
  * (rede, servidor fora) NÃO pode acusar o código de errado - o aluno ficaria
  * conferindo letra por letra um código que está certo.
  */
-export type ResultadoVerificacao = { status: 'ok'; tipo: 'TURMA' | 'UM_V_UM' } | { status: 'inexistente' } | { status: 'falha' };
+export type ResultadoVerificacao =
+  | { status: 'ok'; tipo: 'TURMA' | 'UM_V_UM' }
+  | { status: 'inexistente' }
+  // 429: códigos errados demais em um minuto (o servidor trava os chutes em série)
+  | { status: 'bloqueado' }
+  | { status: 'falha' };
 
 export const verificarSala = async (codigo: string): Promise<ResultadoVerificacao> => {
   try {
@@ -20,6 +25,7 @@ export const verificarSala = async (codigo: string): Promise<ResultadoVerificaca
     return { status: 'ok', tipo: data?.tipo === 'UM_V_UM' ? 'UM_V_UM' : 'TURMA' };
   } catch (err: any) {
     const status = err?.response?.status;
+    if (status === 429) return { status: 'bloqueado' };
     return status === 404 || status === 400 ? { status: 'inexistente' } : { status: 'falha' };
   }
 };

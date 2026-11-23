@@ -4,7 +4,7 @@ import br.com.digitado.domain.enumeration.TipoSala;
 import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
-import br.com.digitado.security.AuthoritiesConstants;
+import br.com.digitado.security.TentativasCodigoSala;
 import br.com.digitado.service.ConfiguracaoPartidaService;
 import br.com.digitado.service.ConquistaEngineService;
 import br.com.digitado.service.JogoSalaService;
@@ -39,6 +39,7 @@ public class JogoSalaController {
     private final ConquistaEngineService conquistaEngine;
     private final ParticipanteSalaService participanteSalaService;
     private final ConfiguracaoPartidaService configuracaoPartidaService;
+    private final TentativasCodigoSala tentativasCodigoSala;
 
     public JogoSalaController(
         JogoSalaService jogoService,
@@ -48,7 +49,8 @@ public class JogoSalaController {
         SimpMessagingTemplate messaging,
         ConquistaEngineService conquistaEngine,
         ParticipanteSalaService participanteSalaService,
-        ConfiguracaoPartidaService configuracaoPartidaService
+        ConfiguracaoPartidaService configuracaoPartidaService,
+        TentativasCodigoSala tentativasCodigoSala
     ) {
         this.jogoService = jogoService;
         this.salaRepository = salaRepository;
@@ -58,6 +60,45 @@ public class JogoSalaController {
         this.conquistaEngine = conquistaEngine;
         this.participanteSalaService = participanteSalaService;
         this.configuracaoPartidaService = configuracaoPartidaService;
+        this.tentativasCodigoSala = tentativasCodigoSala;
+    }
+
+    // Maior código de sala que vale a pena procurar no banco: o de verdade tem 6
+    private static final int MAX_CODIGO = 20;
+    // Nome que o cliente manda ao entrar, quando não há outro: mesmo teto do apelido
+    private static final int MAX_NOME_ENVIADO = 30;
+
+    /**
+     * A sala desta mensagem EXISTE?
+     *
+     * Toda mensagem /app/sala/{codigo}/... criava um estado de jogo em memória para o
+     * código que viesse, existisse a sala ou não: uma conexão mandando códigos
+     * inventados em série enchia a memória do servidor, e "entrar" respondia de um
+     * jeito para sala real e de outro para inventada - um jeito de achar sala alheia
+     * por tentativa. Agora código que não existe é ignorado e conta como chute para
+     * a conta (o mesmo contador da API, ver TentativasCodigoSala).
+     */
+    private boolean salaExiste(String codigo, Principal principal) {
+        if (principal == null || codigo == null) {
+            return false;
+        }
+        String login = principal.getName();
+        if (tentativasCodigoSala.bloqueado(login)) {
+            return false;
+        }
+        if (jogoService.temJogoEmMemoria(codigo)) {
+            return true;
+        }
+        if (codigo.length() <= MAX_CODIGO && salaRepository.existsById(codigo)) {
+            return true;
+        }
+        LOG.warn(
+            "WebSocket: {} mandou mensagem para a sala inexistente {}",
+            login,
+            codigo.length() > MAX_CODIGO ? "(código longo)" : codigo
+        );
+        tentativasCodigoSala.registrarFalha(login);
+        return false;
     }
 
     /**
@@ -95,13 +136,26 @@ public class JogoSalaController {
         Principal principal,
         SimpMessageHeaderAccessor headers
     ) {
-        if (principal == null) return;
+        if (!salaExiste(codigo, principal)) {
+            if (principal != null) {
+                messaging.convertAndSendToUser(
+                    principal.getName(),
+                    "/queue/sala/" + codigo + "/erro",
+                    Map.of("tipo", "SALA_INEXISTENTE", "mensagem", "Esta sala não existe")
+                );
+            }
+            return;
+        }
         String login = principal.getName();
         // Id da sessão WebSocket desta conexão: é por sessão que o participante entra e
         // sai da sala, e não por login - ver JogoSalaService.aoDesconectar
         String sessaoId = headers != null ? headers.getSessionId() : null;
         String nomeSala = getNomeSala(codigo);
-        String nome = nomeExibicao(codigo, login, entrada.nome());
+        String nomeEnviado = entrada != null ? entrada.nome() : null;
+        if (nomeEnviado != null && nomeEnviado.length() > MAX_NOME_ENVIADO) {
+            nomeEnviado = nomeEnviado.substring(0, MAX_NOME_ENVIADO);
+        }
+        String nome = nomeExibicao(codigo, login, nomeEnviado);
         boolean duelo = salaRepository.findByCodigo(codigo).map(s -> s.getTipo() == TipoSala.UM_V_UM).orElse(false);
         if (duelo) {
             boolean entrou = jogoService.registrarNoDuelo(codigo, login, nome, sessaoId);
@@ -228,7 +282,9 @@ public class JogoSalaController {
     // e faz broadcast do placar atualizado para todos.
     @MessageMapping("/sala/{codigo}/responder")
     public void responder(@DestinationVariable String codigo, @Payload RespostaPayload payload, Principal principal) {
-        if (principal == null) return;
+        // Resposta só existe para partida em andamento, que está em memória: nada de
+        // ir ao banco nem criar estado para código inventado
+        if (principal == null || payload == null || !jogoService.temJogoEmMemoria(codigo)) return;
         String login = principal.getName();
         String nomeSala = getNomeSala(codigo);
         int tentativasBurla = payload.tentativasBurla() != null ? payload.tentativasBurla() : 0;
@@ -274,7 +330,7 @@ public class JogoSalaController {
      */
     @MessageMapping("/sala/{codigo}/estado")
     public void estado(@DestinationVariable String codigo, Principal principal) {
-        if (principal == null) return;
+        if (!salaExiste(codigo, principal)) return;
         EstadoJogoDTO estado = jogoService.getEstado(codigo, getNomeSala(codigo));
         messaging.convertAndSendToUser(principal.getName(), "/queue/sala/" + codigo + "/estado", estado);
     }
@@ -291,21 +347,18 @@ public class JogoSalaController {
         return jogoService.nomeSalaCacheado(codigo, () -> salaRepository.findByCodigo(codigo).map(s -> s.getNome()).orElse(codigo));
     }
 
-    // Verifica se o usuário conectado tem permissão para controlar esta sala.
-    // Admin sempre pode. Para outros usuários, compara o e-mail do User autenticado
-    // com o e-mail do professor cadastrado na sala.
+    // Verifica se o usuário conectado tem permissão para controlar esta sala: compara
+    // o e-mail do User autenticado com o e-mail do professor cadastrado na sala.
+    // O admin NÃO comanda mais qualquer sala - a conta de administração nem conecta
+    // no WebSocket do jogo (ver JogoSalaJwtInterceptor).
     private boolean isProfessorDaSala(String codigoSala, Principal principal) {
-        if (principal == null) return false;
+        if (principal == null || codigoSala == null || codigoSala.length() > MAX_CODIGO) return false;
         return salaRepository
             .findByCodigoWithProfessor(codigoSala)
             .map(sala ->
                 userRepository
                     .findOneByLogin(principal.getName())
                     .map(user -> {
-                        // Admin pode controlar qualquer sala
-                        boolean isAdmin = user.getAuthorities().stream().anyMatch(a -> a.getName().equals(AuthoritiesConstants.ADMIN));
-                        if (isAdmin) return true;
-
                         if (sala.getProfessor() == null) {
                             LOG.warn("Sala {} não tem professor definido - acesso negado para {}", codigoSala, user.getLogin());
                             return false;

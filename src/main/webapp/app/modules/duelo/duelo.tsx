@@ -7,6 +7,7 @@ import TelaCarregamento from 'app/shared/layout/loading/tela-carregamento';
 import { useBodyClass } from 'app/shared/util/use-body-class';
 import { extrairCodigoColado, TAMANHO_CODIGO_SALA as CODE_LEN } from 'app/shared/util/codigo-sala';
 import { verificarSala } from 'app/shared/util/verificar-sala';
+import { useTremor } from 'app/shared/util/use-tremor';
 
 // A descrição agora é um objeto JSON vindo do backend: o texto livre + o modo da sala
 interface DescricaoSala {
@@ -63,6 +64,8 @@ export const Duelo = () => {
 
   // Confere o código antes de sair da tela, como no lobby: código errado fica aqui,
   // com o aviso. Código de sala de TURMA segue para a entrada da turma.
+  const { tremendo, tremer } = useTremor();
+
   const entrarPrivado = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = codigoPrivado.trim().toUpperCase();
@@ -75,6 +78,10 @@ export const Duelo = () => {
       navigate(resultado.tipo === 'UM_V_UM' ? `/sala/${code}` : `/sala/${code}/entrar`);
     } else if (resultado.status === 'inexistente') {
       setErroCodigo(`Não encontramos nenhum duelo com o código ${code}.`);
+      tremer();
+    } else if (resultado.status === 'bloqueado') {
+      setErroCodigo('Muitos códigos errados seguidos. Espere um minuto e tente de novo.');
+      tremer();
     } else {
       setErroCodigo('Não foi possível conferir o código agora. Tente de novo.');
     }
@@ -156,7 +163,7 @@ export const Duelo = () => {
           <div className="duelo-card">
             <h2>🔒 Duelo privado</h2>
             <p className="duelo-card-sub">Recebeu um código? Digite abaixo para entrar no duelo</p>
-            <form onSubmit={entrarPrivado} className="duelo-priv-form">
+            <form onSubmit={entrarPrivado} className={`duelo-priv-form${tremendo ? ' tremer' : ''}`}>
               <input
                 type="text"
                 className="duelo-priv-input"

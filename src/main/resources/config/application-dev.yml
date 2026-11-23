@@ -85,8 +85,12 @@ jhipster:
   security:
     authentication:
       jwt:
-        # This token must be encoded using Base64 and be at least 256 bits long (you can type `openssl rand -base64 64` on your command line to generate a 512 bits one)
-        base64-secret: MTg0YTZkOTAwYzEzZGI4ZmE3YjQxMTZiZDk1NWMxOWExM2E4OGU3ZDVmZmRlZGNlZTlmNWQyYzIzMTlkNDYwMzYwM2RhN2RlOGIyN2M1OTVlNjk2NWJiMzI4YzdlNzU2NDgwZTk2ZjgyOWY3ZjA4MGZlZjEyZGNiMGE3OWI3N2U=
+        # SEM chave aqui de propósito. A que existia era a padrão do JHipster, pública
+        # neste repositório: com ela qualquer um na rede da escola forjava um token de
+        # admin. Vazio, o ChaveJwtLocalEnvironmentPostProcessor gera uma chave
+        # aleatória na primeira subida e a guarda em ~/.digitado/jwt-dev.key (fora do
+        # projeto). Para fixar outra, defina JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET.
+        base64-secret: ${JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET:}
         # Token is valid 24 hours
         token-validity-in-seconds: 86400
         token-validity-in-seconds-for-remember-me: 2592000

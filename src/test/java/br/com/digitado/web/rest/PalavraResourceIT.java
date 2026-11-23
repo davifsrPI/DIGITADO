@@ -39,8 +39,8 @@ class PalavraResourceIT {
     private static final String DEFAULT_CATEGORIA = "AAAAAAAAAA";
     private static final String UPDATED_CATEGORIA = "BBBBBBBBBB";
 
-    private static final String DEFAULT_IDIOMA = "AAAAAAAAAA";
-    private static final String UPDATED_IDIOMA = "BBBBBBBBBB";
+    private static final String DEFAULT_IDIOMA = "EN";
+    private static final String UPDATED_IDIOMA = "ES";
 
     private static final Boolean DEFAULT_POSSUI_ACENTO = false;
     private static final Boolean UPDATED_POSSUI_ACENTO = true;

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Idiomas do acervo: PT (o ditado), EN e ES (o treino de idiomas).
+
+        A coluna palavra.idioma existia, mas ninguem a lia, e os seeds gravaram dois
+        valores para o mesmo idioma ('PT' e 'PT-BR'). As salas, os duelos, a palavra
+        do dia e o modo individual passam a filtrar idioma = 'PT', entao tudo o que
+        e portugues precisa estar escrito do mesmo jeito.
+    -->
+    <changeSet id="20261116120000-1" author="digitado">
+        <sql>
+            UPDATE palavra SET idioma = 'PT' WHERE idioma IS NULL OR UPPER(idioma) LIKE 'PT%'
+        </sql>
+        <addDefaultValue tableName="palavra" columnName="idioma" columnDataType="varchar(255)" defaultValue="PT"/>
+        <createIndex tableName="palavra" indexName="ix_palavra__idioma_ativa">
+            <column name="idioma"/>
+            <column name="ativa"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Cada idioma tem o seu recorde no modo individual -->
+    <changeSet id="20261116120000-2" author="digitado">
+        <addColumn tableName="partida_individual">
+            <column name="idioma" type="varchar(5)" defaultValue="PT">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!--
+        45 palavras em ingles e 45 em espanhol para o treino de idiomas, 15 por
+        dificuldade. A coluna dica guarda a TRADUCAO em portugues: o jogador ouve
+        "house", ve "casa" e escreve a grafia em ingles.
+
+        Sem espaco e sem hifen no texto (o campo de resposta so aceita letras), e o
+        espanhol usa o que o teclado ABNT2 digita: acentos, u com trema e o n com til
+        (tecla morta ~ seguida de n). NOT EXISTS por texto + idioma: "real" em
+        espanhol nao e barrado pelo "real" em portugues.
+    -->
+    <changeSet id="20261116120000-3" author="digitado">
+        <sql>
+            INSERT INTO palavra (texto, categoria, idioma, possui_acento, ativa, criador_id, dica, dificuldade)
+            SELECT s.texto, s.categoria, s.idioma, s.possui_acento, s.ativa, s.criador_id, s.dica, s.dificuldade
+            FROM (
+                SELECT 'Cat' AS texto, 'INGLES' AS categoria, 'EN' AS idioma, 0 AS possui_acento, 1 AS ativa, NULL AS criador_id, 'gato' AS dica, 'FACIL' AS dificuldade
+                UNION ALL SELECT 'Dog', 'INGLES', 'EN', 0, 1, NULL, 'cachorro', 'FACIL'
+                UNION ALL SELECT 'House', 'INGLES', 'EN', 0, 1, NULL, 'casa', 'FACIL'
+                UNION ALL SELECT 'Book', 'INGLES', 'EN', 0, 1, NULL, 'livro', 'FACIL'
+                UNION ALL SELECT 'Water', 'INGLES', 'EN', 0, 1, NULL, 'água', 'FACIL'
+                UNION ALL SELECT 'Apple', 'INGLES', 'EN', 0, 1, NULL, 'maçã', 'FACIL'
+                UNION ALL SELECT 'School', 'INGLES', 'EN', 0, 1, NULL, 'escola', 'FACIL'
+                UNION ALL SELECT 'Green', 'INGLES', 'EN', 0, 1, NULL, 'verde', 'FACIL'
+                UNION ALL SELECT 'Friend', 'INGLES', 'EN', 0, 1, NULL, 'amigo', 'FACIL'
+                UNION ALL SELECT 'Happy', 'INGLES', 'EN', 0, 1, NULL, 'feliz', 'FACIL'
+                UNION ALL SELECT 'Table', 'INGLES', 'EN', 0, 1, NULL, 'mesa', 'FACIL'
+                UNION ALL SELECT 'Chair', 'INGLES', 'EN', 0, 1, NULL, 'cadeira', 'FACIL'
+                UNION ALL SELECT 'Window', 'INGLES', 'EN', 0, 1, NULL, 'janela', 'FACIL'
+                UNION ALL SELECT 'Milk', 'INGLES', 'EN', 0, 1, NULL, 'leite', 'FACIL'
+                UNION ALL SELECT 'Bird', 'INGLES', 'EN', 0, 1, NULL, 'pássaro', 'FACIL'
+                UNION ALL SELECT 'Teacher', 'INGLES', 'EN', 0, 1, NULL, 'professor', 'MEDIO'
+                UNION ALL SELECT 'Yellow', 'INGLES', 'EN', 0, 1, NULL, 'amarelo', 'MEDIO'
+                UNION ALL SELECT 'Orange', 'INGLES', 'EN', 0, 1, NULL, 'laranja', 'MEDIO'
+                UNION ALL SELECT 'Kitchen', 'INGLES', 'EN', 0, 1, NULL, 'cozinha', 'MEDIO'
+                UNION ALL SELECT 'Mountain', 'INGLES', 'EN', 0, 1, NULL, 'montanha', 'MEDIO'
+                UNION ALL SELECT 'Country', 'INGLES', 'EN', 0, 1, NULL, 'país', 'MEDIO'
+                UNION ALL SELECT 'People', 'INGLES', 'EN', 0, 1, NULL, 'pessoas', 'MEDIO'
+                UNION ALL SELECT 'Weather', 'INGLES', 'EN', 0, 1, NULL, 'clima', 'MEDIO'
+                UNION ALL SELECT 'Answer', 'INGLES', 'EN', 0, 1, NULL, 'resposta', 'MEDIO'
+                UNION ALL SELECT 'Question', 'INGLES', 'EN', 0, 1, NULL, 'pergunta', 'MEDIO'
+                UNION ALL SELECT 'Island', 'INGLES', 'EN', 0, 1, NULL, 'ilha', 'MEDIO'
+                UNION ALL SELECT 'Knife', 'INGLES', 'EN', 0, 1, NULL, 'faca', 'MEDIO'
+                UNION ALL SELECT 'Daughter', 'INGLES', 'EN', 0, 1, NULL, 'filha', 'MEDIO'
+                UNION ALL SELECT 'Bread', 'INGLES', 'EN', 0, 1, NULL, 'pão', 'MEDIO'
+                UNION ALL SELECT 'Beautiful', 'INGLES', 'EN', 0, 1, NULL, 'bonito', 'MEDIO'
+                UNION ALL SELECT 'Knowledge', 'INGLES', 'EN', 0, 1, NULL, 'conhecimento', 'DIFICIL'
+                UNION ALL SELECT 'Through', 'INGLES', 'EN', 0, 1, NULL, 'através', 'DIFICIL'
+                UNION ALL SELECT 'Necessary', 'INGLES', 'EN', 0, 1, NULL, 'necessário', 'DIFICIL'
+                UNION ALL SELECT 'February', 'INGLES', 'EN', 0, 1, NULL, 'fevereiro', 'DIFICIL'
+                UNION ALL SELECT 'Wednesday', 'INGLES', 'EN', 0, 1, NULL, 'quarta-feira', 'DIFICIL'
+                UNION ALL SELECT 'Environment', 'INGLES', 'EN', 0, 1, NULL, 'meio ambiente', 'DIFICIL'
+                UNION ALL SELECT 'Government', 'INGLES', 'EN', 0, 1, NULL, 'governo', 'DIFICIL'
+                UNION ALL SELECT 'Library', 'INGLES', 'EN', 0, 1, NULL, 'biblioteca', 'DIFICIL'
+                UNION ALL SELECT 'Restaurant', 'INGLES', 'EN', 0, 1, NULL, 'restaurante', 'DIFICIL'
+                UNION ALL SELECT 'Neighbor', 'INGLES', 'EN', 0, 1, NULL, 'vizinho', 'DIFICIL'
+                UNION ALL SELECT 'Thought', 'INGLES', 'EN', 0, 1, NULL, 'pensamento', 'DIFICIL'
+                UNION ALL SELECT 'Enough', 'INGLES', 'EN', 0, 1, NULL, 'suficiente', 'DIFICIL'
+                UNION ALL SELECT 'Receive', 'INGLES', 'EN', 0, 1, NULL, 'receber', 'DIFICIL'
+                UNION ALL SELECT 'Believe', 'INGLES', 'EN', 0, 1, NULL, 'acreditar', 'DIFICIL'
+                UNION ALL SELECT 'Embarrass', 'INGLES', 'EN', 0, 1, NULL, 'envergonhar', 'DIFICIL'
+            ) s
+            WHERE NOT EXISTS (SELECT 1 FROM palavra p WHERE LOWER(p.texto) = LOWER(s.texto) AND p.idioma = s.idioma)
+        </sql>
+    </changeSet>
+
+    <changeSet id="20261116120000-4" author="digitado">
+        <sql>
+            INSERT INTO palavra (texto, categoria, idioma, possui_acento, ativa, criador_id, dica, dificuldade)
+            SELECT s.texto, s.categoria, s.idioma, s.possui_acento, s.ativa, s.criador_id, s.dica, s.dificuldade
+            FROM (
+                SELECT 'Perro' AS texto, 'ESPANHOL' AS categoria, 'ES' AS idioma, 0 AS possui_acento, 1 AS ativa, NULL AS criador_id, 'cachorro' AS dica, 'FACIL' AS dificuldade
+                UNION ALL SELECT 'Leche', 'ESPANHOL', 'ES', 0, 1, NULL, 'leite', 'FACIL'
+                UNION ALL SELECT 'Libro', 'ESPANHOL', 'ES', 0, 1, NULL, 'livro', 'FACIL'
+                UNION ALL SELECT 'Rojo', 'ESPANHOL', 'ES', 0, 1, NULL, 'vermelho', 'FACIL'
+                UNION ALL SELECT 'Hijo', 'ESPANHOL', 'ES', 0, 1, NULL, 'filho', 'FACIL'
+                UNION ALL SELECT 'Mujer', 'ESPANHOL', 'ES', 0, 1, NULL, 'mulher', 'FACIL'
+                UNION ALL SELECT 'Hombre', 'ESPANHOL', 'ES', 0, 1, NULL, 'homem', 'FACIL'
+                UNION ALL SELECT 'Queso', 'ESPANHOL', 'ES', 0, 1, NULL, 'queijo', 'FACIL'
+                UNION ALL SELECT 'Noche', 'ESPANHOL', 'ES', 0, 1, NULL, 'noite', 'FACIL'
+                UNION ALL SELECT 'Ciudad', 'ESPANHOL', 'ES', 0, 1, NULL, 'cidade', 'FACIL'
+                UNION ALL SELECT 'Playa', 'ESPANHOL', 'ES', 0, 1, NULL, 'praia', 'FACIL'
+                UNION ALL SELECT 'Calle', 'ESPANHOL', 'ES', 0, 1, NULL, 'rua', 'FACIL'
+                UNION ALL SELECT 'Llave', 'ESPANHOL', 'ES', 0, 1, NULL, 'chave', 'FACIL'
+                UNION ALL SELECT 'Amarillo', 'ESPANHOL', 'ES', 0, 1, NULL, 'amarelo', 'FACIL'
+                UNION ALL SELECT 'Cuchara', 'ESPANHOL', 'ES', 0, 1, NULL, 'colher', 'FACIL'
+                UNION ALL SELECT 'Niño', 'ESPANHOL', 'ES', 1, 1, NULL, 'menino', 'MEDIO'
+                UNION ALL SELECT 'Mañana', 'ESPANHOL', 'ES', 1, 1, NULL, 'manhã', 'MEDIO'
+                UNION ALL SELECT 'Español', 'ESPANHOL', 'ES', 1, 1, NULL, 'espanhol', 'MEDIO'
+                UNION ALL SELECT 'Año', 'ESPANHOL', 'ES', 1, 1, NULL, 'ano', 'MEDIO'
+                UNION ALL SELECT 'Árbol', 'ESPANHOL', 'ES', 1, 1, NULL, 'árvore', 'MEDIO'
+                UNION ALL SELECT 'Lápiz', 'ESPANHOL', 'ES', 1, 1, NULL, 'lápis', 'MEDIO'
+                UNION ALL SELECT 'Azúcar', 'ESPANHOL', 'ES', 1, 1, NULL, 'açúcar', 'MEDIO'
+                UNION ALL SELECT 'Jamón', 'ESPANHOL', 'ES', 1, 1, NULL, 'presunto', 'MEDIO'
+                UNION ALL SELECT 'Corazón', 'ESPANHOL', 'ES', 1, 1, NULL, 'coração', 'MEDIO'
+                UNION ALL SELECT 'Canción', 'ESPANHOL', 'ES', 1, 1, NULL, 'canção', 'MEDIO'
+                UNION ALL SELECT 'Avión', 'ESPANHOL', 'ES', 1, 1, NULL, 'avião', 'MEDIO'
+                UNION ALL SELECT 'Ratón', 'ESPANHOL', 'ES', 1, 1, NULL, 'rato', 'MEDIO'
+                UNION ALL SELECT 'Sueño', 'ESPANHOL', 'ES', 1, 1, NULL, 'sonho', 'MEDIO'
+                UNION ALL SELECT 'Pequeño', 'ESPANHOL', 'ES', 1, 1, NULL, 'pequeno', 'MEDIO'
+                UNION ALL SELECT 'Cumpleaños', 'ESPANHOL', 'ES', 1, 1, NULL, 'aniversário', 'MEDIO'
+                UNION ALL SELECT 'Murciélago', 'ESPANHOL', 'ES', 1, 1, NULL, 'morcego', 'DIFICIL'
+                UNION ALL SELECT 'Almohada', 'ESPANHOL', 'ES', 0, 1, NULL, 'travesseiro', 'DIFICIL'
+                UNION ALL SELECT 'Zanahoria', 'ESPANHOL', 'ES', 0, 1, NULL, 'cenoura', 'DIFICIL'
+                UNION ALL SELECT 'Ferrocarril', 'ESPANHOL', 'ES', 0, 1, NULL, 'ferrovia', 'DIFICIL'
+                UNION ALL SELECT 'Desarrollo', 'ESPANHOL', 'ES', 0, 1, NULL, 'desenvolvimento', 'DIFICIL'
+                UNION ALL SELECT 'Escalofrío', 'ESPANHOL', 'ES', 1, 1, NULL, 'calafrio', 'DIFICIL'
+                UNION ALL SELECT 'Jirafa', 'ESPANHOL', 'ES', 0, 1, NULL, 'girafa', 'DIFICIL'
+                UNION ALL SELECT 'Vergüenza', 'ESPANHOL', 'ES', 1, 1, NULL, 'vergonha', 'DIFICIL'
+                UNION ALL SELECT 'Pingüino', 'ESPANHOL', 'ES', 1, 1, NULL, 'pinguim', 'DIFICIL'
+                UNION ALL SELECT 'Cigüeña', 'ESPANHOL', 'ES', 1, 1, NULL, 'cegonha', 'DIFICIL'
+                UNION ALL SELECT 'Aceituna', 'ESPANHOL', 'ES', 0, 1, NULL, 'azeitona', 'DIFICIL'
+                UNION ALL SELECT 'Lluvia', 'ESPANHOL', 'ES', 0, 1, NULL, 'chuva', 'DIFICIL'
+                UNION ALL SELECT 'Ventaja', 'ESPANHOL', 'ES', 0, 1, NULL, 'vantagem', 'DIFICIL'
+                UNION ALL SELECT 'Ayuntamiento', 'ESPANHOL', 'ES', 0, 1, NULL, 'prefeitura', 'DIFICIL'
+                UNION ALL SELECT 'Hechizo', 'ESPANHOL', 'ES', 0, 1, NULL, 'feitiço', 'DIFICIL'
+            ) s
+            WHERE NOT EXISTS (SELECT 1 FROM palavra p WHERE LOWER(p.texto) = LOWER(s.texto) AND p.idioma = s.idioma)
+        </sql>
+    </changeSet>
+</databaseChangeLog>

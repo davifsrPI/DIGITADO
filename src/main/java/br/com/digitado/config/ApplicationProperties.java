@@ -81,6 +81,20 @@ public class ApplicationProperties {
         // e furar o rate limit.
         private boolean confiarXForwardedFor = false;
 
+        // Códigos de sala INEXISTENTES que uma conta pode tentar por minuto (pela
+        // API e pelo WebSocket, no mesmo contador). Quem erra o código digitando
+        // corrige em duas ou três tentativas; quem chuta códigos em série para
+        // achar a sala dos outros para aqui. Ver TentativasCodigoSala.
+        private int codigosErradosPorMinuto = 15;
+
+        public int getCodigosErradosPorMinuto() {
+            return codigosErradosPorMinuto;
+        }
+
+        public void setCodigosErradosPorMinuto(int codigosErradosPorMinuto) {
+            this.codigosErradosPorMinuto = codigosErradosPorMinuto;
+        }
+
         public boolean isEnabled() {
             return enabled;
         }

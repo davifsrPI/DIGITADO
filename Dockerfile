@@ -38,12 +38,31 @@ FROM eclipse-temurin:17-jre AS runtime
 # e o estado do jogo vai para o topico que TODOS os alunos assinam, ou seja, a
 # resposta chegaria ao aluno antes de ele responder. Ver PalavraAudioService.
 #
-# A voz do espeak e mais robotica que a do navegador. Para trocar por um
-# sintetizador melhor (Piper, por exemplo), instale-o aqui e aponte
-# digitado.audio-palavra.comando para ele.
+# A voz do espeak e mais robotica que a do navegador; o espanhol do treino de
+# idiomas usa o Piper, instalado logo abaixo.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl espeak-ng \
     && rm -rf /var/lib/apt/lists/*
+
+# Piper + voz em espanhol do treino de idiomas, embutidos na imagem: a voz sai
+# do SERVIDOR e o aluno recebe so o som (nunca o texto da palavra). Cada arquivo
+# e conferido pelo SHA-256 - os mesmos hashes de VozPiper.java; troque os dois
+# juntos ao atualizar uma versao. Hash diferente, o build falha.
+ARG PIPER_URL=https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz
+ARG PIPER_SHA256=a50cb45f355b7af1f6d758c1b360717877ba0a398cc8cbe6d2a7a3a26e225992
+ARG VOZ_ES_URL=https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/es/es_ES/davefx/medium/es_ES-davefx-medium.onnx
+ARG VOZ_ES_SHA256=6658b03b1a6c316ee4c265a9896abc1393353c2d9e1bca7d66c2c442e222a917
+ARG VOZ_ES_JSON_SHA256=0e0dda87c732f6f38771ff274a6380d9252f327dca77aa2963d5fbdf9ec54842
+RUN mkdir -p /opt/piper/vozes \
+    && curl -fsSL -o /tmp/piper.tar.gz "$PIPER_URL" \
+    && echo "$PIPER_SHA256  /tmp/piper.tar.gz" | sha256sum -c - \
+    && tar -xzf /tmp/piper.tar.gz -C /opt/piper \
+    && rm /tmp/piper.tar.gz \
+    && curl -fsSL -o /opt/piper/vozes/es_ES-davefx-medium.onnx "$VOZ_ES_URL" \
+    && echo "$VOZ_ES_SHA256  /opt/piper/vozes/es_ES-davefx-medium.onnx" | sha256sum -c - \
+    && curl -fsSL -o /opt/piper/vozes/es_ES-davefx-medium.onnx.json "$VOZ_ES_URL.json" \
+    && echo "$VOZ_ES_JSON_SHA256  /opt/piper/vozes/es_ES-davefx-medium.onnx.json" | sha256sum -c - \
+    && test -x /opt/piper/piper/piper
 
 # Rodar como root dentro do container e desnecessario: a aplicacao so precisa
 # ler o proprio .jar e abrir a porta 8080.
@@ -54,7 +73,8 @@ WORKDIR /app
 COPY --from=build --chown=digitado /projeto/target/*.jar /app/digitado.jar
 
 ENV SPRING_PROFILES_ACTIVE=prod \
-    JAVA_OPTS="-Xms256m -Xmx768m"
+    JAVA_OPTS="-Xms256m -Xmx768m" \
+    DIGITADO_AUDIOPALAVRA_PIPER_PASTA=/opt/piper
 
 EXPOSE 8080
 

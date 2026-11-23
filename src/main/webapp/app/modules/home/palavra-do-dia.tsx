@@ -1,3 +1,4 @@
+import { ehAdmin } from 'app/shared/auth/private-route';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
@@ -96,8 +97,15 @@ export const PalavraDoDia = () => {
           <span className="pdd-chip">{desafio.tamanho} letras</span>
         </div>
 
+        {/* A conta de administração não joga (o servidor recusa a tentativa dela) */}
+        {ehAdmin(account?.authorities) && !resultado && (
+          <p className="pdd-dica-login" data-cy="pddAdmin">
+            A conta de administração não participa da palavra do dia. Entre com uma conta de jogador para jogar.
+          </p>
+        )}
+
         {/* Ditado: o jogador ouve a palavra via síntese de voz, nada dela aparece na tela */}
-        {!desafio.jaTentou && !resultado && (
+        {!desafio.jaTentou && !resultado && !ehAdmin(account?.authorities) && (
           <div className="pdd-audio">
             <button
               type="button"
@@ -151,7 +159,7 @@ export const PalavraDoDia = () => {
             <div className="pdd-resultado-titulo">Você já usou sua chance de hoje</div>
             <div className="pdd-resultado-palavra">Volte amanhã para uma nova palavra!</div>
           </div>
-        ) : (
+        ) : ehAdmin(account?.authorities) ? null : (
           <form className="pdd-form" onSubmit={enviar}>
             <EntradaPalavra
               className="pdd-input"

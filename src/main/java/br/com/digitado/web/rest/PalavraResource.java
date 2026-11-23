@@ -2,6 +2,7 @@ package br.com.digitado.web.rest;
 
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.enumeration.Dificuldade;
+import br.com.digitado.domain.enumeration.Idioma;
 import br.com.digitado.repository.PalavraRepository;
 import br.com.digitado.repository.UserRepository;
 import br.com.digitado.repository.UsuarioRepository;
@@ -57,14 +58,14 @@ public class PalavraResource {
     public ResponseEntity<Map<String, Object>> buscarPalavra(@RequestParam String texto) {
         String busca = texto.trim();
         Map<String, Object> response = new HashMap<>();
-        Optional<Palavra> exata = palavraRepository.findFirstByTextoIgnoreCaseOrderByIdAsc(busca);
+        Optional<Palavra> exata = palavraRepository.findFirstByTextoIgnoreCaseAndIdiomaOrderByIdAsc(busca, Idioma.PT.name());
         if (exata.isPresent()) {
             response.put("encontrada", true);
             response.put("exata", true);
             response.put("palavra", exata.orElseThrow());
             return ResponseEntity.ok(response);
         }
-        List<Palavra> similares = palavraRepository.findTop5ByTextoContainingIgnoreCaseAndAtivaTrue(busca);
+        List<Palavra> similares = palavraRepository.findTop5ByTextoContainingIgnoreCaseAndAtivaTrueAndIdioma(busca, Idioma.PT.name());
         response.put("encontrada", false);
         response.put("exata", false);
         response.put("similares", similares);
@@ -89,7 +90,7 @@ public class PalavraResource {
         }
         // Já existe (mesmo inativa)? Devolve a existente - também cobre a corrida de
         // duas pessoas cadastrando a mesma palavra quase ao mesmo tempo
-        Optional<Palavra> existente = palavraRepository.findFirstByTextoIgnoreCaseOrderByIdAsc(texto);
+        Optional<Palavra> existente = palavraRepository.findFirstByTextoIgnoreCaseAndIdiomaOrderByIdAsc(texto, Idioma.PT.name());
         if (existente.isPresent()) {
             return ResponseEntity.ok(existente.orElseThrow());
         }
@@ -103,7 +104,7 @@ public class PalavraResource {
         palavra.setTexto(texto);
         palavra.setAtiva(false);
         palavra.setDificuldadeCadastrada(dificuldade);
-        palavra.setIdioma("PT");
+        palavra.setIdioma(Idioma.PT.name());
         String semAcento = java.text.Normalizer.normalize(texto, java.text.Normalizer.Form.NFD).replaceAll(
             "\\p{InCombiningDiacriticalMarks}+",
             ""

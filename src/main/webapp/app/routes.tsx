@@ -46,7 +46,7 @@ const AppRoutes = () => {
         <Route
           path="lobby"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <Lobby />
             </PrivateRoute>
           }
@@ -54,7 +54,7 @@ const AppRoutes = () => {
         <Route
           path="duelo"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <Duelo />
             </PrivateRoute>
           }
@@ -63,15 +63,24 @@ const AppRoutes = () => {
         <Route
           path="individual"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <Individual />
+            </PrivateRoute>
+          }
+        />
+        {/* Treino de idiomas: o modo individual com palavras e voz em inglês ou espanhol */}
+        <Route
+          path="idiomas"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
+              <Individual modoIdiomas />
             </PrivateRoute>
           }
         />
         <Route
           path="minhas-salas"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <MinhasSalas />
             </PrivateRoute>
           }
@@ -79,7 +88,7 @@ const AppRoutes = () => {
         <Route
           path="conquistas"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <Conquistas />
             </PrivateRoute>
           }
@@ -89,7 +98,7 @@ const AppRoutes = () => {
         <Route
           path="meu-desempenho"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <MeuDesempenho />
             </PrivateRoute>
           }
@@ -100,7 +109,7 @@ const AppRoutes = () => {
         <Route
           path="sala/new"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <CriarSala />
             </PrivateRoute>
           }
@@ -111,7 +120,7 @@ const AppRoutes = () => {
         <Route
           path="sala/:codigo/estatisticas"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <SalaEstatisticas />
             </PrivateRoute>
           }
@@ -123,7 +132,7 @@ const AppRoutes = () => {
         <Route
           path="sala/:codigo/entrar"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <IdentificacaoAluno />
             </PrivateRoute>
           }
@@ -131,7 +140,7 @@ const AppRoutes = () => {
         <Route
           path="sala/:codigo"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
               <SalaJogo />
             </PrivateRoute>
           }

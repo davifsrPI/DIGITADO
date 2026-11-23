@@ -1,7 +1,9 @@
 package br.com.digitado.web.filter;
 
 import br.com.digitado.config.ApplicationProperties;
+import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.security.SecurityUtils;
+import br.com.digitado.security.TentativasCodigoSala;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -58,9 +60,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Map<String, Janela> janelas = new ConcurrentHashMap<>();
 
     private final ApplicationProperties applicationProperties;
+    private final TentativasCodigoSala tentativasCodigoSala;
+    private final SalaRepository salaRepository;
 
-    public RateLimitFilter(ApplicationProperties applicationProperties) {
+    public RateLimitFilter(
+        ApplicationProperties applicationProperties,
+        TentativasCodigoSala tentativasCodigoSala,
+        SalaRepository salaRepository
+    ) {
         this.applicationProperties = applicationProperties;
+        this.tentativasCodigoSala = tentativasCodigoSala;
+        this.salaRepository = salaRepository;
     }
 
     @Override
@@ -82,6 +92,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         if (isLogin(request.getRequestURI())) {
             aplicarNoLogin(request, response, filterChain, minutoAtual);
+            return;
+        }
+
+        String codigoSala = codigoSalaDaUrl(request.getRequestURI());
+        String login = loginAutenticado();
+        if (codigoSala != null && login != null && tentativasCodigoSala.bloqueado(login)) {
+            // Chutou códigos de sala demais: nenhuma rota de sala responde até o
+            // minuto virar - nem a do código certo, senão o bloqueio diria qual era
+            bloquear(request, response, "sala:" + login, tentativasCodigoSala.limite());
             return;
         }
 
@@ -110,6 +129,45 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+
+        // Rota de sala que falhou (400/404): se o código não existe, foi um chute.
+        // O banco só é consultado na falha - o caminho feliz não paga nada.
+        int status = response.getStatus();
+        if (
+            codigoSala != null &&
+            login != null &&
+            (status == HttpServletResponse.SC_NOT_FOUND || status == HttpServletResponse.SC_BAD_REQUEST) &&
+            !salaRepository.existsById(codigoSala)
+        ) {
+            tentativasCodigoSala.registrarFalha(login);
+        }
+    }
+
+    // Primeiros segmentos de /api/salas/ que não são código de sala
+    private static final java.util.Set<String> ROTAS_SEM_CODIGO = java.util.Set.of("codigo", "1v1");
+
+    /**
+     * O código de sala de uma URL /api/salas/{codigo}[/...], ou null quando a URL não
+     * é de uma sala específica (/api/salas, /api/salas/codigo/novo,
+     * /api/salas/1v1/publicas).
+     */
+    static String codigoSalaDaUrl(String uri) {
+        String prefixo = "/api/salas/";
+        if (uri == null || !uri.startsWith(prefixo)) {
+            return null;
+        }
+        String resto = uri.substring(prefixo.length());
+        int barra = resto.indexOf('/');
+        String codigo = barra < 0 ? resto : resto.substring(0, barra);
+        if (codigo.isEmpty() || ROTAS_SEM_CODIGO.contains(codigo)) {
+            return null;
+        }
+        // Teto de tamanho: o valor vem da URL e vira consulta ao banco
+        return codigo.length() > 64 ? codigo.substring(0, 64) : codigo;
+    }
+
+    private static String loginAutenticado() {
+        return SecurityUtils.getCurrentUserLogin().filter(l -> !"anonymousUser".equals(l)).orElse(null);
     }
 
     /**

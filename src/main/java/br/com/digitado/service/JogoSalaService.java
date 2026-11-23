@@ -138,6 +138,11 @@ public class JogoSalaService {
     // Quantos JOGADORES estão conectados na sala agora (0 se a sala nem tem estado em
     // memória). O professor da turma não conta: ele comanda a sala, não joga - a
     // listagem mostraria "1 conectado" numa sala em que ninguém entrou ainda.
+    /** Esta sala já tem estado de jogo em memória (alguém entrou nela desde o início do servidor)? */
+    public boolean temJogoEmMemoria(String codigoSala) {
+        return codigoSala != null && jogos.containsKey(codigoSala);
+    }
+
     public int conectadosNaSala(String codigoSala) {
         EstadoJogo jogo = jogos.get(codigoSala);
         return jogo != null ? jogo.totalJogadores() : 0;
@@ -624,6 +629,7 @@ public class JogoSalaService {
     ) {
         EstadoJogo jogo = jogos.get(codigoSala);
         if (jogo == null || jogo.getPalavraAtual() == null) return null;
+        respostaDigitada = ComparadorPalavras.limitarResposta(respostaDigitada);
         // Cada aluno só pode responder uma vez por palavra. Aqui não mandamos recusa:
         // o feedback da primeira resposta já chegou e uma segunda mensagem só faria a
         // tela do aluno trocar o resultado bom por um aviso.

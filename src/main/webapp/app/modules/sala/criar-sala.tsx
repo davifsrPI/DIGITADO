@@ -43,6 +43,12 @@ export const CriarSala = () => {
   // A mesma tela configura salas de turma e duelos 1v1, o modo vem da URL (?modo=1v1)
   const [searchParams] = useSearchParams();
   const is1v1 = searchParams.get('modo') === '1v1';
+  // Duplicar uma sala (botão em "Minhas salas"): ?duplicar=CODIGO abre esta tela
+  // preenchida com as palavras e a configuração daquela sala. O NOME fica em branco
+  // de propósito: é outra turma, e duas salas de nome igual se confundem na lista.
+  const codigoOrigem = searchParams.get('duplicar');
+  const [carregandoCopia, setCarregandoCopia] = useState(!!codigoOrigem);
+  const [avisoCopia, setAvisoCopia] = useState<string | null>(null);
 
   // Estado do formulário
   const [nome, setNome] = useState('');
@@ -115,6 +121,62 @@ export const CriarSala = () => {
     void buscarCodigo();
   }, []);
 
+  /**
+   * Carrega a sala de origem da duplicação. As três leituras são do DONO da sala
+   * (configuração e palavras são as respostas do ditado): para a sala de outra
+   * pessoa o servidor recusa, e a tela segue em branco com o aviso.
+   */
+  useEffect(() => {
+    if (!codigoOrigem) return;
+    let cancelado = false;
+    Promise.all([
+      axios.get<{ descricao?: { descricao?: string | null } | string | null; privada?: boolean }>(
+        `/api/salas/${encodeURIComponent(codigoOrigem)}`,
+      ),
+      axios.get<{
+        tempoFacil: number;
+        tempoMedio: number;
+        tempoDificil: number;
+        qtdFacil: number;
+        qtdMedio: number;
+        qtdDificil: number;
+      }>(`/api/salas/${encodeURIComponent(codigoOrigem)}/configuracao`),
+      axios.get<{ sorteadas: Palavra[]; extras: Palavra[] }>(`/api/salas/${encodeURIComponent(codigoOrigem)}/palavras`),
+    ])
+      .then(([sala, cfg, palavras]) => {
+        if (cancelado) return;
+        const d = sala.data?.descricao;
+        setDescricao((typeof d === 'string' ? d : d?.descricao) ?? '');
+        if (typeof sala.data?.privada === 'boolean') setPrivada(sala.data.privada);
+        setTempos({ FACIL: cfg.data.tempoFacil, MEDIO: cfg.data.tempoMedio, DIFICIL: cfg.data.tempoDificil });
+        const sorteadasCopia = palavras.data.sorteadas ?? [];
+        // As quantidades seguem as palavras copiadas, e não os números gravados: a
+        // dificuldade de uma palavra pode ter mudado desde a criação, e o sorteio
+        // trocaria a palavra para acertar a conta - e a ideia é MANTER as palavras
+        const contar = (dif: Dificuldade) => sorteadasCopia.filter(w => w.dificuldade === dif).length;
+        setQuantidades(
+          sorteadasCopia.length > 0 && !is1v1
+            ? { FACIL: contar('FACIL'), MEDIO: contar('MEDIO'), DIFICIL: contar('DIFICIL') }
+            : { FACIL: cfg.data.qtdFacil, MEDIO: cfg.data.qtdMedio, DIFICIL: cfg.data.qtdDificil },
+        );
+        sorteadasRef.current = sorteadasCopia;
+        setSorteadas(sorteadasCopia);
+        setExtraWords(palavras.data.extras ?? []);
+        setAvisoCopia(
+          `Copiamos as palavras e a configuração da sala ${codigoOrigem}. Dê um nome para a nova sala e confira antes de criar.`,
+        );
+      })
+      .catch(() => {
+        if (!cancelado) setError(`Não foi possível copiar a sala ${codigoOrigem}. Monte a sala do zero ou tente de novo.`);
+      })
+      .finally(() => {
+        if (!cancelado) setCarregandoCopia(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [codigoOrigem]);
+
   // Incrementa/decrementa a quantidade de palavras de uma dificuldade, limitado entre 0 e 30
   const adj = (key: Dificuldade, delta: number) => {
     setQuantidades(prev => ({ ...prev, [key]: Math.max(0, Math.min(30, prev[key] + delta)) }));
@@ -174,7 +236,8 @@ export const CriarSala = () => {
   // Só na sala de turma: no duelo 1v1 o criador também joga, então ver as palavras
   // antes da partida seria vantagem injusta, lá o sorteio continua às cegas no início.
   useEffect(() => {
-    if (is1v1) return;
+    // Duplicando: espera as palavras da sala de origem, senão o sorteio inventaria outras
+    if (is1v1 || carregandoCopia) return;
     if (sorteioDebounceRef.current) clearTimeout(sorteioDebounceRef.current);
     sorteioDebounceRef.current = setTimeout(() => {
       void reconciliarSorteio(quantidades);
@@ -182,7 +245,7 @@ export const CriarSala = () => {
     return () => {
       if (sorteioDebounceRef.current) clearTimeout(sorteioDebounceRef.current);
     };
-  }, [quantidades, is1v1]);
+  }, [quantidades, is1v1, carregandoCopia]);
 
   // Troca uma palavra sorteada por outra da mesma dificuldade que ainda não esteja na tela
   const gerarOutra = async (palavra: Palavra) => {
@@ -361,6 +424,12 @@ export const CriarSala = () => {
               <h2 className="cs-step-title">{is1v1 ? 'Informações do duelo 1v1' : 'Informações da sala'}</h2>
 
               {error && <div className="cs-error">{error}</div>}
+              {carregandoCopia && <div className="cs-copia-aviso">Copiando a sala {codigoOrigem}...</div>}
+              {avisoCopia && !error && (
+                <div className="cs-copia-aviso" role="status">
+                  ⧉ {avisoCopia}
+                </div>
+              )}
 
               <form
                 id="sala-form"
@@ -752,7 +821,12 @@ export const CriarSala = () => {
 
             {/* Sem código do servidor não há sala para criar: o botão espera por ele
                 e diz o motivo, em vez de não fazer nada ao ser tocado */}
-            <button type="submit" form="sala-form" className="cs-submit-btn" disabled={submitting || !nome.trim() || !codigo}>
+            <button
+              type="submit"
+              form="sala-form"
+              className="cs-submit-btn"
+              disabled={submitting || !nome.trim() || !codigo || carregandoCopia}
+            >
               {submitting
                 ? is1v1
                   ? 'Criando duelo...'
@@ -773,7 +847,7 @@ export const CriarSala = () => {
                   type="button"
                   className="cs-submit-btn cs-submit-btn--pronta"
                   onClick={() => void criar(false)}
-                  disabled={submitting || !nome.trim() || !codigo}
+                  disabled={submitting || !nome.trim() || !codigo || carregandoCopia}
                 >
                   {submitting ? 'Criando sala...' : '✓ Criar e deixar pronta'}
                 </button>

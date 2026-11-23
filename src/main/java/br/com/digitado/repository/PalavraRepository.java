@@ -19,10 +19,13 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     // propósito: se o banco já tiver o mesmo texto duplicado (importações antigas),
     // devolve sempre o registro mais antigo em vez de estourar
     // IncorrectResultSizeDataAccessException - que derrubava /buscar e /sugerir.
-    Optional<Palavra> findFirstByTextoIgnoreCaseOrderByIdAsc(String texto);
+    //
+    // POR IDIOMA: "animal", "hotel" e "real" existem em mais de um idioma, e a sala
+    // (que dita em português) não pode receber a palavra do acervo de espanhol.
+    Optional<Palavra> findFirstByTextoIgnoreCaseAndIdiomaOrderByIdAsc(String texto, String idioma);
 
-    // Retorna até 5 palavras ativas cujo texto contenha o trecho digitado - usada no autocomplete
-    List<Palavra> findTop5ByTextoContainingIgnoreCaseAndAtivaTrue(String texto);
+    // Retorna até 5 palavras ativas do idioma cujo texto contenha o trecho digitado - usada no autocomplete
+    List<Palavra> findTop5ByTextoContainingIgnoreCaseAndAtivaTrueAndIdioma(String texto, String idioma);
 
     /**
      * Classificação de dificuldade em SQL - mesma regra do getter
@@ -45,7 +48,9 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
 
     // Sorteia N palavras ativas de uma determinada dificuldade usando ORDER BY RAND()
     @Query(
-        value = "SELECT * FROM palavra WHERE ativa = true AND " + CASE_DIFICULDADE_SQL + " = :dif ORDER BY RAND() LIMIT :n",
+        value = "SELECT * FROM palavra WHERE ativa = true AND idioma = 'PT' AND " +
+        CASE_DIFICULDADE_SQL +
+        " = :dif ORDER BY RAND() LIMIT :n",
         nativeQuery = true
     )
     List<Palavra> findRandomByDificuldade(@Param("dif") String dif, @Param("n") int n);
@@ -53,7 +58,7 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     // Variante que exclui ids (palavras da partida anterior da sala) - evita que
     // duas partidas seguidas repitam as mesmas palavras. Mesma regra de dificuldade.
     @Query(
-        value = "SELECT * FROM palavra WHERE ativa = true AND id NOT IN (:ids) AND " +
+        value = "SELECT * FROM palavra WHERE ativa = true AND idioma = 'PT' AND id NOT IN (:ids) AND " +
         CASE_DIFICULDADE_SQL +
         " = :dif ORDER BY RAND() LIMIT :n",
         nativeQuery = true
@@ -63,18 +68,22 @@ public interface PalavraRepository extends JpaRepository<Palavra, Long> {
     // Sorteia N palavras ativas quaisquer, excluindo as já escolhidas - usado para
     // completar a partida quando alguma faixa de dificuldade (calculada pela taxa
     // de acerto) não tem palavras suficientes, ex: banco novo onde quase tudo é MEDIO
-    @Query(value = "SELECT * FROM palavra WHERE ativa = true AND id NOT IN (:ids) ORDER BY RAND() LIMIT :n", nativeQuery = true)
+    @Query(
+        value = "SELECT * FROM palavra WHERE ativa = true AND idioma = 'PT' AND id NOT IN (:ids) ORDER BY RAND() LIMIT :n",
+        nativeQuery = true
+    )
     List<Palavra> findRandomAtivasExcluindo(@Param("ids") List<Long> ids, @Param("n") int n);
 
-    // Usados pela Palavra do Dia: total de palavras ativas e busca paginada em ordem
+    // Sorteios das SALAS e da palavra do dia: idioma = 'PT' fixo no SQL, o treino de idiomas fica de fora.
+    // Usados pela Palavra do Dia (português): total de palavras ativas e busca paginada em ordem
     // estável de id, para o sorteio determinístico do dia (mesma palavra o dia todo)
-    long countByAtivaTrue();
+    long countByAtivaTrueAndIdioma(String idioma);
 
-    Page<Palavra> findByAtivaTrue(Pageable pageable);
+    Page<Palavra> findByAtivaTrueAndIdioma(String idioma, Pageable pageable);
 
     // O acervo ativo inteiro: o modo individual avalia todas as palavras na equação
     // que escolhe a próxima (EquacaoPalavraIndividual) - são poucas centenas
-    List<Palavra> findAllByAtivaTrue();
+    List<Palavra> findAllByAtivaTrueAndIdioma(String idioma);
 
     // Incremento atômico das colunas de estatística da palavra (total_tentativas e
     // total_acertos) - único ponto que escreve nesses contadores. Seguro mesmo com

@@ -135,6 +135,20 @@ public final class ComparadorPalavras {
     public record AnaliseErro(String tipo, String subtipo, String detalhe) {}
 
     /** Confere a resposta inteira de uma vez. Resposta vazia conta como não respondida. */
+    /**
+     * Teto da resposta digitada. O campo da tela aceita 40 caracteres e nenhuma
+     * palavra do acervo passa de 60, mas a resposta chega do navegador: sem teto, um
+     * cliente adulterado mandava dezenas de KB por rodada, que iam para a memória da
+     * sala, para o relatório transmitido ao professor e para a distância de edição
+     * (que cresce com o produto dos dois tamanhos).
+     */
+    public static final int MAX_RESPOSTA = 80;
+
+    /** A resposta cortada no teto (nulo continua nulo). Errada do mesmo jeito. */
+    public static String limitarResposta(String resposta) {
+        return resposta == null || resposta.length() <= MAX_RESPOSTA ? resposta : resposta.substring(0, MAX_RESPOSTA);
+    }
+
     public static Conferencia conferir(String digitado, String correto) {
         String d = canonico(digitado);
         String c = canonico(correto);

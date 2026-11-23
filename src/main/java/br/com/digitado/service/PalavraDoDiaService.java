@@ -3,6 +3,7 @@ package br.com.digitado.service;
 import br.com.digitado.domain.HistoricoResposta;
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.PalavraDoDiaTentativa;
+import br.com.digitado.domain.enumeration.Idioma;
 import br.com.digitado.repository.PalavraDoDiaTentativaRepository;
 import br.com.digitado.repository.PalavraRepository;
 import java.time.LocalDate;
@@ -80,11 +81,14 @@ public class PalavraDoDiaService {
         if (atual != null && atual.dia().equals(hoje)) {
             return atual.palavra();
         }
-        long total = palavraRepository.countByAtivaTrue();
+        long total = palavraRepository.countByAtivaTrueAndIdioma(Idioma.PT.name());
         Optional<Palavra> palavra = Optional.empty();
         if (total > 0) {
             int indice = (int) (hoje.toEpochDay() % total);
-            palavra = palavraRepository.findByAtivaTrue(PageRequest.of(indice, 1, Sort.by("id"))).stream().findFirst();
+            palavra = palavraRepository
+                .findByAtivaTrueAndIdioma(Idioma.PT.name(), PageRequest.of(indice, 1, Sort.by("id")))
+                .stream()
+                .findFirst();
         }
         // Sem palavras ativas o Optional vazio também é cacheado - evita marretar o
         // banco em toda visita de um ambiente ainda sem acervo
@@ -103,7 +107,10 @@ public class PalavraDoDiaService {
     // sem tipo, e no painel ele virava "Outro".
     @Transactional
     public boolean tentar(Palavra palavra, String login, String resposta) {
-        ComparadorPalavras.Conferencia conferencia = ComparadorPalavras.conferir(resposta, palavra.getTexto());
+        ComparadorPalavras.Conferencia conferencia = ComparadorPalavras.conferir(
+            ComparadorPalavras.limitarResposta(resposta),
+            palavra.getTexto()
+        );
         boolean acertou = conferencia.correta();
 
         tentativaRepository.save(new PalavraDoDiaTentativa().data(hoje()).login(login).acertou(acertou).palavraId(palavra.getId()));

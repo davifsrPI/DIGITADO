@@ -71,7 +71,25 @@ class TitularDadosResourceIT {
         // Uma tentativa de palavra do dia vinculada ao titular (dado pessoal a exportar/excluir)
         Long palavraId = palavraRepository.saveAndFlush(new br.com.digitado.domain.Palavra().texto("titular-teste").ativa(false)).getId();
         tentativaRepository.saveAndFlush(new PalavraDoDiaTentativa().data(LocalDate.now()).login(LOGIN).acertou(true).palavraId(palavraId));
+
+        // O nome verdadeiro e a turma que ele digitou ao entrar numa sala
+        salaRepository.saveAndFlush(new br.com.digitado.domain.Sala().codigo(SALA).nome("Turma LGPD").ativo(true));
+        br.com.digitado.domain.ParticipanteSala participante = new br.com.digitado.domain.ParticipanteSala();
+        participante.setSalaCodigo(SALA);
+        participante.setLogin(LOGIN);
+        participante.setNome("Nome Verdadeiro");
+        participante.setTurma("6B");
+        participante.setDataEntrada(java.time.Instant.now());
+        participanteSalaRepository.saveAndFlush(participante);
     }
+
+    private static final String SALA = "LGPD23";
+
+    @Autowired
+    private br.com.digitado.repository.SalaRepository salaRepository;
+
+    @Autowired
+    private br.com.digitado.repository.ParticipanteSalaRepository participanteSalaRepository;
 
     @Autowired
     private br.com.digitado.repository.PalavraRepository palavraRepository;
@@ -107,5 +125,7 @@ class TitularDadosResourceIT {
         assertThat(userRepository.findOneByLogin(LOGIN)).isEmpty();
         assertThat(usuarioRepository.findByEmail(EMAIL)).isEmpty();
         assertThat(tentativaRepository.findByDataAndLogin(LocalDate.now(), LOGIN)).isEmpty();
+        // Ficava para trás: nome verdadeiro e turma digitados nas salas
+        assertThat(participanteSalaRepository.countByLogin(LOGIN)).isZero();
     }
 }

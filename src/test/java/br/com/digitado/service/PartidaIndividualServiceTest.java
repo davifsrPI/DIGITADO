@@ -88,10 +88,10 @@ class PartidaIndividualServiceTest {
             conquistaEngine,
             xpService
         );
-        when(palavraRepository.findAllByAtivaTrue()).thenReturn(acervo);
+        when(palavraRepository.findAllByAtivaTrueAndIdioma("PT")).thenReturn(acervo);
         acervo.forEach(p -> when(palavraRepository.findById(p.getId())).thenReturn(Optional.of(p)));
         when(historicoRespostaService.estatisticasPorPalavra(LOGIN)).thenReturn(Map.of());
-        when(partidaIndividualRepository.findFirstByLoginOrderByAcertosDescDataFimAsc(LOGIN)).thenReturn(Optional.empty());
+        when(partidaIndividualRepository.findFirstByLoginAndIdiomaOrderByAcertosDescDataFimAsc(LOGIN, "PT")).thenReturn(Optional.empty());
         when(palavraAudioService.temAudio(any())).thenReturn(true);
         when(xpService.creditarPorLogin(anyString(), anyLong(), anyString())).thenAnswer(i -> i.getArgument(1));
     }
@@ -99,6 +99,32 @@ class PartidaIndividualServiceTest {
     private String textoDa(EstadoIndividualVM estado) {
         long id = estado.palavra().id();
         return acervo.stream().filter(p -> p.getId() == id).findFirst().orElseThrow().getTexto();
+    }
+
+    @Test
+    @DisplayName("treino de idiomas sem voz no servidor não começa")
+    void treinoSemVozNaoComeca() {
+        when(palavraAudioService.vozDisponivel(br.com.digitado.domain.enumeration.Idioma.ES)).thenReturn(false);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.iniciar(LOGIN, br.com.digitado.domain.enumeration.Idioma.ES)
+        ).isInstanceOf(PartidaIndividualService.VozIndisponivelException.class);
+    }
+
+    @Test
+    @DisplayName("no treino de idiomas o texto nunca vai para o aluno, nem quando o áudio falha")
+    void treinoNuncaMandaOTexto() {
+        Palavra perro = palavra(900, "Perro");
+        perro.setIdioma("ES");
+        when(palavraRepository.findAllByAtivaTrueAndIdioma("ES")).thenReturn(List.of(perro));
+        when(palavraRepository.findById(900L)).thenReturn(Optional.of(perro));
+        when(partidaIndividualRepository.findFirstByLoginAndIdiomaOrderByAcertosDescDataFimAsc(LOGIN, "ES")).thenReturn(Optional.empty());
+        when(palavraAudioService.vozDisponivel(br.com.digitado.domain.enumeration.Idioma.ES)).thenReturn(true);
+        // A síntese desta palavra falhou: no português o texto iria para o navegador falar
+        when(palavraAudioService.temAudio(900L)).thenReturn(false);
+
+        EstadoIndividualVM estado = service.iniciar(LOGIN, br.com.digitado.domain.enumeration.Idioma.ES);
+
+        assertThat(estado.palavra().texto()).isNull();
+        assertThat(estado.palavra().idioma()).isEqualTo("es-ES");
     }
 
     @Test

@@ -908,3 +908,14 @@ body.criar-sala-page .view-container {
   color: rgba(255, 255, 255, 0.5);
   line-height: 1.35;
 }
+
+/* Aviso da duplicação: a tela abriu preenchida com as palavras de outra sala */
+.cs-copia-aviso {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(55, 138, 221, 0.18);
+  border: 1px solid rgba(55, 138, 221, 0.5);
+  color: #d6e9fb;
+  font-size: 0.9rem;
+}

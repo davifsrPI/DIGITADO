@@ -123,6 +123,13 @@ body.login-page .view-container {
   border-radius: 10px;
 }
 
+/* Conta recém-criada: verde legível sobre o cartão escuro */
+.login-alert.alert-success {
+  background: rgba(46, 160, 67, 0.18);
+  border-color: rgba(46, 160, 67, 0.55);
+  color: #b6f0c2;
+}
+
 .login-form {
   display: flex;
   flex-direction: column;

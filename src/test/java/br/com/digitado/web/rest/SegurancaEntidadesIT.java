@@ -3,6 +3,7 @@ package br.com.digitado.web.rest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,6 +70,45 @@ class SegurancaEntidadesIT {
         mockMvc.perform(get("/api/palavras/buscar").param("texto", "casa")).andExpect(status().isOk());
         mockMvc.perform(get("/api/palavras/sortear").param("dificuldade", "FACIL").param("quantidade", "1")).andExpect(status().isOk());
         mockMvc.perform(get("/api/conquistas/minhas")).andExpect(status().isOk());
+    }
+
+    // A conta de administração administra e NÃO joga: as rotas do jogo a recusam
+    // mesmo que ela tenha também ROLE_USER (como a conta "admin" padrão)
+    @ParameterizedTest(name = "admin não usa {0}")
+    @ValueSource(
+        strings = {
+            "/api/individual/recordes",
+            "/api/individual/estado",
+            "/api/meu-desempenho",
+            "/api/palavras/sortear?dificuldade=FACIL",
+            "/api/palavras/buscar?texto=casa",
+            "/api/conquistas/minhas",
+            "/api/salas/codigo/novo",
+            "/api/salas/1v1/publicas",
+        }
+    )
+    @WithMockUser(value = "admin", authorities = { "ROLE_ADMIN", "ROLE_USER" })
+    void adminNaoJoga(String url) throws Exception {
+        mockMvc.perform(get(url)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(value = "admin", authorities = { "ROLE_ADMIN", "ROLE_USER" })
+    void adminNaoComecaPartidaNemTentaAPalavraDoDia() throws Exception {
+        mockMvc.perform(post("/api/individual/iniciar")).andExpect(status().isForbidden());
+        mockMvc
+            .perform(post("/api/public/palavra-do-dia/tentar").contentType("application/json").content("{\"resposta\":\"casa\"}"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
+    void treinoDeIdiomasSoAceitaOsIdiomasConhecidos() throws Exception {
+        mockMvc.perform(get("/api/individual/recordes").param("idioma", "EN")).andExpect(status().isOk());
+        mockMvc
+            .perform(post("/api/individual/iniciar").param("idioma", "xx' OR 1=1 --"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("error.idiomainvalido"));
     }
 
     @Test

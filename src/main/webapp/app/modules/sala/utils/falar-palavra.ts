@@ -78,9 +78,16 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
   }
 }
 
-// Melhor voz pt-BR disponível neste navegador (null = deixar a padrão)
-const escolherVoz = (): SpeechSynthesisVoice | null => {
+// Melhor voz do idioma neste navegador (null = deixar a padrão). Fora do português
+// (treino de idiomas) vale a voz da etiqueta exata (en-US) e, sem ela, qualquer uma
+// do mesmo idioma (en-GB)
+const escolherVoz = (lang = 'pt-BR'): SpeechSynthesisVoice | null => {
   if (vozesCache.length === 0) atualizarVozes();
+  const base = lang.toLowerCase().slice(0, 2);
+  if (base !== 'pt') {
+    const doIdioma = vozesCache.filter(v => v.lang?.toLowerCase().replace('_', '-').startsWith(base));
+    return doIdioma.find(v => v.lang?.toLowerCase().replace('_', '-') === lang.toLowerCase()) ?? doIdioma[0] ?? null;
+  }
   const vozesPt = vozesCache.filter(v => v.lang?.toLowerCase().startsWith('pt'));
   if (vozesPt.length === 0) return null;
 
@@ -102,6 +109,8 @@ export interface OpcoesFala {
    * jogador já está pronto e qualquer espera aqui parece travamento.
    */
   pausaMs?: number;
+  /** Idioma da palavra (etiqueta BCP-47). Padrão pt-BR; o treino de idiomas manda en-US/es-ES. */
+  lang?: string;
 }
 
 /** Fala o texto em pt-BR com a melhor voz disponível, após a pausa configurada (1s por padrão). */
@@ -125,9 +134,9 @@ export const falarPalavra = (texto: string, opcoes: OpcoesFala = {}) => {
   const falar = () => {
     timerPausa = null;
     const utter = new SpeechSynthesisUtterance(texto);
-    utter.lang = 'pt-BR';
+    utter.lang = opcoes.lang ?? 'pt-BR';
     utter.rate = opcoes.rate ?? 0.85;
-    const voz = escolherVoz();
+    const voz = escolherVoz(utter.lang);
     if (voz) utter.voice = voz;
     if (opcoes.onEnd) {
       utter.onend = opcoes.onEnd;

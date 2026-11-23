@@ -116,6 +116,27 @@ public class SalaResource {
         return valor;
     }
 
+    // Mesmos tetos dos campos da tela de criação (maxLength 80 e 500)
+    static final int MAX_NOME = 80;
+    static final int MAX_DESCRICAO = 500;
+
+    /**
+     * Nome obrigatório e textos dentro dos tetos da tela. A tela já limita, mas o
+     * corpo vem do navegador: sem conferir aqui, um nome de 10 mil caracteres
+     * estourava a coluna (erro 500) e uma descrição gigante ia para o banco.
+     */
+    private void validarTextos(String nome, String descricao) {
+        if (nome == null || nome.isBlank()) {
+            throw new BadRequestAlertException("O nome da sala é obrigatório", ENTITY_NAME, "nomeobrigatorio");
+        }
+        if (nome.length() > MAX_NOME) {
+            throw new BadRequestAlertException("Nome da sala longo demais", ENTITY_NAME, "nomelongo");
+        }
+        if (descricao != null && descricao.length() > MAX_DESCRICAO) {
+            throw new BadRequestAlertException("Descrição longa demais", ENTITY_NAME, "descricaolonga");
+        }
+    }
+
     // Monta o JSON final da coluna a partir do texto e do tipo da sala
     private String montarDescricaoJson(String descricaoOriginal, TipoSala tipo) {
         ObjectNode node = objectMapper.createObjectNode();
@@ -150,10 +171,20 @@ public class SalaResource {
     @PostMapping("")
     public ResponseEntity<SalaResponseVM> createSala(@Valid @RequestBody Sala sala) throws URISyntaxException {
         LOG.debug("REST request to save Sala : {}", sala);
+        // O código vem do navegador (ele o pediu a /codigo/novo): só o formato do
+        // servidor passa. Antes qualquer texto virava a chave primária da sala.
+        if (!CodigoSalaService.formatoValido(sala.getCodigo())) {
+            throw new BadRequestAlertException("Código de sala inválido", ENTITY_NAME, "codigoinvalido");
+        }
+        validarTextos(sala.getNome(), extrairTextoDescricao(sala.getDescricao()));
         // Impede criação com código duplicado - o código é a chave primária
         if (salaRepository.existsById(sala.getCodigo())) {
             throw new BadRequestAlertException("Código de sala já em uso", ENTITY_NAME, "codigoexists");
         }
+        // O corpo é a ENTIDADE inteira: o que não é do formulário de criação é
+        // descartado aqui, para o cliente não escolher o professor nem os alunos
+        sala.setProfessor(null);
+        sala.setAlunos(new java.util.HashSet<>());
         // Vincula o professor logado à sala - se não houver Usuario correspondente, professor fica null
         SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)
@@ -234,6 +265,10 @@ public class SalaResource {
         }
         if (!isOwnerOrAdmin(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
+        }
+        if (sala.getNome() != null || sala.getDescricao() != null) {
+            String nomeFinal = sala.getNome() != null ? sala.getNome() : "-";
+            validarTextos(nomeFinal, extrairTextoDescricao(sala.getDescricao()));
         }
 
         Optional<Sala> result = salaRepository
@@ -652,57 +687,11 @@ public class SalaResource {
         return ResponseEntity.ok(Map.of("souProfessor", isOwnerOrAdmin(codigo)));
     }
 
-    /**
-     * Duplica a sala: mesma configuração de partida (tempos, quantidades, palavras
-     * sorteadas e as escolhidas a mão), mesmo tipo e descrição, código NOVO.
-     *
-     * É o caso do professor que dá a mesma atividade para a turma B depois da A:
-     * antes ele montava tudo de novo, palavra por palavra, ou usava a mesma sala -
-     * e aí as duas turmas se misturavam no mesmo placar e nas mesmas estatísticas.
-     * A cópia nasce limpa: sem partida, sem participantes, sem histórico.
-     *
-     * Só o dono (ou admin) duplica: a configuração carrega as palavras da partida,
-     * que são as respostas do ditado. A cópia pertence a quem duplicou.
-     */
-    @PostMapping("/{codigo}/duplicar")
-    public ResponseEntity<SalaResponseVM> duplicarSala(@PathVariable("codigo") String codigo) throws URISyntaxException {
-        LOG.debug("REST request to duplicate Sala : {}", codigo);
-        Sala original = salaRepository
-            .findById(codigo)
-            .orElseThrow(() -> new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound"));
-        if (!isOwnerOrAdmin(codigo)) {
-            throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
-        }
-        Sala copia = new Sala();
-        copia.setCodigo(codigoSalaService.gerarDisponivel());
-        copia.setNome(nomeDaCopia(original.getNome()));
-        TipoSala tipo = original.getTipo() != null ? original.getTipo() : TipoSala.TURMA;
-        copia.setTipo(tipo);
-        copia.setPrivada(tipo == TipoSala.UM_V_UM ? original.getPrivada() : Boolean.TRUE);
-        copia.setDescricao(montarDescricaoJson(original.getDescricao(), tipo));
-        copia.setConfiguracao(original.getConfiguracao());
-        copia.setAtivo(true);
-        copia.setDataCriacao(java.time.Instant.now());
-        // Dono da cópia: quem duplicou. O admin que duplica a sala de alguém e não
-        // tem cadastro de jogador deixa a cópia com o professor original
-        Usuario dono = SecurityUtils.getCurrentUserLogin()
-            .flatMap(userRepository::findOneByLogin)
-            .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))
-            .orElse(original.getProfessor());
-        copia.setProfessor(dono);
-        copia = salaRepository.save(copia);
-        return ResponseEntity.created(new URI("/api/salas/" + copia.getCodigo()))
-            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, copia.getCodigo()))
-            .body(toVM(copia));
-    }
-
-    // "Turma 3A" -> "Turma 3A (cópia)"; duplicar a cópia não empilha "(cópia) (cópia)"
-    static String nomeDaCopia(String nome) {
-        String base = nome == null ? "Sala" : nome.replaceAll("\\s*\\(cópia\\)$", "").trim();
-        String copia = base + " (cópia)";
-        // O nome da tela de criação vai até 80 caracteres: a cópia respeita o mesmo teto
-        return copia.length() <= 80 ? copia : base.substring(0, 80 - " (cópia)".length()).trim() + " (cópia)";
-    }
+    // Duplicar a sala NÃO tem endpoint próprio: o botão "Duplicar" abre a tela de
+    // criação já preenchida (/sala/new?duplicar=CODIGO) com o que /configuracao e
+    // /palavras devolvem - os dois só ao dono. O professor confere, dá um nome novo
+    // e cria como qualquer sala. Antes a cópia nascia direto no servidor com o mesmo
+    // nome + "(cópia)", e duas turmas acabavam com salas de nome igual na lista.
 
     // Exclui uma sala - apenas o professor dono ou admin podem excluir
     @DeleteMapping("/{codigo}")

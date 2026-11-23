@@ -244,6 +244,9 @@ public class TitularDadosService {
         em.createQuery("delete from PalavraDoDiaTentativa t where t.login = :login").setParameter("login", login).executeUpdate();
         em.createQuery("delete from HistoricoResposta h where h.login = :login").setParameter("login", login).executeUpdate();
         em.createQuery("delete from PartidaIndividual pi where pi.login = :login").setParameter("login", login).executeUpdate();
+        // Nome verdadeiro e turma que o aluno digitou ao entrar em cada sala: são dado
+        // pessoal dele e ficavam para trás quando a conta era excluída
+        em.createQuery("delete from ParticipanteSala ps where ps.login = :login").setParameter("login", login).executeUpdate();
         userRepository.findOneByLogin(login).ifPresent(userRepository::delete);
 
         // Log SEM dados além do login - trilha de auditoria da exclusão (art. 37)

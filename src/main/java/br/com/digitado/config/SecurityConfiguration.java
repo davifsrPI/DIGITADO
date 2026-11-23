@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authorization.AuthorityAuthorizationManager;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationManager;
@@ -18,6 +19,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
@@ -67,6 +69,44 @@ public class SecurityConfiguration {
         };
     }
 
+    /**
+     * Conta de JOGADOR: autenticada, com ROLE_USER e SEM ROLE_ADMIN.
+     *
+     * A conta de administração administra (tabelas, usuários, métricas) e não joga.
+     * Ela tinha as duas roles e, por isso, entrava em qualquer sala com o poder de
+     * professor, criava salas, somava XP no ranking e via as respostas da partida
+     * ao vivo. Barrar só no menu do front não basta: a regra mora aqui.
+     */
+    static AuthorizationManager<RequestAuthorizationContext> somenteJogador() {
+        return (autenticacao, contexto) -> new AuthorizationDecision(ehJogador(autenticacao.get()));
+    }
+
+    /**
+     * Qualquer um, inclusive o visitante anônimo, MENOS a conta de administração.
+     * Serve à palavra do dia, que o visitante joga sem conta.
+     */
+    static AuthorizationManager<RequestAuthorizationContext> excetoAdmin() {
+        return (autenticacao, contexto) -> new AuthorizationDecision(!temAutoridade(autenticacao.get(), AuthoritiesConstants.ADMIN));
+    }
+
+    static boolean ehJogador(Authentication autenticacao) {
+        return (
+            autenticacao != null &&
+            autenticacao.isAuthenticated() &&
+            !(autenticacao instanceof AnonymousAuthenticationToken) &&
+            temAutoridade(autenticacao, AuthoritiesConstants.USER) &&
+            !temAutoridade(autenticacao, AuthoritiesConstants.ADMIN)
+        );
+    }
+
+    private static boolean temAutoridade(Authentication autenticacao, String autoridade) {
+        return (
+            autenticacao != null &&
+            autenticacao.getAuthorities() != null &&
+            autenticacao.getAuthorities().stream().anyMatch(a -> autoridade.equals(a.getAuthority()))
+        );
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -104,11 +144,33 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern("/api/activate")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/init")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/finish")).permitAll()
+                    // O JOGO é da conta de jogador (ver somenteJogador). A de administração
+                    // não cria nem comanda sala, não joga o individual, o treino de idiomas
+                    // nem a palavra do dia. Precisa vir ANTES de /api/public/** e das
+                    // regras gerais abaixo: a primeira correspondência vence.
+                    // Ficam com o admin só as telas de Entidades de sala: listar, ver,
+                    // editar (PUT) e excluir, em /api/salas e /api/salas/{codigo}.
+                    .requestMatchers(mvc.pattern(HttpMethod.POST, "/api/public/palavra-do-dia/tentar")).access(excetoAdmin())
+                    .requestMatchers(
+                        mvc.pattern("/api/individual/**"),
+                        mvc.pattern("/api/meu-desempenho"),
+                        mvc.pattern(HttpMethod.POST, "/api/salas"),
+                        mvc.pattern(HttpMethod.PATCH, "/api/salas/*"),
+                        // tudo o que é DA PARTIDA: /codigo/novo, /1v1/publicas, /{codigo}/audio,
+                        // /palavra-atual, /configuracao, /palavras, /identificacao, /relatorio,
+                        // /estatisticas, /participantes, /meu-resumo, /resumo/{login}...
+                        mvc.pattern("/api/salas/*/*"),
+                        mvc.pattern("/api/salas/*/*/*"),
+                        mvc.pattern(HttpMethod.POST, "/api/palavras/sugerir"),
+                        mvc.pattern(HttpMethod.GET, "/api/palavras/buscar"),
+                        mvc.pattern(HttpMethod.GET, "/api/palavras/sortear"),
+                        mvc.pattern(HttpMethod.GET, "/api/conquistas/minhas")
+                    ).access(somenteJogador())
                     .requestMatchers(mvc.pattern("/api/public/**")).permitAll()
                     .requestMatchers(mvc.pattern("/websocket/**")).permitAll()
-                    // Endpoints de escrita usados pelo próprio jogador: permanecem acessíveis a qualquer usuário autenticado.
-                    // Precisam vir ANTES das regras de bloqueio abaixo (a primeira correspondência vence).
-                    .requestMatchers(mvc.pattern(HttpMethod.POST, "/api/palavras/sugerir")).authenticated()
+                    // Endpoint de escrita usado pelo próprio titular: aberto a qualquer usuário autenticado.
+                    // Precisa vir ANTES das regras de bloqueio abaixo (a primeira correspondência vence).
+                    // (sugerir palavra, buscar, sortear e as próprias conquistas são do jogo: ver acima)
                     .requestMatchers(mvc.pattern(HttpMethod.POST, "/api/usuarios/alterar-senha")).authenticated()
                     // Manipulação do banco (CRUD administrativo): apenas ADMIN pode escrever.
                     .requestMatchers(mvc.pattern(HttpMethod.POST, "/api/atividades")).hasAuthority(AuthoritiesConstants.ADMIN)
@@ -129,10 +191,6 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern(HttpMethod.PUT, "/api/erro-ortograficos/**"), mvc.pattern(HttpMethod.PATCH, "/api/erro-ortograficos/**"), mvc.pattern(HttpMethod.DELETE, "/api/erro-ortograficos/**")).hasAuthority(AuthoritiesConstants.ADMIN)
                     .requestMatchers(mvc.pattern(HttpMethod.PUT, "/api/usuarios/**"), mvc.pattern(HttpMethod.PATCH, "/api/usuarios/**"), mvc.pattern(HttpMethod.DELETE, "/api/usuarios/**")).hasAuthority(AuthoritiesConstants.ADMIN)
                     .requestMatchers(mvc.pattern(HttpMethod.PUT, "/api/usuario-conquistas/**"), mvc.pattern(HttpMethod.PATCH, "/api/usuario-conquistas/**"), mvc.pattern(HttpMethod.DELETE, "/api/usuario-conquistas/**")).hasAuthority(AuthoritiesConstants.ADMIN)
-                    // Leituras do acervo que o JOGO usa (criar sala, ver as próprias conquistas).
-                    // Vêm antes do bloqueio abaixo, que fecha o resto das mesmas URLs.
-                    .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/palavras/buscar"), mvc.pattern(HttpMethod.GET, "/api/palavras/sortear")).authenticated()
-                    .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/conquistas/minhas")).authenticated()
                     // Tabelas do banco (telas de Entidades): LEITURA e escrita só para ADMIN.
                     // Antes só a escrita era barrada, e qualquer conta logada lia pela API as
                     // respostas, os rankings e os cadastros de todo mundo - o menu escondido

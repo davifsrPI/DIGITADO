@@ -72,6 +72,26 @@ public class CodigoSalaService {
         throw new SemCodigoDisponivelException("Não foi possível gerar um código de sala livre");
     }
 
+    /**
+     * O texto tem o formato de um código de sala (6 caracteres do ALFABETO)?
+     *
+     * O código chega do navegador na criação da sala e na URL de todas as rotas
+     * da sala. Sem esta conferência o cliente escolhia a chave primária que
+     * quisesse - inclusive textos enormes ou com barras e espaços, que viravam
+     * caminho de URL e de tópico WebSocket.
+     */
+    public static boolean formatoValido(String codigo) {
+        if (codigo == null || codigo.length() != TAMANHO) {
+            return false;
+        }
+        for (int i = 0; i < codigo.length(); i++) {
+            if (ALFABETO.indexOf(codigo.charAt(i)) < 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** Sorteia um código com o formato definido aqui, sem consultar o banco. */
     public String sortear() {
         StringBuilder codigo = new StringBuilder(TAMANHO);

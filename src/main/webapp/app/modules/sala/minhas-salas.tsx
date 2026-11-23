@@ -60,32 +60,16 @@ export const MinhasSalas = () => {
   // ganha um aviso no topo e um destaque no card, senão o professor voltaria para
   // uma lista igual à de antes, sem saber se a sala foi mesmo criada
   const salaCriada = (location.state as { salaCriada?: string } | null)?.salaCriada ?? null;
-  // Duplicação: a sala de origem e a cópia, para o aviso no topo e o destaque do card
-  const [duplicada, setDuplicada] = useState<{ origem: string; copia: string } | null>(null);
-  const [duplicando, setDuplicando] = useState<string | null>(null);
-  const [erroDuplicar, setErroDuplicar] = useState<string | null>(null);
-  const salaEmDestaque = duplicada?.copia ?? salaCriada;
+  const salaEmDestaque = salaCriada;
 
   /**
-   * Duplica a sala no servidor: mesma configuração e mesmas palavras, código novo.
-   * A cópia entra no topo da lista, destacada - é a sala que o professor acabou de
-   * pedir, e ele vai querer copiar o código dela.
+   * Duplica a sala: abre a tela de CRIAÇÃO já preenchida com as palavras, os tempos
+   * e as quantidades desta sala, e com o nome em branco. O professor confere, dá um
+   * nome para a outra turma e cria - a cópia não nasce mais sozinha com o mesmo
+   * nome + "(cópia)", que deixava duas salas iguais na lista.
    */
-  const duplicar = async (sala: Sala) => {
-    if (duplicando) return;
-    setDuplicando(sala.codigo);
-    setErroDuplicar(null);
-    try {
-      const { data } = await axios.post<Sala>(`/api/salas/${sala.codigo}/duplicar`);
-      setSalas(prev => [data, ...prev]);
-      setDuplicada({ origem: sala.codigo, copia: data.codigo });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch {
-      setErroDuplicar(`Não foi possível duplicar a sala ${sala.codigo}. Tente de novo.`);
-    } finally {
-      setDuplicando(null);
-    }
-  };
+  const duplicar = (sala: Sala) =>
+    navigate(`/sala/new?duplicar=${encodeURIComponent(sala.codigo)}${ehDuelo(sala.descricao) ? '&modo=1v1' : ''}`);
 
   // Adiciona classe ao body para aplicar o fundo específico desta página
   useBodyClass('minhas-salas-page');
@@ -123,21 +107,7 @@ export const MinhasSalas = () => {
           </Link>
         </div>
 
-        {duplicada && (
-          <div className="ms-criada">
-            <span className="ms-criada-icone">✓</span>
-            <div className="ms-criada-texto">
-              <strong>
-                Sala {duplicada.origem} duplicada: a cópia é a sala {duplicada.copia}.
-              </strong>{' '}
-              Mesmas palavras e configurações, sem partidas nem alunos - pronta para outra turma.
-            </div>
-          </div>
-        )}
-
-        {erroDuplicar && <div className="ms-erro">⚠ {erroDuplicar}</div>}
-
-        {salaCriada && !duplicada && (
+        {salaCriada && (
           <div className="ms-criada">
             <span className="ms-criada-icone">✓</span>
             <div className="ms-criada-texto">
@@ -182,11 +152,10 @@ export const MinhasSalas = () => {
                     para uma sala nova, com código próprio e sem histórico */}
                 <button
                   className="ms-estatisticas-btn"
-                  onClick={() => void duplicar(sala)}
-                  disabled={duplicando !== null}
-                  title="Criar uma sala nova com as mesmas palavras e configurações"
+                  onClick={() => duplicar(sala)}
+                  title="Abrir a criação de sala com as mesmas palavras e configurações"
                 >
-                  {duplicando === sala.codigo ? 'Duplicando...' : '⧉ Duplicar sala'}
+                  ⧉ Duplicar sala
                 </button>
               </div>
             ))}

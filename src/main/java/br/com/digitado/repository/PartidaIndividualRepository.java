@@ -13,9 +13,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface PartidaIndividualRepository extends JpaRepository<PartidaIndividual, Long> {
     // O recorde: mais acertos e, no empate, a partida mais antiga (quem chegou lá primeiro)
-    Optional<PartidaIndividual> findFirstByLoginOrderByAcertosDescDataFimAsc(String login);
+    // Por idioma: o recorde do treino de inglês não se mistura com o do ditado em português
+    Optional<PartidaIndividual> findFirstByLoginAndIdiomaOrderByAcertosDescDataFimAsc(String login, String idioma);
 
-    List<PartidaIndividual> findTop5ByLoginOrderByDataFimDesc(String login);
+    List<PartidaIndividual> findTop5ByLoginAndIdiomaOrderByDataFimDesc(String login, String idioma);
 
     // Tela de consulta do admin (AdminTabelasResource): paginada, com busca pelo login
     Page<PartidaIndividual> findByLoginContainingIgnoreCase(String login, Pageable pageable);

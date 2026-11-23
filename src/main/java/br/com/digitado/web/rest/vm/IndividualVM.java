@@ -28,7 +28,10 @@ public final class IndividualVM {
         String dificuldade,
         int tempoLimite,
         long timestampInicio,
-        long timestampServidor
+        long timestampServidor,
+        // Etiqueta BCP-47 do idioma da palavra (pt-BR, en-US, es-ES): a voz do navegador
+        // usa quando o servidor não tem áudio
+        String idioma
     ) {}
 
     /** Estado da partida em andamento - o que a tela desenha. */

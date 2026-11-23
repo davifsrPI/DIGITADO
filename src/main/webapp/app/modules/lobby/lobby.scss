@@ -605,3 +605,9 @@ body.lobby-page {
   line-height: 1.4;
   text-align: center;
 }
+
+/* Código que não existe: as caixas ficam vermelhas até o aluno mexer no código */
+.code-boxes--erro .code-box {
+  border-color: #e24b4a;
+  color: #e24b4a;
+}

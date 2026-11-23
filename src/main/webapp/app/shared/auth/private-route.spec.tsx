@@ -27,6 +27,28 @@ describe('private-route component', () => {
     );
   };
 
+  it('tela de jogo: a conta admin vê o aviso, não o jogo', () => {
+    const { container } = wrapper(
+      <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
+        <TestComp />
+      </PrivateRoute>,
+      { isAuthenticated: true, sessionHasBeenFetched: true, account: { authorities: [AUTHORITIES.ADMIN, AUTHORITIES.USER] } },
+    );
+    expect(container.innerHTML).not.toContain('Test</div>');
+    expect(container.innerHTML).toContain('não participa dos jogos');
+  });
+
+  it('tela de jogo: o jogador entra normalmente', () => {
+    const { container } = wrapper(
+      <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
+        <TestComp />
+      </PrivateRoute>,
+      { isAuthenticated: true, sessionHasBeenFetched: true, account: { authorities: [AUTHORITIES.USER] } },
+    );
+    expect(container.innerHTML).toContain('Test');
+    expect(container.innerHTML).not.toContain('não participa dos jogos');
+  });
+
   // All tests will go here
   it('Should throw error when falsy children are provided', () => {
     const originalError = console.error;

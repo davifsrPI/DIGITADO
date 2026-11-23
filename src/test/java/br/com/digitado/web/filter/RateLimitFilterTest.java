@@ -3,9 +3,12 @@ package br.com.digitado.web.filter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.digitado.config.ApplicationProperties;
+import br.com.digitado.repository.SalaRepository;
+import br.com.digitado.security.TentativasCodigoSala;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -20,14 +23,69 @@ import org.springframework.security.core.context.SecurityContextHolder;
 class RateLimitFilterTest {
 
     private RateLimitFilter filter;
+    private SalaRepository salaRepository;
 
     @BeforeEach
     void setup() {
         ApplicationProperties props = new ApplicationProperties();
         props.getRateLimit().setRequisicoesPorMinuto(5);
         props.getRateLimit().setAutenticacaoPorMinuto(2);
-        filter = new RateLimitFilter(props);
+        props.getRateLimit().setCodigosErradosPorMinuto(3);
+        salaRepository = Mockito.mock(SalaRepository.class);
+        // Só a sala ABCDEF existe
+        Mockito.when(salaRepository.existsById(Mockito.anyString())).thenAnswer(i -> "ABCDEF".equals(i.getArgument(0)));
+        filter = new RateLimitFilter(props, new TentativasCodigoSala(props), salaRepository);
         SecurityContextHolder.clearContext();
+    }
+
+    // GET numa rota de sala, respondendo como o SalaResource: 404 para sala que não existe
+    private MockHttpServletResponse buscarSala(String codigo) throws Exception {
+        String uri = "/api/salas/" + codigo;
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
+        request.setRequestURI(uri);
+        request.setRemoteAddr("10.0.9.9");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(request, response, (req, res) ->
+            ((jakarta.servlet.http.HttpServletResponse) res).setStatus("ABCDEF".equals(codigo) ? 200 : 404)
+        );
+        return response;
+    }
+
+    @Test
+    void chutarCodigosDeSalaEmSerieBloqueiaAConta() throws Exception {
+        SecurityContextHolder.getContext()
+            .setAuthentication(new UsernamePasswordAuthenticationToken("chutador", null, java.util.List.of()));
+        // O código certo não gasta nada
+        assertThat(buscarSala("ABCDEF").getStatus()).isEqualTo(200);
+        assertThat(buscarSala("ZZZZZ2").getStatus()).isEqualTo(404);
+        assertThat(buscarSala("ZZZZZ3").getStatus()).isEqualTo(404);
+        assertThat(buscarSala("ZZZZZ4").getStatus()).isEqualTo(404);
+        // Esgotou os 3 códigos errados: nem o certo responde mais neste minuto,
+        // senão o bloqueio entregaria qual chute era a sala de verdade
+        assertThat(buscarSala("ZZZZZ5").getStatus()).isEqualTo(429);
+        assertThat(buscarSala("ABCDEF").getStatus()).isEqualTo(429);
+    }
+
+    @Test
+    void outraContaNaoHerdaOBloqueioDosChutes() throws Exception {
+        SecurityContextHolder.getContext()
+            .setAuthentication(new UsernamePasswordAuthenticationToken("chutador2", null, java.util.List.of()));
+        for (int i = 0; i < 4; i++) {
+            buscarSala("YYYYY" + (i + 2));
+        }
+        assertThat(buscarSala("ABCDEF").getStatus()).isEqualTo(429);
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("colega", null, java.util.List.of()));
+        assertThat(buscarSala("ABCDEF").getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    void codigoDaSalaNaUrl() {
+        assertThat(RateLimitFilter.codigoSalaDaUrl("/api/salas/ABCDEF")).isEqualTo("ABCDEF");
+        assertThat(RateLimitFilter.codigoSalaDaUrl("/api/salas/ABCDEF/identificacao")).isEqualTo("ABCDEF");
+        assertThat(RateLimitFilter.codigoSalaDaUrl("/api/salas")).isNull();
+        assertThat(RateLimitFilter.codigoSalaDaUrl("/api/salas/codigo/novo")).isNull();
+        assertThat(RateLimitFilter.codigoSalaDaUrl("/api/salas/1v1/publicas")).isNull();
+        assertThat(RateLimitFilter.codigoSalaDaUrl("/api/palavras/1")).isNull();
     }
 
     @AfterEach

@@ -8,9 +8,7 @@ import { NavDropdown } from './menu-components';
 
 // O item de desempenho tem destino diferente conforme quem está logado:
 // o aluno vê a evolução DELE; o administrador vê o resumo de TODOS os usuários.
-// Admin não tem painel pessoal de propósito, ele joga para testar o sistema, e
-// esses números não medem aprendizado nenhum (o backend, aliás, já exclui as
-// respostas de quem tem ROLE_ADMIN do relatório da turma).
+// Admin não tem painel pessoal: a conta de administração não joga.
 const itemDesempenho = (isAdmin: boolean) =>
   isAdmin ? (
     <MenuItem icon="chart-line" to="/admin/desempenho" data-cy="desempenhoGeral">
@@ -22,14 +20,19 @@ const itemDesempenho = (isAdmin: boolean) =>
     </MenuItem>
   );
 
+// A conta de administração não joga: salas e conquistas são telas de jogador
 const accountMenuItemsAuthenticated = (isAdmin: boolean) => (
   <>
-    <MenuItem icon="door-open" to="/minhas-salas" data-cy="minhasSalas">
-      Minhas Salas
-    </MenuItem>
-    <MenuItem icon="trophy" to="/conquistas" data-cy="conquistas">
-      Minhas Conquistas
-    </MenuItem>
+    {!isAdmin && (
+      <>
+        <MenuItem icon="door-open" to="/minhas-salas" data-cy="minhasSalas">
+          Minhas Salas
+        </MenuItem>
+        <MenuItem icon="trophy" to="/conquistas" data-cy="conquistas">
+          Minhas Conquistas
+        </MenuItem>
+      </>
+    )}
     {itemDesempenho(isAdmin)}
     <MenuItem icon="wrench" to="/account/settings" data-cy="settings">
       <Translate contentKey="global.menu.account.settings">Settings</Translate>

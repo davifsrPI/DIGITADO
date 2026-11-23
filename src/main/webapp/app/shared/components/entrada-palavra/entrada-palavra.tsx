@@ -4,13 +4,14 @@ import './entrada-palavra.scss';
 // Tipos de tentativa de burla que a guarda detecta e bloqueia
 export type TipoBurla = 'colagem' | 'copia' | 'arrasto' | 'correcao-automatica' | 'insercao-multipla';
 
-// Só letras do português (com acentos) e hífen de palavras compostas passam
-const CARACTERES_INVALIDOS = /[^a-záàâãéêíóôõúüç-]/g;
+// Só letras do português (com acentos), o ñ do espanhol (treino de idiomas) e hífen
+// de palavras compostas passam
+const CARACTERES_INVALIDOS = /[^a-záàâãéêíóôõúüçñ-]/g;
 // Enquanto o acento está sendo composto (tecla morta ´ seguida da vogal), o campo
 // precisa exibir o acento sozinho por um instante. Apagá-lo nessa janela cancela a
 // composição do navegador e a vogal acentuada nunca chega, por isso as teclas
 // mortas passam durante a composição e só são sanitizadas no fim dela
-const CARACTERES_INVALIDOS_COMPONDO = /[^a-záàâãéêíóôõúüç´`^~¨-]/g;
+const CARACTERES_INVALIDOS_COMPONDO = /[^a-záàâãéêíóôõúüçñ´`^~¨-]/g;
 // Acentos que o teclado físico digita sozinhos antes de virarem vogal acentuada
 const MARCAS_MORTAS = '´`^~¨';
 // Depois de uma tecla morta, a vogal acentuada chega em seguida. Passada essa janela,

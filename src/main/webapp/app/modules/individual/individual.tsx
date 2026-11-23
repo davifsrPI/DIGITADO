@@ -22,6 +22,8 @@ interface PalavraIndividual {
   tempoLimite: number;
   timestampInicio: number;
   timestampServidor: number;
+  // Etiqueta do idioma da palavra (pt-BR, en-US, es-ES), para a voz do navegador
+  idioma?: string;
 }
 
 interface EstadoIndividual {
@@ -89,6 +91,13 @@ interface Recordes {
 
 const URL_AUDIO = '/api/individual/audio';
 
+// Idiomas do treino (o servidor só aceita os do enum Idioma)
+export type IdiomaTreino = 'EN' | 'ES';
+const IDIOMAS: Array<{ codigo: IdiomaTreino; nome: string }> = [
+  { codigo: 'EN', nome: 'Inglês' },
+  { codigo: 'ES', nome: 'Espanhol' },
+];
+
 // "1 acerto", "2 acertos"
 const acertos = (n: number) => `${n} acerto${n === 1 ? '' : 's'}`;
 
@@ -119,13 +128,43 @@ const IntroIndividual: React.FC<{
   erro: string | null;
   onComecar: () => void;
   onContinuar: () => void;
-}> = ({ recordes, carregando, erro, onComecar, onContinuar }) => (
+  // Treino de idiomas: o idioma escolhido e a troca
+  idioma?: IdiomaTreino | null;
+  onIdioma?: (idioma: IdiomaTreino) => void;
+}> = ({ recordes, carregando, erro, onComecar, onContinuar, idioma, onIdioma }) => (
   <div className="ind-intro">
-    <div className="sj-lobby-badge">Modo individual</div>
-    <h1 className="ind-titulo">🎯 Até onde você chega?</h1>
-    <p className="ind-sub">
-      Só você e o ditado. As palavras ficam mais difíceis a cada acerto - e as que você já errou voltam para revisão.
-    </p>
+    {onIdioma ? (
+      <>
+        <div className="sj-lobby-badge">Treino de idiomas</div>
+        <h1 className="ind-titulo">🌍 Treine o ditado em outro idioma</h1>
+        <p className="ind-sub">Escolha o idioma, ouça a palavra e escreva a grafia certa.</p>
+        <div className="ind-idiomas" role="radiogroup" aria-label="Idioma do treino">
+          {IDIOMAS.map(i => (
+            <button
+              key={i.codigo}
+              type="button"
+              role="radio"
+              aria-checked={idioma === i.codigo}
+              className={`ind-idioma${idioma === i.codigo ? ' ind-idioma--ativo' : ''}`}
+              onClick={() => onIdioma(i.codigo)}
+            >
+              <span className="ind-idioma-bandeira" aria-hidden="true">
+                {i.codigo}
+              </span>
+              <strong>{i.nome}</strong>
+            </button>
+          ))}
+        </div>
+      </>
+    ) : (
+      <>
+        <div className="sj-lobby-badge">Modo individual</div>
+        <h1 className="ind-titulo">🎯 Até onde você chega?</h1>
+        <p className="ind-sub">
+          Só você e o ditado. As palavras ficam mais difíceis a cada acerto - e as que você já errou voltam para revisão.
+        </p>
+      </>
+    )}
 
     <ul className="ind-regras">
       <li>
@@ -300,8 +339,13 @@ const FimIndividual: React.FC<{ resumo: ResumoIndividual; onDeNovo: () => void; 
 );
 
 // Mensagem de erro do servidor para um pedido fora de ordem (ver PartidaIndividualResource)
-const mensagemDeErro = (err: any, padrao: string): string =>
-  err?.response?.data?.message === 'error.rodadainvalida' ? 'A partida mudou em outra aba. Recarregue a página.' : padrao;
+const mensagemDeErro = (err: any, padrao: string): string => {
+  const chave = err?.response?.data?.message;
+  if (chave === 'error.vozindisponivel') {
+    return 'A voz deste idioma ainda está sendo preparada no servidor. Tente de novo em alguns minutos.';
+  }
+  return chave === 'error.rodadainvalida' ? 'A partida mudou em outra aba. Recarregue a página.' : padrao;
+};
 
 /**
  * Modo individual: o jogador sozinho, até onde conseguir chegar.
@@ -311,9 +355,12 @@ const mensagemDeErro = (err: any, padrao: string): string =>
  * só desenha e manda o que foi digitado - como nas salas, o texto da palavra nunca
  * chega antes da resposta; o som vem de /api/individual/audio.
  */
-export const Individual: React.FC = () => {
+export const Individual: React.FC<{ modoIdiomas?: boolean }> = ({ modoIdiomas = false }) => {
   const navigate = useNavigate();
   useBodyClass('sala-jogo-page');
+  // Treino de idiomas: EN ou ES; o modo individual de sempre é o português (PT)
+  const [idiomaTreino, setIdiomaTreino] = useState<IdiomaTreino>('EN');
+  const idioma = modoIdiomas ? idiomaTreino : 'PT';
 
   const [fase, setFase] = useState<'intro' | 'jogando' | 'correcao' | 'fim'>('intro');
   const [recordes, setRecordes] = useState<Recordes | null>(null);
@@ -335,10 +382,10 @@ export const Individual: React.FC = () => {
 
   const carregarRecordes = useCallback(() => {
     axios
-      .get<Recordes>('/api/individual/recordes')
+      .get<Recordes>('/api/individual/recordes', { params: { idioma } })
       .then(res => setRecordes(res.data))
       .catch(() => setRecordes(null));
-  }, []);
+  }, [idioma]);
 
   useEffect(() => {
     carregarRecordes();
@@ -362,6 +409,7 @@ export const Individual: React.FC = () => {
       urlAudio: URL_AUDIO,
       chave: novo.palavra.id,
       texto: novo.palavra.texto,
+      lang: novo.palavra.idioma,
       onEnd: () => setFalando(false),
       onBloqueadoPeloNavegador: () => setAudioBloqueado(true),
     });
@@ -382,7 +430,10 @@ export const Individual: React.FC = () => {
   };
 
   const comecar = async () => {
-    const novo = await pedir(() => axios.post<EstadoIndividual>('/api/individual/iniciar'), 'Não foi possível começar a partida agora.');
+    const novo = await pedir(
+      () => axios.post<EstadoIndividual>('/api/individual/iniciar', null, { params: { idioma } }),
+      'Não foi possível começar a partida agora.',
+    );
     if (novo) {
       setResumo(null);
       entrarNaRodada(novo);
@@ -479,6 +530,7 @@ export const Individual: React.FC = () => {
       urlAudio: URL_AUDIO,
       chave: estado.palavra.id,
       texto: estado.palavra.texto,
+      lang: estado.palavra.idioma,
       pausaMs: 0,
       onEnd: () => setFalando(false),
       onBloqueadoPeloNavegador: () => setAudioBloqueado(true),
@@ -498,7 +550,15 @@ export const Individual: React.FC = () => {
         </button>
 
         {fase === 'intro' && (
-          <IntroIndividual recordes={recordes} carregando={ocupado} erro={erro} onComecar={comecar} onContinuar={continuar} />
+          <IntroIndividual
+            recordes={recordes}
+            carregando={ocupado}
+            erro={erro}
+            onComecar={comecar}
+            onContinuar={continuar}
+            idioma={modoIdiomas ? idiomaTreino : null}
+            onIdioma={modoIdiomas ? setIdiomaTreino : undefined}
+          />
         )}
 
         {(fase === 'jogando' || fase === 'correcao') && estado && (

@@ -11,9 +11,10 @@ import br.com.digitado.IntegrationTest;
 import br.com.digitado.domain.Sala;
 import br.com.digitado.domain.enumeration.TipoSala;
 import br.com.digitado.repository.SalaRepository;
+import br.com.digitado.repository.UsuarioRepository;
+import br.com.digitado.service.CodigoSalaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
-import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ class SalaResourceIT {
     private static final String DEFAULT_NOME = "AAAAAAAAAA";
     private static final String UPDATED_NOME = "BBBBBBBBBB";
 
-    private static final String DEFAULT_CODIGO = "AAAAAAAAAA";
+    private static final String DEFAULT_CODIGO = "TST234";
 
     // A descricao é uma coluna JSON: {"descricao": texto, "modo": "1v1"|"normal"}.
     // Os valores salvos direto pelo repositório precisam ser JSON válido.
@@ -68,9 +69,18 @@ class SalaResourceIT {
 
     private Sala insertedSala;
 
-    // Gera um código aleatório para não colidir com salas existentes
+    // Gera um código aleatório, no formato do servidor, para não colidir com salas existentes
     private static String randomCodigo() {
-        return UUID.randomUUID().toString();
+        return new CodigoSalaService(null).sortear();
+    }
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    // O jogador "user" (conta padrão) como dono da sala: PATCH e as rotas da partida
+    // são do dono, e a conta admin não joga mais
+    private void doUser(Sala s) {
+        s.setProfessor(usuarioRepository.findByEmail("user@localhost").orElseThrow());
     }
 
     /**
@@ -108,6 +118,7 @@ class SalaResourceIT {
 
     @Test
     @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
     void createSala() throws Exception {
         long databaseSizeBeforeCreate = getRepositoryCount();
         // Create the Sala
@@ -130,6 +141,7 @@ class SalaResourceIT {
 
     @Test
     @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
     void createSalaWithExistingCodigo() throws Exception {
         // Initialize the database with a sala using the same codigo
         insertedSala = salaRepository.saveAndFlush(sala);
@@ -147,6 +159,7 @@ class SalaResourceIT {
 
     @Test
     @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
     void checkNomeIsRequired() throws Exception {
         long databaseSizeBeforeTest = getRepositoryCount();
         // set the field null
@@ -163,6 +176,7 @@ class SalaResourceIT {
 
     @Test
     @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
     void checkCodigoIsRequired() throws Exception {
         long databaseSizeBeforeTest = getRepositoryCount();
         // set the field null
@@ -296,8 +310,10 @@ class SalaResourceIT {
 
     @Test
     @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
     void partialUpdateSalaWithPatch() throws Exception {
         // Initialize the database
+        doUser(sala);
         insertedSala = salaRepository.saveAndFlush(sala);
 
         long databaseSizeBeforeUpdate = getRepositoryCount();
@@ -324,8 +340,10 @@ class SalaResourceIT {
 
     @Test
     @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
     void fullUpdateSalaWithPatch() throws Exception {
         // Initialize the database
+        doUser(sala);
         insertedSala = salaRepository.saveAndFlush(sala);
 
         long databaseSizeBeforeUpdate = getRepositoryCount();
@@ -352,6 +370,7 @@ class SalaResourceIT {
 
     @Test
     @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
     void patchNonExistingSala() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
         sala.setCodigo(randomCodigo());
@@ -371,6 +390,7 @@ class SalaResourceIT {
 
     @Test
     @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
     void patchWithCodigoMismatchSala() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
         sala.setCodigo(randomCodigo());
@@ -388,6 +408,7 @@ class SalaResourceIT {
 
     @Test
     @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
     void patchWithMissingCodigoPathParamSala() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
         sala.setCodigo(randomCodigo());
@@ -448,48 +469,129 @@ class SalaResourceIT {
 
     @Test
     @Transactional
-    void duplicarSalaCopiaAConfiguracaoComCodigoNovo() throws Exception {
-        sala.setCodigo(randomCodigo().substring(0, 8));
-        sala.setTipo(TipoSala.TURMA);
-        sala.setConfiguracao("{\"qtdFacil\":3,\"palavrasIds\":[1,2,3]}");
-        insertedSala = salaRepository.saveAndFlush(sala);
+    void aContaAdminNaoCriaSala() throws Exception {
+        long antes = getRepositoryCount();
+        restSalaMockMvc
+            .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
+            .andExpect(status().isForbidden());
+        assertSameRepositoryCount(antes);
+    }
 
-        String corpo = restSalaMockMvc
-            .perform(post(ENTITY_API_URL_CODIGO + "/duplicar", sala.getCodigo()))
+    @Test
+    @Transactional
+    void aContaAdminNaoUsaAsRotasDaPartida() throws Exception {
+        doUser(sala);
+        insertedSala = salaRepository.saveAndFlush(sala);
+        for (String rota : new String[] {
+            "/codigo/novo",
+            "/" + sala.getCodigo() + "/configuracao",
+            "/" + sala.getCodigo() + "/palavras",
+            "/" + sala.getCodigo() + "/palavra-atual",
+            "/" + sala.getCodigo() + "/sou-professor",
+        }) {
+            restSalaMockMvc.perform(get(ENTITY_API_URL + rota)).andExpect(status().isForbidden());
+        }
+        // As telas de Entidades continuam: ver e excluir
+        restSalaMockMvc.perform(get(ENTITY_API_URL_CODIGO, sala.getCodigo())).andExpect(status().isOk());
+    }
+
+    @Test
+    @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
+    void codigoForaDoFormatoDoServidorEhRecusado() throws Exception {
+        for (String codigo : new String[] { "abc", "AAAAAAAAAA", "ABC/12", "OIOI10", "ABC 23" }) {
+            sala.setCodigo(codigo);
+            restSalaMockMvc
+                .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("error.codigoinvalido"));
+        }
+    }
+
+    @Test
+    @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
+    void nomeEDescricaoTemTeto() throws Exception {
+        sala.setCodigo(randomCodigo());
+        sala.setNome("x".repeat(81));
+        restSalaMockMvc
+            .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("error.nomelongo"));
+        sala.setNome("   ");
+        restSalaMockMvc
+            .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
+    void oCorpoNaoEscolheOProfessorDaSala() throws Exception {
+        // Um cliente adulterado manda o professor no corpo: vale quem está logado
+        String corpo =
+            "{\"codigo\":\"" +
+            randomCodigo() +
+            "\",\"nome\":\"Turma\",\"professor\":{\"id\":" +
+            usuarioRepository.findByEmail("admin@localhost").orElseThrow().getId() +
+            "}}";
+        String resposta = restSalaMockMvc
+            .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(corpo))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.nome").value(DEFAULT_NOME + " (cópia)"))
-            .andExpect(jsonPath("$.tipo").value("TURMA"))
             .andReturn()
             .getResponse()
             .getContentAsString();
-        String codigoCopia = om.readTree(corpo).get("codigo").asText();
-
-        assertThat(codigoCopia).isNotEqualTo(sala.getCodigo());
-        Sala copia = salaRepository.findById(codigoCopia).orElseThrow();
-        // A configuração (com as palavras da partida) vai junto
-        assertThat(om.readTree(copia.getConfiguracao())).isEqualTo(om.readTree(sala.getConfiguracao()));
-        assertThat(copia.getAtivo()).isTrue();
-        salaRepository.delete(copia);
+        Sala criada = salaRepository.findById(om.readTree(resposta).get("codigo").asText()).orElseThrow();
+        assertThat(criada.getProfessor().getEmail()).isEqualTo("user@localhost");
+        insertedSala = criada;
     }
 
-    @Test
-    @Transactional
-    void duplicarSalaInexistenteEhRecusado() throws Exception {
-        restSalaMockMvc.perform(post(ENTITY_API_URL_CODIGO + "/duplicar", "NAOEXISTE")).andExpect(status().isBadRequest());
-    }
-
+    // Duplicar = abrir a criação preenchida com /configuracao e /palavras da sala de
+    // origem. As duas são as RESPOSTAS do ditado: só o dono lê.
     @Test
     @Transactional
     @WithMockUser(value = "intruso", authorities = "ROLE_USER")
-    void soODonoDuplicaASala() throws Exception {
-        sala.setCodigo(randomCodigo().substring(0, 8));
+    void soODonoLeAsPalavrasDaSalaParaDuplicar() throws Exception {
+        doUser(sala);
+        sala.setConfiguracao("{\"qtdFacil\":3,\"palavrasIds\":[1,2,3]}");
         insertedSala = salaRepository.saveAndFlush(sala);
-        long antes = salaRepository.count();
-
         restSalaMockMvc
-            .perform(post(ENTITY_API_URL_CODIGO + "/duplicar", sala.getCodigo()))
+            .perform(get(ENTITY_API_URL_CODIGO + "/palavras", sala.getCodigo()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("error.forbidden"));
-        assertThat(salaRepository.count()).isEqualTo(antes);
+        restSalaMockMvc
+            .perform(get(ENTITY_API_URL_CODIGO + "/configuracao", sala.getCodigo()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("error.forbidden"));
+    }
+
+    @Test
+    @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
+    void oDonoLeAsPalavrasDaSalaParaDuplicar() throws Exception {
+        doUser(sala);
+        sala.setConfiguracao("{\"qtdFacil\":3,\"palavrasIds\":[]}");
+        insertedSala = salaRepository.saveAndFlush(sala);
+        restSalaMockMvc.perform(get(ENTITY_API_URL_CODIGO + "/palavras", sala.getCodigo())).andExpect(status().isOk());
+        restSalaMockMvc
+            .perform(get(ENTITY_API_URL_CODIGO + "/configuracao", sala.getCodigo()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.qtdFacil").value(3));
+    }
+
+    @Test
+    @Transactional
+    @WithMockUser(value = "user", authorities = "ROLE_USER")
+    void oEndpointAntigoDeDuplicarNaoExisteMais() throws Exception {
+        doUser(sala);
+        insertedSala = salaRepository.saveAndFlush(sala);
+        long antes = getRepositoryCount();
+        int status = restSalaMockMvc
+            .perform(post(ENTITY_API_URL_CODIGO + "/duplicar", sala.getCodigo()))
+            .andReturn()
+            .getResponse()
+            .getStatus();
+        assertThat(status).isIn(404, 405);
+        assertSameRepositoryCount(antes);
     }
 }

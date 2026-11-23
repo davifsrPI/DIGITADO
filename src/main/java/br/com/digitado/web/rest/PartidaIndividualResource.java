@@ -1,5 +1,6 @@
 package br.com.digitado.web.rest;
 
+import br.com.digitado.domain.enumeration.Idioma;
 import br.com.digitado.security.SecurityUtils;
 import br.com.digitado.service.PalavraAudioService;
 import br.com.digitado.service.PartidaIndividualService;
@@ -40,16 +41,26 @@ public class PartidaIndividualResource {
 
     /** Recorde pessoal, partida em aberto e as últimas partidas. */
     @GetMapping("/recordes")
-    public RecordesVM recordes() {
-        return partidaIndividualService.recordes(login());
+    public RecordesVM recordes(@RequestParam(name = "idioma", defaultValue = "PT") String idioma) {
+        return partidaIndividualService.recordes(login(), idioma(idioma));
     }
 
     /** Começa uma partida nova (a que estava aberta é encerrada como abandonada). */
+    /**
+     * Começa uma partida nova. idioma=PT (padrão) é o modo individual; EN e ES são o
+     * treino de idiomas. Só os idiomas do enum passam - o valor nunca chega ao SQL
+     * como texto livre.
+     */
     @PostMapping("/iniciar")
-    public EstadoIndividualVM iniciar() {
+    public EstadoIndividualVM iniciar(@RequestParam(name = "idioma", defaultValue = "PT") String idioma) {
         String login = login();
-        LOG.debug("REST request to start individual game for {}", login);
-        return executar(() -> partidaIndividualService.iniciar(login));
+        Idioma escolhido = idioma(idioma);
+        LOG.debug("REST request to start individual game for {} in {}", login, escolhido);
+        return executar(() -> partidaIndividualService.iniciar(login, escolhido));
+    }
+
+    private static Idioma idioma(String valor) {
+        return Idioma.de(valor).orElseThrow(() -> new BadRequestAlertException("Idioma inválido", ENTITY_NAME, "idiomainvalido"));
     }
 
     /** A partida em andamento - 404 quando não há nenhuma. */
@@ -104,6 +115,8 @@ public class PartidaIndividualResource {
             return acao.get();
         } catch (PartidaIndividualService.RodadaInvalidaException e) {
             throw new BadRequestAlertException(e.getMessage(), ENTITY_NAME, "rodadainvalida");
+        } catch (PartidaIndividualService.VozIndisponivelException e) {
+            throw new BadRequestAlertException(e.getMessage(), ENTITY_NAME, "vozindisponivel");
         }
     }
 }

@@ -30,4 +30,10 @@ describe('verificarSala (código conferido antes de sair do lobby)', () => {
     get.mockRejectedValue({ response: { status: 503 } });
     expect(await verificarSala('ABC234')).toEqual({ status: 'falha' });
   });
+
+  // Chutes demais: o servidor trava as rotas de sala por um minuto
+  it('excesso de códigos errados (429) vira "bloqueado"', async () => {
+    get.mockRejectedValue({ response: { status: 429 } });
+    expect(await verificarSala('ABC234')).toEqual({ status: 'bloqueado' });
+  });
 });

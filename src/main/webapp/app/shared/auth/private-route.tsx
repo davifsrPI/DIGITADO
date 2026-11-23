@@ -1,17 +1,39 @@
 import React from 'react';
-import { Navigate, PathRouteProps, useLocation } from 'react-router-dom';
+import { Link, Navigate, PathRouteProps, useLocation } from 'react-router-dom';
 import { Translate } from 'react-jhipster';
 
 import { useAppSelector } from 'app/config/store';
+import { AUTHORITIES } from 'app/config/constants';
 import ErrorBoundary from 'app/shared/error/error-boundary';
 import { LoadingSpinner } from 'app/shared/layout/loading/loading-spinner';
 
 interface IOwnProps extends PathRouteProps {
   hasAnyAuthorities?: string[];
+  /**
+   * Tela de JOGO: a conta de administração não entra (ela administra, não joga).
+   * O servidor barra do mesmo jeito - isto só troca o erro por uma explicação.
+   */
+  somenteJogador?: boolean;
   children: React.ReactNode;
 }
 
-export const PrivateRoute = ({ children, hasAnyAuthorities = [], ...rest }: IOwnProps) => {
+/** A conta tem papel de administração? */
+export const ehAdmin = (authorities?: string[]) => !!authorities?.includes(AUTHORITIES.ADMIN);
+
+/** O aviso que a conta de administração vê no lugar das telas de jogo. */
+export const AvisoAdminNaoJoga = () => (
+  <div className="insufficient-authority">
+    <div className="alert alert-warning" role="alert" data-cy="adminNaoJoga">
+      <strong>A conta de administração não participa dos jogos.</strong> Ela cuida do sistema: usuários, palavras, salas e métricas. Para
+      jogar, entre com uma conta de jogador.
+      <div className="mt-2">
+        <Link to="/admin/desempenho">Ir para o desempenho de todos →</Link>
+      </div>
+    </div>
+  </div>
+);
+
+export const PrivateRoute = ({ children, hasAnyAuthorities = [], somenteJogador = false, ...rest }: IOwnProps) => {
   const isAuthenticated = useAppSelector(state => state.authentication.isAuthenticated);
   const sessionHasBeenFetched = useAppSelector(state => state.authentication.sessionHasBeenFetched);
   const account = useAppSelector(state => state.authentication.account);
@@ -27,6 +49,9 @@ export const PrivateRoute = ({ children, hasAnyAuthorities = [], ...rest }: IOwn
   }
 
   if (isAuthenticated) {
+    if (somenteJogador && ehAdmin(account.authorities)) {
+      return <AvisoAdminNaoJoga />;
+    }
     if (isAuthorized) {
       return <ErrorBoundary>{children}</ErrorBoundary>;
     }

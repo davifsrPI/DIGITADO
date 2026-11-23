@@ -4,6 +4,7 @@ import br.com.digitado.domain.HistoricoResposta;
 import br.com.digitado.domain.Palavra;
 import br.com.digitado.domain.PartidaIndividual;
 import br.com.digitado.domain.enumeration.Dificuldade;
+import br.com.digitado.domain.enumeration.Idioma;
 import br.com.digitado.repository.PalavraRepository;
 import br.com.digitado.repository.PartidaIndividualRepository;
 import br.com.digitado.service.EquacaoPalavraIndividual.Candidata;
@@ -59,6 +60,16 @@ public class PartidaIndividualService {
         };
     }
 
+    /** O servidor ainda não tem voz para o idioma pedido no treino. */
+    public static class VozIndisponivelException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public VozIndisponivelException(String mensagem) {
+            super(mensagem);
+        }
+    }
+
     /** Pedido fora de ordem: responder duas vezes, pedir a próxima sem responder... */
     public static class RodadaInvalidaException extends RuntimeException {
 
@@ -105,6 +116,23 @@ public class PartidaIndividualService {
      * abandonada antes - o que ela já rendeu (XP, histórico) continua valendo.
      */
     public EstadoIndividualVM iniciar(String login) {
+        return iniciar(login, Idioma.PT);
+    }
+
+    /**
+     * Começa uma partida no idioma pedido: PT é o modo individual de sempre; EN e ES
+     * são o treino de idiomas, com as palavras e a voz daquele idioma.
+     */
+    public EstadoIndividualVM iniciar(String login, Idioma idioma) {
+        Idioma doJogo = idioma == null ? Idioma.PT : idioma;
+        // Treino de idiomas: só o SOM da palavra vai para o aluno. Sem voz no servidor
+        // para o idioma (o Piper ainda baixando, por exemplo) a partida não começa -
+        // mandar o texto para o navegador falar entregaria a resposta.
+        if (doJogo != Idioma.PT && !palavraAudioService.vozDisponivel(doJogo)) {
+            throw new VozIndisponivelException(
+                "A voz em " + doJogo.getNome().toLowerCase() + " ainda está sendo preparada no servidor. Tente de novo em alguns minutos."
+            );
+        }
         Corrida anterior = corridas.get(login);
         if (anterior != null) {
             synchronized (anterior) {
@@ -114,20 +142,26 @@ public class PartidaIndividualService {
             }
         }
         List<Candidata> candidatas = palavraRepository
-            .findAllByAtivaTrue()
+            .findAllByAtivaTrueAndIdioma(doJogo.name())
             .stream()
             .map(p ->
                 new Candidata(p.getId(), p.getDificuldade(), p.getTotalTentativas(), p.getTotalAcertos(), tempoDaRodada(p.getDificuldade()))
             )
             .toList();
         if (candidatas.isEmpty()) {
-            throw new RodadaInvalidaException("O acervo não tem palavras ativas para o modo individual.");
+            throw new RodadaInvalidaException("O acervo não tem palavras ativas em " + doJogo.getNome().toLowerCase() + ".");
         }
         int recorde = partidaIndividualRepository
-            .findFirstByLoginOrderByAcertosDescDataFimAsc(login)
+            .findFirstByLoginAndIdiomaOrderByAcertosDescDataFimAsc(login, doJogo.name())
             .map(PartidaIndividual::getAcertos)
             .orElse(0);
-        Corrida corrida = new Corrida(login, recorde, candidatas, new HashMap<>(historicoRespostaService.estatisticasPorPalavra(login)));
+        Corrida corrida = new Corrida(
+            login,
+            doJogo,
+            recorde,
+            candidatas,
+            new HashMap<>(historicoRespostaService.estatisticasPorPalavra(login))
+        );
         synchronized (corrida) {
             corridas.put(login, corrida);
             sortearProxima(corrida);
@@ -160,6 +194,7 @@ public class PartidaIndividualService {
      * acabou ou o jogador pulou); resposta que chega depois do tempo também.
      */
     public ResultadoIndividualVM responder(String login, String resposta, int tentativasBurla) {
+        resposta = ComparadorPalavras.limitarResposta(resposta);
         Corrida c = corridaAberta(login);
         synchronized (c) {
             if (c.encerrada || c.palavraAtual == null) {
@@ -282,9 +317,17 @@ public class PartidaIndividualService {
 
     /** Recorde, partida aberta e as últimas partidas - a tela de entrada do modo. */
     public RecordesVM recordes(String login) {
-        Optional<PartidaIndividual> recorde = partidaIndividualRepository.findFirstByLoginOrderByAcertosDescDataFimAsc(login);
+        return recordes(login, Idioma.PT);
+    }
+
+    public RecordesVM recordes(String login, Idioma idioma) {
+        Idioma doJogo = idioma == null ? Idioma.PT : idioma;
+        Optional<PartidaIndividual> recorde = partidaIndividualRepository.findFirstByLoginAndIdiomaOrderByAcertosDescDataFimAsc(
+            login,
+            doJogo.name()
+        );
         List<PartidaAnteriorVM> ultimas = partidaIndividualRepository
-            .findTop5ByLoginOrderByDataFimDesc(login)
+            .findTop5ByLoginAndIdiomaOrderByDataFimDesc(login, doJogo.name())
             .stream()
             .map(p ->
                 new PartidaAnteriorVM(
@@ -301,7 +344,8 @@ public class PartidaIndividualService {
         return new RecordesVM(
             recorde.map(PartidaIndividual::getAcertos).orElse(0),
             recorde.map(PartidaIndividual::getDataFim).orElse(null),
-            aberta != null && !aberta.encerrada,
+            // A partida aberta só conta como "continuar" no MESMO idioma
+            aberta != null && !aberta.encerrada && aberta.idioma == doJogo,
             ultimas
         );
     }
@@ -386,6 +430,7 @@ public class PartidaIndividualService {
             registro.setMelhorSequencia(c.melhorSequencia);
             registro.setXpGanho((int) Math.min(Integer.MAX_VALUE, c.xpGanho));
             registro.setEncerramento(motivo);
+            registro.setIdioma(c.idioma.name());
             try {
                 partidaIndividualRepository.save(registro);
             } catch (Exception e) {
@@ -421,14 +466,16 @@ public class PartidaIndividualService {
             Palavra p = c.palavraAtual;
             // Texto só depois de respondida, ou quando não há áudio no servidor (aí o
             // navegador precisa dele para falar - a mesma degradação das salas)
-            boolean esconder = !c.respondida && palavraAudioService.temAudio(p.getId());
+            // No treino de idiomas o texto NUNCA sai antes da resposta, nem sem áudio
+            boolean esconder = !c.respondida && (c.idioma != Idioma.PT || palavraAudioService.temAudio(p.getId()));
             palavra = new PalavraIndividualVM(
                 p.getId(),
                 esconder ? null : p.getTexto(),
                 p.getDificuldade() != null ? p.getDificuldade().name() : null,
                 c.tempoLimite,
                 c.inicioRodada,
-                Instant.now().toEpochMilli()
+                Instant.now().toEpochMilli(),
+                c.idioma.getTag()
             );
         }
         return new EstadoIndividualVM(
@@ -449,6 +496,7 @@ public class PartidaIndividualService {
     static final class Corrida {
 
         final String login;
+        final Idioma idioma;
         final Instant inicio = Instant.now();
         final int recordeAnterior;
         final List<Candidata> candidatas;
@@ -471,8 +519,15 @@ public class PartidaIndividualService {
         int tempoLimite;
         boolean respondida = true;
 
-        Corrida(String login, int recordeAnterior, List<Candidata> candidatas, Map<Long, EstatisticaPalavraJogador> historico) {
+        Corrida(
+            String login,
+            Idioma idioma,
+            int recordeAnterior,
+            List<Candidata> candidatas,
+            Map<Long, EstatisticaPalavraJogador> historico
+        ) {
             this.login = login;
+            this.idioma = idioma;
             this.recordeAnterior = recordeAnterior;
             this.candidatas = candidatas;
             this.historico = historico;

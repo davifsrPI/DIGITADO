@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
 import { Alert, Button } from 'reactstrap';
 import { toast } from 'react-toastify';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import './register.scss';
 
 import PasswordStrengthBar from 'app/shared/layout/password/password-strength-bar';
@@ -13,7 +13,10 @@ import { CampoSenhaValidado } from 'app/shared/components/campo-senha/campo-senh
 
 export const RegisterPage = () => {
   const [password, setPassword] = useState('');
+  // E-mail do cadastro em andamento: vai para a tela de login quando a conta nascer
+  const [emailCadastrado, setEmailCadastrado] = useState('');
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.body.classList.add('register-page');
@@ -26,6 +29,7 @@ export const RegisterPage = () => {
   const currentLocale = useAppSelector(state => state.locale.currentLocale);
 
   const handleValidSubmit = ({ username, apelido, email, firstPassword }) => {
+    setEmailCadastrado(email);
     dispatch(handleRegister({ login: username, apelido, email, password: firstPassword, langKey: currentLocale }));
   };
 
@@ -36,9 +40,18 @@ export const RegisterPage = () => {
   const registrationBloqueada = useAppSelector(state => state.register.registrationBloqueada);
   const registrationConflito = useAppSelector(state => state.register.registrationConflito);
 
+  /**
+   * Conta criada: direto para o login, com o e-mail já no campo - falta só a senha.
+   *
+   * O e-mail vai no ESTADO da navegação, não na URL (?email=...). Na URL ele ficaria
+   * no histórico do navegador (em computador de escola, compartilhado), nos logs de
+   * acesso do servidor e de qualquer proxy no caminho, e no cabeçalho Referer dos
+   * pedidos seguintes. A senha nunca sai daqui: quem digitou acabou de digitá-la.
+   */
   useEffect(() => {
     if (successMessage) {
       toast.success(translate(successMessage));
+      navigate('/login', { replace: true, state: { contaCriada: true, loginSugerido: emailCadastrado } });
     }
   }, [successMessage]);
 

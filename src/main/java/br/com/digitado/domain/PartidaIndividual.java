@@ -70,6 +70,19 @@ public class PartidaIndividual implements Serializable {
     @Column(name = "encerramento", length = 20, nullable = false)
     private Encerramento encerramento;
 
+    // PT (modo individual) ou EN/ES (treino de idiomas): cada idioma tem o seu recorde
+    @NotNull
+    @Column(name = "idioma", length = 5, nullable = false)
+    private String idioma = "PT";
+
+    public String getIdioma() {
+        return idioma;
+    }
+
+    public void setIdioma(String idioma) {
+        this.idioma = idioma;
+    }
+
     public Long getId() {
         return id;
     }

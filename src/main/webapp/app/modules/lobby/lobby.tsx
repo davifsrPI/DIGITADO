@@ -7,6 +7,7 @@ import { useAppSelector } from 'app/config/store';
 import { useBodyClass } from 'app/shared/util/use-body-class';
 import { extrairCodigoColado, limparCodigoSala, TAMANHO_CODIGO_SALA as CODE_LEN } from 'app/shared/util/codigo-sala';
 import { verificarSala } from 'app/shared/util/verificar-sala';
+import { useTremor } from 'app/shared/util/use-tremor';
 
 export const Lobby = () => {
   const account = useAppSelector(state => state.authentication.account);
@@ -16,6 +17,7 @@ export const Lobby = () => {
   const [erroCodigo, setErroCodigo] = useState<string | null>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { tremendo, tremer } = useTremor();
 
   useBodyClass('lobby-page');
 
@@ -36,8 +38,14 @@ export const Lobby = () => {
     if (resultado.status === 'ok') {
       navigate(resultado.tipo === 'UM_V_UM' ? `/sala/${code}` : `/sala/${code}/entrar`);
     } else if (resultado.status === 'inexistente') {
+      // Código errado NÃO sai do lobby: as caixas tremem, o aviso aparece e o
+      // aluno corrige ali mesmo
       setErroCodigo(`Não encontramos nenhuma sala com o código ${code}. Confira com o seu professor.`);
+      tremer();
       codeInputRef.current?.focus();
+    } else if (resultado.status === 'bloqueado') {
+      setErroCodigo('Muitos códigos errados seguidos. Espere um minuto, confira o código com o seu professor e tente de novo.');
+      tremer();
     } else {
       setErroCodigo('Não foi possível conferir a sala agora. Verifique a conexão e tente de novo.');
     }
@@ -76,7 +84,11 @@ export const Lobby = () => {
           <p>Insira o código fornecido pelo seu professor</p>
           <form onSubmit={handleEnterRoom} className="room-code-form">
             {/* 6 caixas de código com um input invisível por cima capturando a digitação */}
-            <div className="code-boxes" onClick={() => codeInputRef.current?.focus()}>
+            <div
+              className={`code-boxes${erroCodigo ? ' code-boxes--erro' : ''}${tremendo ? ' tremer' : ''}`}
+              data-cy="codeBoxes"
+              onClick={() => codeInputRef.current?.focus()}
+            >
               {Array.from({ length: CODE_LEN }).map((_, i) => (
                 <div
                   key={i}
@@ -142,6 +154,12 @@ export const Lobby = () => {
         <Link to="/individual" className="create-room-link">
           <span className="create-room-link-icon">🎯</span>
           Modo individual: até onde você chega?
+          <span className="create-room-link-arrow">→</span>
+        </Link>
+
+        <Link to="/idiomas" className="create-room-link">
+          <span className="create-room-link-icon">🌍</span>
+          Treino de idiomas: inglês e espanhol
           <span className="create-room-link-arrow">→</span>
         </Link>
 

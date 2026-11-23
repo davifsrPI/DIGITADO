@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert } from 'reactstrap';
 import './login-page.scss';
@@ -9,10 +9,19 @@ interface ILoginPageProps {
   handleLogin: (username: string, password: string, rememberMe: boolean) => void;
   loginError: boolean;
   loginBloqueado: boolean;
+  // Acabou de criar a conta: aviso no topo e o e-mail dela já no campo
+  contaCriada?: boolean;
+  loginSugerido?: string;
 }
 
-const LoginPage = ({ handleLogin, loginError, loginBloqueado }: ILoginPageProps) => {
-  const [username, setUsername] = useState('');
+const LoginPage = ({ handleLogin, loginError, loginBloqueado, contaCriada = false, loginSugerido = '' }: ILoginPageProps) => {
+  const [username, setUsername] = useState(loginSugerido);
+  // Com o e-mail já preenchido, o que falta é a senha: o cursor começa lá
+  useEffect(() => {
+    if (loginSugerido) {
+      (document.getElementById('lp-password') as HTMLInputElement | null)?.focus();
+    }
+  }, []);
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -41,6 +50,12 @@ const LoginPage = ({ handleLogin, loginError, loginBloqueado }: ILoginPageProps)
           <h2>Bem-vindo de volta</h2>
           <p className="login-sub">Entre com seus dados para continuar</p>
 
+          {contaCriada && !loginError && !loginBloqueado && (
+            <Alert color="success" className="login-alert" data-cy="contaCriada">
+              Conta criada! Agora é só entrar com a senha que você acabou de escolher.
+            </Alert>
+          )}
+
           {loginBloqueado ? (
             <Alert color="warning" className="login-alert">
               Muitas tentativas seguidas. Espere um minuto antes de tentar de novo: insistir agora renova o bloqueio.
@@ -62,6 +77,7 @@ const LoginPage = ({ handleLogin, loginError, loginBloqueado }: ILoginPageProps)
                 placeholder="Digite seu login"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
+                autoComplete="username"
                 required
               />
             </div>

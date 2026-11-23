@@ -7,6 +7,7 @@ import { useAppSelector } from 'app/config/store';
 import PalavraDoDia from 'app/modules/home/palavra-do-dia';
 import RankingTop5 from 'app/modules/home/ranking-top5';
 import { useBodyClass } from 'app/shared/util/use-body-class';
+import { ehAdmin } from 'app/shared/auth/private-route';
 
 export const Home = () => {
   const account = useAppSelector(state => state.authentication.account);
@@ -39,7 +40,17 @@ export const Home = () => {
         <p className="hero-sub">Desafios em tempo real, conquistas e feedback instantâneo para transformar sua escrita.</p>
 
         <div className="hero-actions">
-          {account?.login ? (
+          {ehAdmin(account?.authorities) ? (
+            // A conta de administração não joga: os botões levam ao painel dela
+            <>
+              <Link to="/admin/desempenho">
+                <button className="btn-primary">Painel de administração</button>
+              </Link>
+              <Link to="/entidades/palavra">
+                <button className="btn-ghost">Banco de palavras</button>
+              </Link>
+            </>
+          ) : account?.login ? (
             // Logado: os dois botões levam para o lobby (lista de salas), não direto para a criação
             <>
               <Link to="/lobby">

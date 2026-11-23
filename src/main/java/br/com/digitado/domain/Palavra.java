@@ -311,6 +311,17 @@ public class Palavra implements Serializable {
         return this;
     }
 
+    /**
+     * Idioma sempre gravado como PT, EN ou ES. Palavra cadastrada sem idioma (ou com
+     * o "PT-BR" dos primeiros seeds) é português: é o que mantém as consultas das
+     * salas, que filtram idioma = 'PT', enxergando o acervo inteiro.
+     */
+    @PrePersist
+    @PreUpdate
+    void normalizarIdioma() {
+        this.idioma = br.com.digitado.domain.enumeration.Idioma.daPalavra(this.idioma).name();
+    }
+
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
 
     @Override

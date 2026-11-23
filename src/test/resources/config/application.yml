@@ -103,3 +103,9 @@ application:
     enabled: true
     requisicoes-por-minuto: 1000000
     autenticacao-por-minuto: 1000000
+
+# Nos testes o servidor NAO baixa o Piper (~85 MB) nem a voz do treino de idiomas
+digitado:
+  audio-palavra:
+    piper:
+      instalar: false

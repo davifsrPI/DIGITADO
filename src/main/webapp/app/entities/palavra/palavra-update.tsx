@@ -70,9 +70,10 @@ export const PalavraUpdate = () => {
 
   const defaultValues = () =>
     isNew
-      ? {}
+      ? { idioma: 'PT' }
       : {
           ...palavraEntity,
+          idioma: palavraEntity?.idioma ?? 'PT',
           criador: palavraEntity?.criador?.id,
           listas: palavraEntity?.listas?.map(e => e.id.toString()),
         };
@@ -138,8 +139,13 @@ export const PalavraUpdate = () => {
                 id="palavra-idioma"
                 name="idioma"
                 data-cy="idioma"
-                type="text"
-              />
+                type="select"
+              >
+                {/* PT entra nas salas e na palavra do dia; EN e ES, só no treino de idiomas */}
+                <option value="PT">Português (ditado)</option>
+                <option value="EN">Inglês (treino de idiomas)</option>
+                <option value="ES">Espanhol (treino de idiomas)</option>
+              </ValidatedField>
               <ValidatedField
                 label={translate('digitadoApp.palavra.possuiAcento')}
                 id="palavra-possuiAcento"
