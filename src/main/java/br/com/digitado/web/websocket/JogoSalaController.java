@@ -179,7 +179,8 @@ public class JogoSalaController {
         }
         // Conquista "Bem-vindo à Turma" (primeira sala) - nunca derruba a conexão
         try {
-            conquistaEngine.aoEntrarNaSala(login);
+            // A conta de administração duela para ser vencida, não para pontuar
+            if (!conquistaEngine.ehAdmin(login)) conquistaEngine.aoEntrarNaSala(login);
         } catch (Exception e) {
             LOG.error("Falha ao processar conquista de entrada de {}: {}", login, e.getMessage(), e);
         }
@@ -349,8 +350,8 @@ public class JogoSalaController {
 
     // Verifica se o usuário conectado tem permissão para controlar esta sala: compara
     // o e-mail do User autenticado com o e-mail do professor cadastrado na sala.
-    // O admin NÃO comanda mais qualquer sala - a conta de administração nem conecta
-    // no WebSocket do jogo (ver JogoSalaJwtInterceptor).
+    // O admin NÃO comanda mais qualquer sala: ele só joga duelo, e só comanda o duelo
+    // que ele mesmo criou (o interceptor descarta o resto, ver JogoSalaJwtInterceptor).
     private boolean isProfessorDaSala(String codigoSala, Principal principal) {
         if (principal == null || codigoSala == null || codigoSala.length() > MAX_CODIGO) return false;
         return salaRepository

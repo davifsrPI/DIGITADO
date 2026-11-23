@@ -6,6 +6,7 @@ import axios from 'axios';
 
 import { useAppSelector } from 'app/config/store';
 import { useBodyClass } from 'app/shared/util/use-body-class';
+import { AvisoAdminNaoJoga, ehAdmin } from 'app/shared/auth/private-route';
 
 // O que o aluno grava em GET/PUT /api/salas/{codigo}/identificacao
 interface Identificacao {
@@ -66,8 +67,32 @@ export const IdentificacaoAluno: React.FC = () => {
 
   // Quem NÃO passa por esta tela: o dono da sala (comanda, não joga) e o duelo
   // 1v1 (não é turma). Os dois vão direto para a partida.
+  const admin = ehAdmin(account?.authorities);
+  const [adminEmTurma, setAdminEmTurma] = useState(false);
+
   useEffect(() => {
     let cancelado = false;
+    // A conta de administração só joga duelo: duelo vai direto para a partida,
+    // sala de turma mostra o aviso (sem perguntar papel nem identificação)
+    if (admin) {
+      axios
+        .get<{ tipo?: string }>(`/api/salas/${codigo}`)
+        .then(sala => {
+          if (cancelado) return;
+          if (sala.data?.tipo === 'UM_V_UM') navigate(`/sala/${codigo}`, { replace: true });
+          else setAdminEmTurma(true);
+          setCarregando(false);
+        })
+        .catch(() => {
+          if (cancelado) return;
+          setErro('Não encontramos uma sala com esse código.');
+          setFalhaAoAbrir(true);
+          setCarregando(false);
+        });
+      return () => {
+        cancelado = true;
+      };
+    }
     Promise.all([
       axios.get<{ souProfessor: boolean }>(`/api/salas/${codigo}/sou-professor`),
       axios.get<{ nome?: string; tipo?: string }>(`/api/salas/${codigo}`),
@@ -141,6 +166,10 @@ export const IdentificacaoAluno: React.FC = () => {
       setErro('Não foi possível entrar na sala agora. Tente de novo.');
     }
   };
+
+  if (adminEmTurma) {
+    return <AvisoAdminNaoJoga />;
+  }
 
   if (carregando) {
     return (

@@ -467,32 +467,79 @@ class SalaResourceIT {
         assertSalaAllUpdatablePropertiesEquals(expectedSala, getPersistedSala(expectedSala));
     }
 
+    // A conta de administração (QUALQUER uma com ROLE_ADMIN - a classe roda com um
+    // mock sem login "admin") só joga DUELO: é o "desenvolvedor" da conquista
+    // "Vença de um Desenvolvedor".
     @Test
     @Transactional
-    void aContaAdminNaoCriaSala() throws Exception {
+    @WithMockUser(value = "outro-admin", authorities = "ROLE_ADMIN")
+    void aContaAdminNaoCriaSalaDeTurma() throws Exception {
         long antes = getRepositoryCount();
+        sala.setCodigo(randomCodigo());
         restSalaMockMvc
             .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("error.forbidden"));
         assertSameRepositoryCount(antes);
     }
 
     @Test
     @Transactional
-    void aContaAdminNaoUsaAsRotasDaPartida() throws Exception {
+    @WithMockUser(value = "outro-admin", authorities = "ROLE_ADMIN")
+    void aContaAdminCriaDuelo() throws Exception {
+        restSalaMockMvc.perform(get(ENTITY_API_URL + "/codigo/novo")).andExpect(status().isOk());
+        restSalaMockMvc.perform(get(ENTITY_API_URL + "/1v1/publicas")).andExpect(status().isOk());
+        sala.setCodigo(randomCodigo());
+        sala.setTipo(TipoSala.UM_V_UM);
+        String resposta = restSalaMockMvc
+            .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(sala)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.tipo").value("UM_V_UM"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        insertedSala = salaRepository.findById(om.readTree(resposta).get("codigo").asText()).orElseThrow();
+    }
+
+    @Test
+    @Transactional
+    @WithMockUser(value = "outro-admin", authorities = "ROLE_ADMIN")
+    void aContaAdminNaoUsaAsRotasDeSalaDeTurma() throws Exception {
         doUser(sala);
         insertedSala = salaRepository.saveAndFlush(sala);
-        for (String rota : new String[] {
-            "/codigo/novo",
-            "/" + sala.getCodigo() + "/configuracao",
-            "/" + sala.getCodigo() + "/palavras",
-            "/" + sala.getCodigo() + "/palavra-atual",
-            "/" + sala.getCodigo() + "/sou-professor",
-        }) {
-            restSalaMockMvc.perform(get(ENTITY_API_URL + rota)).andExpect(status().isForbidden());
+        // Rotas que o duelo usa: abertas ao admin, mas o SalaResource recusa sala de turma
+        for (String rota : new String[] { "/configuracao", "/sou-professor", "/audio", "/meu-resumo" }) {
+            restSalaMockMvc
+                .perform(get(ENTITY_API_URL_CODIGO + rota, sala.getCodigo()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("error.forbidden"));
         }
-        // As telas de Entidades continuam: ver e excluir
+        // Rotas só de turma: fechadas ao admin já na SecurityConfiguration
+        for (String rota : new String[] { "/palavras", "/palavra-atual", "/relatorio", "/participantes", "/estatisticas" }) {
+            restSalaMockMvc.perform(get(ENTITY_API_URL_CODIGO + rota, sala.getCodigo())).andExpect(status().isForbidden());
+        }
+        // As telas de Entidades continuam: ver a sala
         restSalaMockMvc.perform(get(ENTITY_API_URL_CODIGO, sala.getCodigo())).andExpect(status().isOk());
+    }
+
+    @Test
+    @Transactional
+    @WithMockUser(value = "outro-admin", authorities = "ROLE_ADMIN")
+    void noDueloDeOutraPessoaOAdminEhSoOOponente() throws Exception {
+        // Duelo criado por "user": o admin entra como oponente, e NÃO como dono -
+        // antes o admin era "dono" de toda sala e leria as palavras da partida
+        doUser(sala);
+        sala.setTipo(TipoSala.UM_V_UM);
+        sala.setConfiguracao("{\"qtdFacil\":1,\"palavrasExtrasIds\":[1]}");
+        insertedSala = salaRepository.saveAndFlush(sala);
+        restSalaMockMvc
+            .perform(get(ENTITY_API_URL_CODIGO + "/sou-professor", sala.getCodigo()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.souProfessor").value(false));
+        restSalaMockMvc
+            .perform(get(ENTITY_API_URL_CODIGO + "/configuracao", sala.getCodigo()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("error.forbidden"));
     }
 
     @Test

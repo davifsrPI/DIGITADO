@@ -151,6 +151,21 @@ public class SecurityConfiguration {
                     // Ficam com o admin só as telas de Entidades de sala: listar, ver,
                     // editar (PUT) e excluir, em /api/salas e /api/salas/{codigo}.
                     .requestMatchers(mvc.pattern(HttpMethod.POST, "/api/public/palavra-do-dia/tentar")).access(excetoAdmin())
+                    // EXCEÇÃO: o duelo 1v1. O admin pode duelar - é o "desenvolvedor" da
+                    // conquista "Vença de um Desenvolvedor". Ficam abertas a ele só as rotas
+                    // que o duelo usa, e o SalaResource confere, sala por sala, que é um
+                    // DUELO (criar sala de turma ou abrir uma continua proibido ao admin).
+                    .requestMatchers(
+                        mvc.pattern(HttpMethod.POST, "/api/salas"),
+                        mvc.pattern(HttpMethod.GET, "/api/salas/codigo/novo"),
+                        mvc.pattern(HttpMethod.GET, "/api/salas/1v1/publicas"),
+                        mvc.pattern(HttpMethod.GET, "/api/salas/*/sou-professor"),
+                        mvc.pattern(HttpMethod.GET, "/api/salas/*/configuracao"),
+                        mvc.pattern(HttpMethod.GET, "/api/salas/*/audio"),
+                        mvc.pattern(HttpMethod.GET, "/api/salas/*/meu-resumo"),
+                        mvc.pattern(HttpMethod.GET, "/api/palavras/buscar"),
+                        mvc.pattern(HttpMethod.POST, "/api/palavras/sugerir")
+                    ).authenticated()
                     .requestMatchers(
                         mvc.pattern("/api/individual/**"),
                         mvc.pattern("/api/meu-desempenho"),

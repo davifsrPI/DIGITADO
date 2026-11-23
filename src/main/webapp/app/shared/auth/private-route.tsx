@@ -24,10 +24,10 @@ export const ehAdmin = (authorities?: string[]) => !!authorities?.includes(AUTHO
 export const AvisoAdminNaoJoga = () => (
   <div className="insufficient-authority">
     <div className="alert alert-warning" role="alert" data-cy="adminNaoJoga">
-      <strong>A conta de administração não participa dos jogos.</strong> Ela cuida do sistema: usuários, palavras, salas e métricas. Para
-      jogar, entre com uma conta de jogador.
+      <strong>A conta de administração não participa dos jogos de turma.</strong> Ela cuida do sistema: usuários, palavras, salas e
+      métricas. O único jogo aberto a ela é o duelo 1v1 - quem vencer leva a conquista &ldquo;Vença de um Desenvolvedor&rdquo;.
       <div className="mt-2">
-        <Link to="/admin/desempenho">Ir para o desempenho de todos →</Link>
+        <Link to="/duelo">Ir para os duelos 1v1 →</Link> · <Link to="/admin/desempenho">Desempenho de todos →</Link>
       </div>
     </div>
   </div>

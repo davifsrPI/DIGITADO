@@ -8,6 +8,8 @@ import { useBodyClass } from 'app/shared/util/use-body-class';
 import { extrairCodigoColado, TAMANHO_CODIGO_SALA as CODE_LEN } from 'app/shared/util/codigo-sala';
 import { verificarSala } from 'app/shared/util/verificar-sala';
 import { useTremor } from 'app/shared/util/use-tremor';
+import { useAppSelector } from 'app/config/store';
+import { ehAdmin } from 'app/shared/auth/private-route';
 
 // A descrição agora é um objeto JSON vindo do backend: o texto livre + o modo da sala
 interface DescricaoSala {
@@ -65,6 +67,7 @@ export const Duelo = () => {
   // Confere o código antes de sair da tela, como no lobby: código errado fica aqui,
   // com o aviso. Código de sala de TURMA segue para a entrada da turma.
   const { tremendo, tremer } = useTremor();
+  const admin = ehAdmin(useAppSelector(state => state.authentication.account)?.authorities);
 
   const entrarPrivado = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +77,11 @@ export const Duelo = () => {
     setErroCodigo(null);
     const resultado = await verificarSala(code);
     setVerificando(false);
-    if (resultado.status === 'ok') {
+    if (resultado.status === 'ok' && admin && resultado.tipo !== 'UM_V_UM') {
+      // A conta de administração só entra em duelo
+      setErroCodigo('Esse código é de uma sala de turma. A conta de administração só entra em duelos 1v1.');
+      tremer();
+    } else if (resultado.status === 'ok') {
       navigate(resultado.tipo === 'UM_V_UM' ? `/sala/${code}` : `/sala/${code}/entrar`);
     } else if (resultado.status === 'inexistente') {
       setErroCodigo(`Não encontramos nenhum duelo com o código ${code}.`);
@@ -95,8 +102,8 @@ export const Duelo = () => {
       </div>
 
       <div className="duelo-content">
-        <button className="duelo-back" onClick={() => navigate('/lobby')}>
-          ← Voltar ao lobby
+        <button className="duelo-back" onClick={() => navigate(admin ? '/' : '/lobby')}>
+          {admin ? '← Voltar ao início' : '← Voltar ao lobby'}
         </button>
 
         <div className="duelo-header">

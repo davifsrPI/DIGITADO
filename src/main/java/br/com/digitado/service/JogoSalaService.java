@@ -428,6 +428,11 @@ public class JogoSalaService {
         List<String> participantes = jogo.getParticipantes().stream().filter(jogo::ehJogador).toList();
         int jogadores = participantes.size();
         for (String login : participantes) {
+            // O admin duela para ser vencido ("Vença de um Desenvolvedor"), não para
+            // somar XP nem conquistas: a conta de administração fica fora do ranking
+            if (jogo.isModo1v1() && conquistaEngine.ehAdmin(login)) {
+                continue;
+            }
             int meusPontos = jogo.pontosDe(login);
             int aFrente = (int) participantes.stream().filter(o -> jogo.pontosDe(o) > meusPontos).count();
             int superados = (int) participantes.stream().filter(o -> jogo.pontosDe(o) < meusPontos).count();
@@ -476,6 +481,9 @@ public class JogoSalaService {
             XpService.ResultadoDuelo resultado = meus > dele
                 ? XpService.ResultadoDuelo.VITORIA
                 : meus == dele ? XpService.ResultadoDuelo.EMPATE : XpService.ResultadoDuelo.DERROTA;
+            if (conquistaEngine.ehAdmin(login)) {
+                continue; // o oponente dele é premiado normalmente, inclusive pela vitória
+            }
             int[] estat = jogo.getEstatisticaPartida(login);
             // Quem não respondeu nada não ganha XP, e bônus de vitória/empate exige
             // ao menos um acerto: dois jogadores parados não podem fabricar XP
@@ -725,7 +733,8 @@ public class JogoSalaService {
         // Motor de conquistas: acerto, rapidez, acentos/cedilha e sequência.
         // Transação própria e try/catch - conquista nunca derruba a partida.
         try {
-            conquistaEngine.aoResponderNaPartida(
+            // O admin só duela, para ser vencido: sem conquista pelas respostas dele
+            if (!conquistaEngine.ehAdmin(login)) conquistaEngine.aoResponderNaPartida(
                 login,
                 jogo.getPalavraAtual(),
                 correta,

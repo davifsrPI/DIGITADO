@@ -197,6 +197,9 @@ public class SalaResource {
         if (sala.getTipo() == null) {
             sala.setTipo(TipoSala.TURMA);
         }
+        if (adminAtual() && sala.getTipo() != TipoSala.UM_V_UM) {
+            throw new BadRequestAlertException("A conta de administração só cria duelos 1v1", ENTITY_NAME, "forbidden");
+        }
         if (sala.getTipo() != TipoSala.UM_V_UM) {
             sala.setPrivada(true);
         } else if (sala.getPrivada() == null) {
@@ -263,7 +266,7 @@ public class SalaResource {
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(codigo)) {
+        if (!isDono(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         if (sala.getNome() != null || sala.getDescricao() != null) {
@@ -411,7 +414,7 @@ public class SalaResource {
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(codigo)) {
+        if (!isDono(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         return ResponseEntity.ok(jogoSalaService.gerarRelatorio(codigo));
@@ -433,7 +436,7 @@ public class SalaResource {
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(codigo)) {
+        if (!isDono(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         // Sem partida encerrada ainda: 404 e a tela mostra o estado vazio
@@ -453,6 +456,7 @@ public class SalaResource {
      */
     @GetMapping("/{codigo}/audio")
     public ResponseEntity<byte[]> getAudioDaPalavra(@PathVariable("codigo") String codigo) {
+        exigirDueloSeAdmin(codigo);
         String login = SecurityUtils.getCurrentUserLogin().orElse(null);
         if (login == null || !jogoSalaService.estaNaSala(codigo, login)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
@@ -483,7 +487,7 @@ public class SalaResource {
      */
     @GetMapping("/{codigo}/palavra-atual")
     public ResponseEntity<Map<String, String>> getPalavraAtual(@PathVariable("codigo") String codigo) {
-        if (!isOwnerOrAdmin(codigo)) {
+        if (!isDono(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         return jogoSalaService
@@ -506,10 +510,11 @@ public class SalaResource {
      */
     @GetMapping("/{codigo}/configuracao")
     public ResponseEntity<ConfiguracaoPartidaService.ConfiguracaoPartida> getConfiguracao(@PathVariable("codigo") String codigo) {
+        exigirDueloSeAdmin(codigo);
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(codigo)) {
+        if (!isDono(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         // Sala criada antes desta coluna existir: devolve o padrão, que é o mesmo
@@ -534,7 +539,7 @@ public class SalaResource {
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(codigo)) {
+        if (!isDono(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         return ResponseEntity.ok(configuracaoPartidaService.palavras(codigo));
@@ -597,7 +602,7 @@ public class SalaResource {
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(codigo)) {
+        if (!isDono(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         return ResponseEntity.ok(participanteSalaService.listar(codigo));
@@ -616,6 +621,7 @@ public class SalaResource {
      */
     @GetMapping("/{codigo}/meu-resumo")
     public ResponseEntity<ResumoPartidaService.ResumoAluno> getMeuResumo(@PathVariable("codigo") String codigo) {
+        exigirDueloSeAdmin(codigo);
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
@@ -637,7 +643,7 @@ public class SalaResource {
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        if (!isOwnerOrAdmin(codigo)) {
+        if (!isDono(codigo)) {
             throw new BadRequestAlertException("Acesso negado", ENTITY_NAME, "forbidden");
         }
         return ResponseUtil.wrapOrNotFound(resumoDoAluno(codigo, login, true));
@@ -681,10 +687,11 @@ public class SalaResource {
     // usuário logado é o dono (ou admin) e renderizar a visão de professor de novo.
     @GetMapping("/{codigo}/sou-professor")
     public ResponseEntity<Map<String, Boolean>> souProfessor(@PathVariable("codigo") String codigo) {
+        exigirDueloSeAdmin(codigo);
         if (!salaRepository.existsById(codigo)) {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "codigonotfound");
         }
-        return ResponseEntity.ok(Map.of("souProfessor", isOwnerOrAdmin(codigo)));
+        return ResponseEntity.ok(Map.of("souProfessor", isDono(codigo)));
     }
 
     // Duplicar a sala NÃO tem endpoint próprio: o botão "Duplicar" abre a tela de
@@ -711,11 +718,33 @@ public class SalaResource {
         return ResponseEntity.noContent().headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, codigo)).build();
     }
 
-    // Verifica se o usuário logado é dono da sala (como professor) ou administrador do sistema
+    // Dono da sala OU admin: só para a exclusão pelas telas de Entidades
     private boolean isOwnerOrAdmin(String codigo) {
-        if (SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN)) {
-            return true;
+        return adminAtual() || isDono(codigo);
+    }
+
+    private static boolean adminAtual() {
+        return SecurityUtils.hasCurrentUserThisAuthority(AuthoritiesConstants.ADMIN);
+    }
+
+    /**
+     * A conta de administração só JOGA duelo 1v1 (é o "desenvolvedor" da conquista
+     * "Vença de um Desenvolvedor"). Nas rotas de partida abertas a ela pela
+     * SecurityConfiguration, sala que não é duelo é recusada aqui.
+     */
+    private void exigirDueloSeAdmin(String codigo) {
+        if (!adminAtual()) {
+            return;
         }
+        boolean duelo = salaRepository.findById(codigo).map(s -> s.getTipo() == TipoSala.UM_V_UM).orElse(false);
+        if (!duelo) {
+            throw new BadRequestAlertException("A conta de administração só joga duelos 1v1", ENTITY_NAME, "forbidden");
+        }
+    }
+
+    // O usuário logado é o professor (criador) desta sala? Sem exceção para o admin:
+    // nas rotas do jogo ele é um jogador como outro qualquer.
+    private boolean isDono(String codigo) {
         return SecurityUtils.getCurrentUserLogin()
             .flatMap(userRepository::findOneByLogin)
             .flatMap(user -> usuarioRepository.findByEmail(user.getEmail()))

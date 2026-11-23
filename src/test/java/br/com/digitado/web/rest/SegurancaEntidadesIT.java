@@ -81,15 +81,22 @@ class SegurancaEntidadesIT {
             "/api/individual/estado",
             "/api/meu-desempenho",
             "/api/palavras/sortear?dificuldade=FACIL",
-            "/api/palavras/buscar?texto=casa",
             "/api/conquistas/minhas",
-            "/api/salas/codigo/novo",
-            "/api/salas/1v1/publicas",
         }
     )
     @WithMockUser(value = "admin", authorities = { "ROLE_ADMIN", "ROLE_USER" })
     void adminNaoJoga(String url) throws Exception {
         mockMvc.perform(get(url)).andExpect(status().isForbidden());
+    }
+
+    // A exceção: o duelo 1v1, para QUALQUER conta com ROLE_ADMIN (o login aqui nem é "admin")
+    @Test
+    @WithMockUser(value = "outro-admin", authorities = "ROLE_ADMIN")
+    void qualquerAdminChegaAoDuelo() throws Exception {
+        mockMvc.perform(get("/api/salas/codigo/novo")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/salas/1v1/publicas")).andExpect(status().isOk());
+        // Buscar palavra extra ao montar o duelo
+        mockMvc.perform(get("/api/palavras/buscar").param("texto", "casa")).andExpect(status().isOk());
     }
 
     @Test

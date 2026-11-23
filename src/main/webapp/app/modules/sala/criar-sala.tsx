@@ -1,11 +1,13 @@
 import './criar-sala.scss';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useBodyClass } from 'app/shared/util/use-body-class';
 import { CORES_DIFICULDADE, LABELS_DIFICULDADE, DificuldadeKey } from 'app/shared/util/dificuldade-constants';
 import { useCopiar } from 'app/shared/util/copiar-texto';
+import { useAppSelector } from 'app/config/store';
+import { ehAdmin } from 'app/shared/auth/private-route';
 
 // Alias local: mantém o nome curto usado em todo o componente
 type Dificuldade = DificuldadeKey;
@@ -40,6 +42,7 @@ const DIFF_LABELS = LABELS_DIFICULDADE;
 
 export const CriarSala = () => {
   const navigate = useNavigate();
+  const admin = ehAdmin(useAppSelector(state => state.authentication.account)?.authorities);
   // A mesma tela configura salas de turma e duelos 1v1, o modo vem da URL (?modo=1v1)
   const [searchParams] = useSearchParams();
   const is1v1 = searchParams.get('modo') === '1v1';
@@ -401,6 +404,11 @@ export const CriarSala = () => {
   };
 
   const total = quantidades.FACIL + quantidades.MEDIO + quantidades.DIFICIL;
+
+  // A conta de administração só cria DUELO (o servidor recusa sala de turma dela)
+  if (admin && !is1v1) {
+    return <Navigate to="/sala/new?modo=1v1" replace />;
+  }
 
   return (
     <div className="cs-wrapper">

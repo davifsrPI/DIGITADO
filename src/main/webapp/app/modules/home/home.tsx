@@ -46,8 +46,8 @@ export const Home = () => {
               <Link to="/admin/desempenho">
                 <button className="btn-primary">Painel de administração</button>
               </Link>
-              <Link to="/entidades/palavra">
-                <button className="btn-ghost">Banco de palavras</button>
+              <Link to="/duelo">
+                <button className="btn-ghost">Duelo 1v1</button>
               </Link>
             </>
           ) : account?.login ? (

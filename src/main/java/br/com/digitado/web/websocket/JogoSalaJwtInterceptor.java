@@ -1,10 +1,14 @@
 package br.com.digitado.web.websocket;
 
+import br.com.digitado.domain.enumeration.TipoSala;
+import br.com.digitado.repository.SalaRepository;
 import br.com.digitado.security.AuthoritiesConstants;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
@@ -29,9 +33,46 @@ public class JogoSalaJwtInterceptor implements ChannelInterceptor {
     private static final Logger LOG = LoggerFactory.getLogger(JogoSalaJwtInterceptor.class);
 
     private final JwtDecoder jwtDecoder;
+    private final SalaRepository salaRepository;
 
-    public JogoSalaJwtInterceptor(JwtDecoder jwtDecoder) {
+    public JogoSalaJwtInterceptor(JwtDecoder jwtDecoder, SalaRepository salaRepository) {
         this.jwtDecoder = jwtDecoder;
+        this.salaRepository = salaRepository;
+    }
+
+    // Código da sala num destino STOMP: /app/sala/{c}/..., /topic/sala/{c},
+    // /user/queue/sala/{c}/... (null quando o destino não é de uma sala)
+    private static final Pattern DESTINO_DE_SALA = Pattern.compile("^(?:/user)?/(?:app|topic|queue)/sala/([^/]+)");
+
+    static String salaDoDestino(String destino) {
+        if (destino == null) {
+            return null;
+        }
+        Matcher m = DESTINO_DE_SALA.matcher(destino);
+        return m.find() ? m.group(1) : null;
+    }
+
+    private static boolean ehAdmin(java.security.Principal usuario) {
+        return (
+            usuario instanceof org.springframework.security.core.Authentication a &&
+            a.getAuthorities().stream().anyMatch(g -> AuthoritiesConstants.ADMIN.equals(g.getAuthority()))
+        );
+    }
+
+    /**
+     * A conta de administração só joga DUELO 1v1 (é o "desenvolvedor" da conquista
+     * "Vença de um Desenvolvedor"): mensagem ou inscrição dela em sala de turma, ou
+     * em qualquer destino que não seja de sala, não passa.
+     */
+    private boolean adminForaDeDuelo(StompHeaderAccessor accessor) {
+        if (!ehAdmin(accessor.getUser())) {
+            return false;
+        }
+        String codigo = salaDoDestino(accessor.getDestination());
+        if (codigo == null || codigo.length() > 20) {
+            return true;
+        }
+        return !salaRepository.findById(codigo).map(sala -> sala.getTipo() == TipoSala.UM_V_UM).orElse(false);
     }
 
     @Override
@@ -54,11 +95,14 @@ public class JogoSalaJwtInterceptor implements ChannelInterceptor {
             try {
                 Jwt jwt = jwtDecoder.decode(token);
 
-                // O campo "auth" do JWT contém as roles separadas por vírgula (ex: "ROLE_USER,ROLE_ADMIN")
+                // O campo "auth" do JWT contém as roles separadas por espaço (ex: "ROLE_ADMIN ROLE_USER")
                 String authClaim = jwt.getClaimAsString("auth");
                 List<GrantedAuthority> authorities = List.of();
                 if (authClaim != null && !authClaim.isBlank()) {
-                    authorities = List.of(authClaim.split(","))
+                    // O AuthenticateController junta os papéis com ESPAÇO ("ROLE_ADMIN ROLE_USER");
+                    // separar só por vírgula virava um papel único inválido e a conta com
+                    // dois papéis era recusada. Aceita os dois separadores.
+                    authorities = List.of(authClaim.split("[,\\s]+"))
                         .stream()
                         .map(String::trim)
                         .filter(a -> !a.isEmpty())
@@ -67,14 +111,13 @@ public class JogoSalaJwtInterceptor implements ChannelInterceptor {
                         .toList();
                 }
 
-                // O WebSocket é só do JOGO, e a conta de administração não joga (ver
-                // SecurityConfiguration.somenteJogador): com ela o admin entrava em
-                // qualquer sala com o poder de professor
+                // O WebSocket é do JOGO: entra a conta de jogador e o admin, que só
+                // duela (ver adminForaDeDuelo abaixo) - nunca sala de turma
                 boolean admin = authorities.stream().anyMatch(a -> AuthoritiesConstants.ADMIN.equals(a.getAuthority()));
                 boolean jogador = authorities.stream().anyMatch(a -> AuthoritiesConstants.USER.equals(a.getAuthority()));
-                if (admin || !jogador) {
-                    LOG.warn("WebSocket CONNECT de conta que não é de jogador ({}) - conexão rejeitada", jwt.getSubject());
-                    throw new MessagingException("A conta de administração não participa dos jogos");
+                if (!admin && !jogador) {
+                    LOG.warn("WebSocket CONNECT de conta sem papel de jogo ({}) - conexão rejeitada", jwt.getSubject());
+                    throw new MessagingException("Esta conta não participa dos jogos");
                 }
 
                 // Associa o usuário autenticado à sessão STOMP para que os controllers
@@ -110,6 +153,10 @@ public class JogoSalaJwtInterceptor implements ChannelInterceptor {
                     MAX_MENSAGENS,
                     JANELA_MS / 1000
                 );
+                return null;
+            }
+            if (adminForaDeDuelo(accessor)) {
+                LOG.warn("WebSocket: conta admin {} fora de duelo em {} - descartado", nomeDe(accessor), accessor.getDestination());
                 return null;
             }
         }

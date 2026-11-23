@@ -51,10 +51,13 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        {/* Duelo 1v1: aberto também à conta admin - é o "desenvolvedor" da conquista
+            "Vença de um Desenvolvedor". Criar sala e a partida idem, mas as telas
+            barram o admin em sala de turma (o servidor também). */}
         <Route
           path="duelo"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <Duelo />
             </PrivateRoute>
           }
@@ -109,7 +112,7 @@ const AppRoutes = () => {
         <Route
           path="sala/new"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <CriarSala />
             </PrivateRoute>
           }
@@ -132,7 +135,7 @@ const AppRoutes = () => {
         <Route
           path="sala/:codigo/entrar"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <IdentificacaoAluno />
             </PrivateRoute>
           }
@@ -140,7 +143,7 @@ const AppRoutes = () => {
         <Route
           path="sala/:codigo"
           element={
-            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]} somenteJogador>
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.USER]}>
               <SalaJogo />
             </PrivateRoute>
           }

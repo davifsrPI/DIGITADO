@@ -9,6 +9,7 @@ import { ErroWS, EstadoJogo, FeedbackAluno, RespostaRodada, useSalaWebSocket } f
 import { SalaJogoAluno } from './sala-jogo-aluno';
 import { SalaJogoProfessor } from './sala-jogo-professor';
 import { useBodyClass } from 'app/shared/util/use-body-class';
+import { AvisoAdminNaoJoga, ehAdmin } from 'app/shared/auth/private-route';
 
 // Página principal do jogo, decide se renderiza a visão do professor ou do aluno
 // com base no estado de navegação passado pela tela de criação/entrada na sala
@@ -87,7 +88,8 @@ export const SalaJogo: React.FC = () => {
   const [identificado, setIdentificado] = useState<boolean | null>(null);
   useEffect(() => {
     if (!papelResolvido || modo1v1 === null) return;
-    if (isProfessor || modo1v1) {
+    // Admin em sala de turma não joga: a tela mostra o aviso, sem formulário de entrada
+    if (isProfessor || modo1v1 || ehAdmin(account?.authorities)) {
       setIdentificado(true);
       return;
     }
@@ -206,7 +208,9 @@ export const SalaJogo: React.FC = () => {
           </div>
         )}
 
-        {verificandoPapel ? (
+        {ehAdmin(account?.authorities) && modo1v1 === false ? (
+          <AvisoAdminNaoJoga />
+        ) : verificandoPapel ? (
           <div style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', padding: '60px 0', fontSize: 15 }}>Carregando sala...</div>
         ) : isProfessor && modo1v1 ? (
           // APENAS no duelo 1v1 o criador joga junto: recebe a mesma tela do

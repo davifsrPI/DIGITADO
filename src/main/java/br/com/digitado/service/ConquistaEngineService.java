@@ -250,7 +250,7 @@ public class ConquistaEngineService {
         incrementar(usuario, "Primeiro Duelo", 1);
         if (venceu) {
             POR_VITORIA_DUELO.forEach(nome -> incrementar(usuario, nome, 1));
-            if (oponenteEhAdmin(oponenteLogin)) {
+            if (ehAdmin(oponenteLogin)) {
                 marco(usuario, "Vença de um Desenvolvedor");
             }
         }
@@ -258,8 +258,10 @@ public class ConquistaEngineService {
         verificarXpERankingInterno(usuario);
     }
 
-    // O oponente é o usuário administrador do sistema? (checado pela authority, não pelo login)
-    private boolean oponenteEhAdmin(String oponenteLogin) {
+    // O login é de uma conta de administração? (checado pela authority, não pelo login)
+    // Usado no duelo: vencer o admin dá a conquista, e o admin não ganha XP nem conquista
+    @Transactional(readOnly = true)
+    public boolean ehAdmin(String oponenteLogin) {
         if (oponenteLogin == null) {
             return false;
         }
